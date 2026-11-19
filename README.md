@@ -21,11 +21,9 @@ Your car isn't here? [Add it](docs/adding-a-vehicle.md), no coding experience ne
 
 ## Hardware
 
-A "dumb" **KKL cable** (sold as VAG-COM KKL 409.1) with an **FTDI FT232RL** chip, about €20.
-For USB-C, add a USB-A to USB-C adapter.
-
-- Not an ELM327. Those can't do the wake-up or manufacturer-specific commands.
-- Avoid CH340 chips and the 4-way switch versions.
+For most cars: a "dumb" **KKL cable** (VAG-COM KKL 409.1) with an **FTDI FT232RL** chip, about €20,
+plus a USB-A to USB-C adapter if you need one. Not an ELM327.
+Some cars need an adapter: see **[Which cable do I need?](docs/hardware.md)**, and the vehicle's profile.
 
 ## Development
 

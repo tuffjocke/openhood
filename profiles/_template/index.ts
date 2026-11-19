@@ -68,6 +68,7 @@ export const templateProfile: VehicleProfile = {
   name: "Template",
   covers: "Make, models · years",
   ecu: "Which ECU",
+  hardware: "Standard KKL cable. Where the OBD socket is, and any adapter needed.",
   status: "experimental",
   link: { baudRate: 10400, init: "fast", addresses: { ecu: 0x10, tester: 0xf1 } },
   async connect(ecu) {

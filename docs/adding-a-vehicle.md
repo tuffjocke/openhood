@@ -20,6 +20,9 @@ tools that talk to it. Someone may pick it up, and you can test it when it's rea
 
 ## Option 2: Add it yourself with an AI
 
+First, check that your car has a K-line and order the cable: [Which cable do I need?](hardware.md)
+It takes a few days to arrive, and you can do everything except the final test before it does.
+
 **Copy the text below, paste it into ChatGPT, Claude or any other AI, and write which car you have
 on the last line.** The AI will guide you through everything, one step at a time.
 
@@ -31,6 +34,8 @@ I am not a programmer. Guide me one small step at a time, wait for me to say it 
 the next step, and explain things in plain words. If I paste an error, help me fix it.
 
 The plan:
+0. Help me check that my car has a K-line and which cable I need, using
+   https://github.com/tuffjocke/openhood/blob/main/docs/hardware.md
 1. Help me install what I need: Node.js (LTS), GitHub Desktop with a free GitHub account,
    and an AI coding agent that can work with files on my computer (Claude Code or OpenAI Codex).
    If you are already such an agent running on my computer, skip what is already done.
@@ -72,7 +77,7 @@ Things that help:
 #### What you need
 
 - A computer (Windows, Mac or Linux) with **Chrome** or **Edge**
-- A **KKL cable** with an FTDI chip (see the [README](../README.md#hardware)), for testing on the car
+- A **KKL cable**, for testing on the car. See [Which cable do I need?](hardware.md)
 - An AI coding agent: **[Claude Code](https://claude.com/claude-code)** or **[OpenAI Codex](https://openai.com/codex)**.
   These are like ChatGPT, but they can read and change files on your computer and run the app.
   A regular chat window can't do that, which is why you need one of these.

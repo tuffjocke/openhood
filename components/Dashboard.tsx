@@ -272,8 +272,9 @@ export default function Dashboard() {
 
       {status === "idle" && !error && (
         <p className="hint">
-          KKL cable into the OBD socket, ignition on, then <em>Connect cable</em>. Engine can be off or running.
-          Nothing is written to the ECU. No car nearby? Try the <em>Simulator</em>.
+          {profile.hardware ?? "Standard KKL cable into the OBD socket."} Ignition on, then <em>Connect cable</em>.
+          Engine can be off or running. Nothing is written to the ECU. No car nearby? Try the <em>Simulator</em>.{" "}
+          <a href="https://github.com/tuffjocke/openhood/blob/main/docs/hardware.md">Which cable?</a>
         </p>
       )}
 

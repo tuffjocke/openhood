@@ -246,6 +246,11 @@ button:focus-visible {
   font-size: 14px;
 }
 
+.hint a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
 .hint em {
   font-style: normal;
   color: var(--ink);

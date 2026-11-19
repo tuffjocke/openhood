@@ -33,7 +33,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
-docs/                     adding-a-vehicle.md, architecture.md, k-line-primer.md
+docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```
 
 ## Most common task: add or extend a vehicle
@@ -41,7 +41,7 @@ docs/                     adding-a-vehicle.md, architecture.md, k-line-primer.md
 Follow docs/adding-a-vehicle.md. In short:
 
 1. `cp -r profiles/_template profiles/<make>-<engine-or-ecu>` (kebab-case, e.g. `bmw-m52`).
-2. Fill in link settings, `connect`, channels, groups, schedule, simulator.
+2. Fill in link settings, `hardware`, `connect`, channels, groups, schedule, simulator.
 3. Keep each group's simulator `encode` next to its `decode` so they cannot drift.
 4. Register it in `profiles/index.ts`.
 5. Write the profile README (status table, connect bytes, sources).

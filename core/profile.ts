@@ -74,6 +74,11 @@ export interface VehicleProfile {
   covers: string;
   /** Which ECU this talks to: "Engine ECU (MSB/NNN)". */
   ecu: string;
+  /**
+   * What cable or adapter this car needs, in one or two plain sentences. Shown before connecting.
+   * Default if omitted: the standard KKL cable (docs/hardware.md).
+   */
+  hardware?: string;
   /** Overall maturity. Keep "experimental" until it has been used on a real car. */
   status: "experimental" | "tested";
 

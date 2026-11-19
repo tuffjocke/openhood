@@ -13,6 +13,7 @@ export const landRoverTd5: VehicleProfile = {
   name: "Land Rover Td5",
   covers: "Defender, Discovery 2 · 1998 to 2006",
   ecu: "Engine ECU (MSB / NNN)",
+  hardware: "Standard KKL cable. The OBD socket is under the dash, K-line on pin 7.",
   status: "experimental",
 
   link: {
