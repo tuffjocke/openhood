@@ -63,6 +63,9 @@ export interface Fault {
   code?: string;
   /** Short name to show when there is no explanation: the official title or the profile's own name. */
   name: string;
+  /** Plain-language state, if the ECU reports one: "active now", "stored". Faults that share an
+   *  explanation are shown as one row with their states listed. */
+  state?: string;
 }
 
 /**

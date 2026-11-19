@@ -8,7 +8,7 @@
  * discovery2-diag reading and clearing the block on a real Discovery 2 Td5. See README.md.
  */
 import type { EcuLink, Fault, FaultInfo } from "@/core/profile";
-import { explainTd5Fault } from "./fault-explanations";
+import { explainTd5Fault, splitStatus, STATUS } from "./fault-explanations";
 import { BLOCK_LENGTH, TD5_FAULT_MAP } from "./fault-map";
 
 export const READ_FAULTS = [0x21, 0x3b];
@@ -23,7 +23,9 @@ export function decodeFaults(res: Uint8Array): Fault[] {
     for (let bit = 0; bit < 8; bit++) {
       if (!(byte & (1 << bit))) continue;
       const key = `${offset}.${bit}`;
-      out.push({ id: `td5-${key}`, name: capitalise(TD5_FAULT_MAP[key] ?? `Unknown fault (byte ${offset}, bit ${bit})`) });
+      const name = TD5_FAULT_MAP[key] ?? `unknown fault (byte ${offset}, bit ${bit})`;
+      const { status } = splitStatus(name);
+      out.push({ id: `td5-${key}`, name: capitalise(name), state: status ? STATUS[status] : undefined });
     }
   });
   return out;

@@ -38,7 +38,9 @@ describe("Land Rover Td5", () => {
       assert.ok(e.causes.length >= 2 && e.causes.length <= 4);
       for (const t of [e.title, e.plain, e.check ?? "", ...e.causes]) assert.ok(!/[\u2013\u2014]/.test(t), t);
     }
-    assert.match(explanations["td5-4.6"].title, /air flow sensor · active now/);
+    assert.equal(explanations["td5-4.6"].title, "Problem with the air flow sensor");
+    const raw = Uint8Array.from([0x61, 0x3b, 0, 0, 0, 0, 0x40, ...new Array(30).fill(0)]);
+    assert.deepEqual(decodeFaults(raw).map((f) => f.state), ["active now"]);
   });
 
   it("builds the published request frames byte for byte", () => {

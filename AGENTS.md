@@ -34,7 +34,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
-components/FaultPanel     faults: explanations, urgency, freeze frames, pending, history, self-tests, clear warning
+components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
+components/FirstRun       three-step guide shown until the first connection with the selected car
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles

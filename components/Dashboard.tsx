@@ -18,7 +18,8 @@ import { TimeoutError } from "@/core/transport/types";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Sparkline, type Point } from "./Sparkline";
-import { FaultPanel } from "./FaultPanel";
+import { FaultPanel, FaultSummary } from "./FaultPanel";
+import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
@@ -64,6 +65,8 @@ export default function Dashboard() {
   const [now, setNow] = useState(0);
   const [night, setNight] = useState(false);
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
+  const [everLive, setEverLive] = useState(false);
+  const [pickerRequest, setPickerRequest] = useState(0);
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -133,6 +136,7 @@ export default function Dashboard() {
       await s.connect();
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
+      setEverLive(true);
       void refreshFaults(s);
       void s.poll(onValues, (e) => {
         setStatus("error");
@@ -279,6 +283,7 @@ export default function Dashboard() {
 
   function pickVehicle(sel: Selection) {
     setSelection(sel);
+    setEverLive(false);
     setFaults(null);
     setReadiness(null);
     setPending(null);
@@ -290,6 +295,8 @@ export default function Dashboard() {
   }
 
   const live = status === "live";
+  // The guide replaces the empty gauges until the first connection with this car.
+  const showFirstRun = !everLive && status !== "live";
   const label = selectionLabel(selection, profile);
   // Empty for a generic profile: "I have a Generic OBD-II" would read oddly in the AI question.
   const vehicleText = selection.make ? [label.title, label.detail].filter(Boolean).join(" ") : "";
@@ -297,7 +304,7 @@ export default function Dashboard() {
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
   return (
-    <main className="shell">
+    <main className={`shell${showFirstRun ? " is-first-run" : ""}`}>
       <header className="top">
         <div className="mark">
           <span className="mark-name">Openhood</span>
@@ -307,40 +314,40 @@ export default function Dashboard() {
             profile={profile}
             disabled={status === "live" || status === "connecting"}
             onSelect={pickVehicle}
+            openRequest={pickerRequest}
           />
         </div>
-        <div className="top-right">
-          <span className={`status status-${status}`}>
-            <i />
-            {status === "idle" && "Not connected"}
-            {status === "connecting" && "Waking ECU…"}
-            {status === "live" && `${source === "simulator" ? "Simulator" : "Live"} · ${rate.toFixed(0)} reads/s`}
-            {status === "error" && "Stopped"}
-          </span>
-          {status === "idle" || status === "error" ? (
-            <>
-              <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Web Serial not available here"}>
-                Connect cable
+        <button className="quiet night" onClick={toggleNight}>
+          {night ? "Day" : "Night"}
+        </button>
+        {!showFirstRun && (
+          <div className="actions">
+            <span className={`status status-${status}`}>
+              <i />
+              <span className="status-text">
+                {status === "idle" && "Not connected"}
+                {status === "connecting" && "Waking ECU…"}
+                {status === "live" && `${source === "simulator" ? "Simulator" : "Live"} · ${rate.toFixed(0)} reads/s`}
+                {status === "error" && "Stopped"}
+              </span>
+            </span>
+            {status === "idle" || status === "error" ? (
+              <span className="action-buttons">
+                <button className="quiet" onClick={() => connect("simulator")}>
+                  Simulator
+                </button>
+                <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Web Serial not available here"}>
+                  Connect cable
+                </button>
+              </span>
+            ) : (
+              <button onClick={disconnect} disabled={status === "connecting"}>
+                Disconnect
               </button>
-              <button className="quiet" onClick={() => connect("simulator")}>
-                Simulator
-              </button>
-            </>
-          ) : (
-            <button onClick={disconnect} disabled={status === "connecting"}>
-              Disconnect
-            </button>
-          )}
-          <button className="quiet" onClick={toggleNight}>
-            {night ? "Day" : "Night"}
-          </button>
-        </div>
+            )}
+          </div>
+        )}
       </header>
-
-      <p className="sub">
-        Profile: {profile.name} · {profile.ecu} · K-line {profile.link.baudRate}
-        {profile.status === "experimental" && <span className="tag">experimental</span>}
-      </p>
 
       {error && (
         <p className="notice" role="alert">
@@ -352,50 +359,53 @@ export default function Dashboard() {
           )}
         </p>
       )}
-      {!serialOk && status === "idle" && !error && (
-        <p className="notice quiet-notice">
-          This browser can&rsquo;t open serial ports. Use Chrome or Edge on a computer, or Chrome on Android. The
-          simulator works anywhere.
-        </p>
-      )}
 
-      <section className="grid">
-        {profile.channels.map((c) => {
-          const v = latest.current[c.key];
-          const warn = isWarn(c, v);
-          return (
-            <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
-              <div className="cell-head">
-                <span>{c.label}</span>
-                <span>{c.unit}</span>
-              </div>
-              {unavailable.has(c.key) ? (
-                <div className="value na" title="This car doesn't report this value">
-                  n/a
+      {showFirstRun ? (
+        <FirstRun
+          vehicle={vehicleText}
+          profile={profile}
+          serialOk={serialOk}
+          connecting={status === "connecting" ? source : null}
+          onChangeCar={() => setPickerRequest((n) => n + 1)}
+          onConnect={() => connect("serial")}
+          onSimulator={() => connect("simulator")}
+        />
+      ) : (
+        <>
+          <FaultSummary faults={faults} pending={pending} readiness={readiness} explanations={profile.faults?.explanations} />
+          <section className="grid">
+            {profile.channels.map((c) => {
+              const v = latest.current[c.key];
+              const warn = isWarn(c, v);
+              return (
+                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
+                  <div className="cell-head">
+                    <span>{c.label}</span>
+                    <span>{c.unit}</span>
+                  </div>
+                  {unavailable.has(c.key) ? (
+                    <div className="value na" title="This car doesn't report this value">
+                      n/a
+                    </div>
+                  ) : (
+                    <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
+                  )}
+                  <Sparkline
+                    points={history.current[c.key] ?? []}
+                    now={now}
+                    min={c.min}
+                    max={c.max}
+                    warn={c.warnAbove ?? c.warnBelow}
+                  />
                 </div>
-              ) : (
-                <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
-              )}
-              <Sparkline
-                points={history.current[c.key] ?? []}
-                now={now}
-                min={c.min}
-                max={c.max}
-                warn={c.warnAbove ?? c.warnBelow}
-              />
-            </div>
-          );
-        })}
-      </section>
-
-      {status === "idle" && !error && (
-        <p className="hint">
-          {profile.hardware ?? "Standard KKL cable into the OBD socket."} Ignition on, then <em>Connect cable</em>.
-          Engine can be off or running. Nothing is written to the ECU. No car nearby? Try the <em>Simulator</em>.{" "}
-          <a href="https://github.com/tuffjocke/openhood/blob/main/docs/hardware.md">Which cable?</a>
-        </p>
+              );
+            })}
+          </section>
+        </>
       )}
 
+      {!showFirstRun && (
+        <>
       <section className="lower">
         <FaultPanel
           profile={profile}
@@ -444,6 +454,14 @@ export default function Dashboard() {
           </pre>
         )}
       </details>
+      </>
+      )}
+
+      <p className="profile-info">
+        Profile: {profile.name} · {profile.ecu} · K-line {profile.link.baudRate} baud
+        {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
+        <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
+      </p>
 
       <footer className="foot">
         <a href="https://github.com/tuffjocke/openhood">Open source on GitHub</a>

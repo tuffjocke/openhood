@@ -4,7 +4,7 @@
  *
  * The Td5 has 115 distinct fault names, so explanations are grouped into families matched by
  * pattern. The first matching family wins; faults matching none show their official name only.
- * The status (active now / stored) is added to the title by explainTd5Fault.
+ * The status (active now / stored) is reported separately as Fault.state.
  */
 import type { FaultInfo, Urgency } from "@/core/profile";
 
@@ -222,7 +222,7 @@ const FAMILIES: Family[] = [
   },
 ];
 
-const STATUS: Record<string, string> = {
+export const STATUS: Record<string, string> = {
   Current: "active now",
   Logged: "stored",
   "Logged Low": "stored, signal too low",
@@ -236,13 +236,13 @@ export function splitStatus(name: string): { base: string; status?: string } {
 }
 
 export function explainTd5Fault(name: string): FaultInfo | undefined {
-  const { base, status } = splitStatus(name);
+  const { base } = splitStatus(name);
   for (const f of FAMILIES) {
     const m = base.match(f.match);
     if (!m) continue;
     const pick = <T,>(v: T | ((m: RegExpMatchArray) => T)) => (typeof v === "function" ? (v as (m: RegExpMatchArray) => T)(m) : v);
     return {
-      title: `${f.title(m)}${status ? ` · ${STATUS[status]}` : ""}`,
+      title: f.title(m),
       plain: pick(f.plain),
       causes: pick(f.causes),
       check: pick(f.check),

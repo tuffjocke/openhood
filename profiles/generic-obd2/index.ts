@@ -17,7 +17,7 @@ export const genericObd2: VehicleProfile = {
   generic: true,
   ecu: "Engine (standard OBD values)",
   hardware:
-    "Standard KKL cable. Tries the fast wake-up first, then the slower 5-baud one (ISO 9141-2), which takes a few seconds.",
+    "Standard KKL cable in the OBD socket, usually under the dashboard. Some cars take a few seconds longer to answer; that's normal.",
   status: "experimental",
 
   link: {

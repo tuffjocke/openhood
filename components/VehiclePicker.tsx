@@ -27,18 +27,28 @@ export function VehiclePicker({
   profile,
   disabled,
   onSelect,
+  openRequest = 0,
 }: {
   profiles: VehicleProfile[];
   selection: Selection;
   profile: VehicleProfile;
   disabled: boolean;
   onSelect: (s: Selection) => void;
+  /** Increment to open the picker from elsewhere (the first-run guide). */
+  openRequest?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [make, setMake] = useState(selection.make ?? "");
   const [model, setModel] = useState(selection.model ?? "");
   const [year, setYear] = useState(selection.year ? String(selection.year) : "");
   const root = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openRequest > 0 && !disabled) {
+      openPanel();
+      root.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [openRequest]);
 
   // Close on outside click and Escape.
   useEffect(() => {

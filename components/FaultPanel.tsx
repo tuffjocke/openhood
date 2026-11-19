@@ -42,8 +42,72 @@ export function aiQuestion(
 
 type Snapshot = Values | null | "loading" | undefined;
 
+const RANK: Record<Urgency, number> = { ok: 0, soon: 1, now: 2 };
+
+/** Faults that share an explanation (same sensor, stored and active) shown as one row. */
+export interface FaultGroup {
+  key: string;
+  faults: Fault[];
+  info?: FaultInfo;
+}
+
+export function groupFaults(faults: Fault[], explanations?: Record<string, FaultInfo>): FaultGroup[] {
+  const groups: FaultGroup[] = [];
+  const byKey = new Map<string, FaultGroup>();
+  for (const f of faults) {
+    const info = explanations?.[f.id];
+    const key = info ? `info:${info.title}` : `id:${f.id}`;
+    const g = byKey.get(key);
+    if (g) {
+      g.faults.push(f);
+      if (info && g.info && RANK[info.urgency] > RANK[g.info.urgency]) g.info = info;
+    } else {
+      const ng = { key, faults: [f], info };
+      byKey.set(key, ng);
+      groups.push(ng);
+    }
+  }
+  return groups;
+}
+
+/** "Engine light on · 3 problems, 1 to fix now" strip shown under the header. */
+export function FaultSummary({
+  faults,
+  pending,
+  readiness,
+  explanations,
+}: {
+  faults: Fault[] | null;
+  pending: Fault[] | null;
+  readiness: Readiness | null;
+  explanations?: Record<string, FaultInfo>;
+}) {
+  if (faults === null) return null;
+  const groups = groupFaults(faults, explanations);
+  const count = (u: Urgency) => groups.filter((g) => g.info?.urgency === u).length;
+  const now = count("now");
+  const soon = count("soon");
+  const level = now || readiness?.milOn ? "now" : soon ? "soon" : groups.length ? "ok" : "none";
+  const parts: string[] = [];
+  if (readiness?.milOn) parts.push("Engine light on");
+  if (!groups.length) parts.push("No stored faults");
+  else {
+    parts.push(`${groups.length} ${groups.length === 1 ? "problem" : "problems"}`);
+    if (now) parts.push(`${now} to fix now`);
+    else if (soon) parts.push(`${soon} to fix soon`);
+    else parts.push("fine to drive");
+  }
+  if (pending?.length) parts.push(`${pending.length} pending`);
+  return (
+    <a className={`summary summary-${level}`} href="#faults">
+      <span>{parts.join(" · ")}</span>
+      {groups.length > 0 && <span className="summary-go">See faults</span>}
+    </a>
+  );
+}
+
 function FaultRow({
-  fault,
+  group,
   info,
   vehicle,
   profile,
@@ -52,7 +116,7 @@ function FaultRow({
   live,
   onFreezeFrame,
 }: {
-  fault: Fault;
+  group: Fault[];
   info?: FaultInfo;
   vehicle: string;
   profile: VehicleProfile;
@@ -63,7 +127,11 @@ function FaultRow({
 }) {
   const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot>(undefined);
-  const question = aiQuestion(vehicle, fault, profile, values, {
+  const fault = group[0];
+  const states = [...new Set(group.map((f) => f.state).filter(Boolean))].join(" · ");
+  const asked: Fault =
+    group.length === 1 ? fault : { ...fault, name: group.map((f) => (f.code ? `${f.code} ${f.name}` : f.name)).join("; ") };
+  const question = aiQuestion(vehicle, asked, profile, values, {
     pending,
     snapshot: snapshot === "loading" ? null : snapshot,
   });
@@ -96,7 +164,10 @@ function FaultRow({
             info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>
           )}
           {fault.code && <span className="fault-code">{fault.code}</span>}
-          <span className="fault-title">{info?.title ?? fault.name}</span>
+          <span className="fault-title">
+            {info?.title ?? fault.name}
+            {states && <span className="fault-state">{states}</span>}
+          </span>
         </summary>
         <div className="fault-body">
           {info ? (
@@ -114,9 +185,10 @@ function FaultRow({
                   {info.check}
                 </p>
               )}
-              {fault.code && (
+              {(fault.code || group.length > 1) && (
                 <p className="muted small">
-                  Official name: {fault.code} {fault.name}
+                  Official {group.length > 1 ? "names" : "name"}:{" "}
+                  {group.map((f) => [f.code, f.name].filter(Boolean).join(" ")).join("; ")}
                 </p>
               )}
               <SnapshotView snapshot={snapshot} profile={profile} />
@@ -277,7 +349,7 @@ export function FaultPanel({
   const done = readiness?.monitors.filter((m) => m.complete).length ?? 0;
 
   return (
-    <div className="panel">
+    <div className="panel" id="faults">
       <div className="panel-head">
         <h2>Fault memory</h2>
         <div>
@@ -358,11 +430,11 @@ export function FaultPanel({
         <p className="muted">No stored faults.</p>
       ) : (
         <ol className="faults">
-          {faults.map((fault) => (
+          {groupFaults(faults, f.explanations).map((g) => (
             <FaultRow
-              key={fault.id}
-              fault={fault}
-              info={f.explanations?.[fault.id]}
+              key={g.key}
+              group={g.faults}
+              info={g.info}
               vehicle={vehicle}
               profile={profile}
               values={values}
@@ -381,11 +453,11 @@ export function FaultPanel({
             faults if they happen again.
           </p>
           <ol className="faults">
-            {pending.map((fault) => (
+            {groupFaults(pending, f?.explanations).map((g) => (
               <FaultRow
-                key={fault.id}
-                fault={fault}
-                info={f?.explanations?.[fault.id]}
+                key={g.key}
+                group={g.faults}
+                info={g.info}
                 vehicle={vehicle}
                 profile={profile}
                 values={values}
