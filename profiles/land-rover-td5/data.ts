@@ -2,9 +2,10 @@
  * Td5 live data: channels (what the UI shows) and groups (what we ask the ECU for).
  *
  * All groups use service 0x21 readDataByLocalIdentifier. Response payload looks like
- * [0x61, localId, ...data]. Layouts and scalings are from community documentation of the
- * MSB/NNN ECU and have NOT been checked on a car yet: compare with the dash gauges and
- * the K-line traffic panel, then set confidence to "verified".
+ * [0x61, localId, ...data]. All values are big-endian. Each layout below is backed by at least
+ * one open project or a Nanocom log format (sources in README.md), but has not been checked
+ * on our car yet: compare with the dash gauges and the K-line traffic panel, then set
+ * confidence to "verified".
  *
  * Each group carries an `encode` used only by the simulator, kept next to `decode`
  * so the two can never drift apart.
@@ -21,7 +22,7 @@ export const channels: Channel[] = [
   { key: "fuelTemp", label: "Fuel", unit: "°C", decimals: 0, min: 0, max: 100, warnAbove: 80, confidence: "community" },
   { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, confidence: "community" },
   { key: "maf", label: "Air mass", unit: "kg/h", decimals: 0, min: 0, max: 600, confidence: "community" },
-  { key: "pedal", label: "Pedal", unit: "%", decimals: 0, min: 0, max: 100, confidence: "community" },
+  { key: "pedal", label: "Pedal sensor", unit: "V", decimals: 2, min: 0, max: 5, confidence: "community" },
   { key: "battery", label: "Battery", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "community" },
 ];
 
@@ -70,8 +71,12 @@ export const groups: SimGroup[] = [
   {
     id: "pedal",
     request: [0x21, 0x1b],
-    decode: (r) => ({ pedal: u16(r, 2) / 100 }),
-    encode: (s) => [0x61, 0x1b, ...be16(s.pedal * 100), ...be16(s.pedal * 100), ...be16(5000)],
+    // accelerator tracks 1 to 4 and the 5 V supply, in mV; we show track 1 in volts
+    decode: (r) => ({ pedal: u16(r, 2) / 1000 }),
+    encode: (s) => {
+      const v = 500 + s.pedal * 40; // simulator only: about 0.5 V released to 4.5 V floored
+      return [0x61, 0x1b, ...be16(v), ...be16(5000 - v), ...be16(v / 2), ...be16(2500 - v / 2), ...be16(5000)];
+    },
     confidence: "community",
   },
   {

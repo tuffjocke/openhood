@@ -46,6 +46,7 @@ tests/profiles.test.ts    contract tests, run for every registered profile autom
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
+tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```
 

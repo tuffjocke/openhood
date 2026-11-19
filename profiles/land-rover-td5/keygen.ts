@@ -1,11 +1,10 @@
 /**
  * Td5 security access: 16-bit seed from the ECU -> 16-bit key.
  *
- * Confidence: community. LFSR-style algorithm as published by the Td5 community
- * (open "td5keygen" implementations). The simulator uses this same function, so
- * passing tests prove nothing about correctness. Verify with a seed/key pair
- * captured from a real ECU (e.g. sniffing a Nanocom session), then add it to
- * tests/profiles.test.ts as a known-answer test.
+ * Confidence: community, with a known answer. Algorithm from pajacobson/td5keygen, derived
+ * from disassembly of the ECU code: https://github.com/pajacobson/td5keygen
+ * Its README gives seed 34A5 → key 54D3, which tests/td5.test.ts checks. Seed and key are
+ * big-endian ([high][low]); an ESP32 project only authenticated after fixing exactly that.
  *
  * Symptom when wrong: SendKey answered with NRC 0x35 (invalid key).
  * After 3 bad keys the ECU locks out for about 10 s.

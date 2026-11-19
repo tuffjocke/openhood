@@ -1,3 +1,4 @@
+import { NegativeResponse } from "@/core/kwp2000/frame";
 import type { VehicleProfile } from "@/core/profile";
 import { channels, groups } from "./data";
 import { faults } from "./faults";
@@ -24,11 +25,19 @@ export const landRoverTd5: VehicleProfile = {
     baudRate: 10400,
     init: "fast",
     addresses: { ecu: 0x13, tester: 0xf7 },
-    interMessageMs: 30,
+    interMessageMs: 55, // 55 ms P3 needed with the engine running (TD5-Dash, see README)
+    interByteMs: 5, // byte spacing used by a working ESP32 implementation; any 0 to 20 ms is valid P4
   },
 
   async connect(ecu) {
-    await ecu.request([0x81], { addressed: true, note: "start communication" });
+    try {
+      await ecu.request([0x81], { addressed: true, note: "start communication" });
+    } catch (e) {
+      // 7F 81 10: the ECU still has an old session open. Close it and try once more.
+      if (!(e instanceof NegativeResponse && e.code === 0x10)) throw e;
+      await ecu.request([0x82], { addressed: true, note: "stop old session" }).catch(() => {});
+      await ecu.request([0x81], { addressed: true, note: "start communication" });
+    }
     await ecu.request([0x10, 0xa0], { note: "diagnostic session" });
     const seed = await ecu.request([0x27, 0x01], { note: "request seed" });
     const key = td5Key((seed[2] << 8) | seed[3]);

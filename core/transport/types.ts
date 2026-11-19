@@ -18,7 +18,11 @@ export interface Transport {
    * by the session with normal reads and writes.
    */
   fiveBaud(address: number): Promise<void>;
-  write(bytes: Uint8Array): Promise<void>;
+  /**
+   * Send bytes. `interByteMs` > 0 sends them one at a time with that gap (KWP2000 P4),
+   * for ECUs that drop bytes sent back to back.
+   */
+  write(bytes: Uint8Array, interByteMs?: number): Promise<void>;
   /** Resolve with exactly `n` bytes, or reject after `timeoutMs`. */
   read(n: number, timeoutMs: number): Promise<Uint8Array>;
   /**

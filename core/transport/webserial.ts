@@ -94,11 +94,18 @@ export class WebSerialTransport implements Transport {
     return this.rx.takeUntilIdle(idleMs, timeoutMs);
   }
 
-  async write(bytes: Uint8Array) {
+  async write(bytes: Uint8Array, interByteMs = 0) {
     if (!this.port?.writable) throw new Error("Port not open");
     const w = this.port.writable.getWriter();
     try {
-      await w.write(bytes);
+      if (interByteMs > 0) {
+        for (let i = 0; i < bytes.length; i++) {
+          await w.write(bytes.subarray(i, i + 1));
+          if (i < bytes.length - 1) await sleep(interByteMs);
+        }
+      } else {
+        await w.write(bytes);
+      }
     } finally {
       w.releaseLock();
     }

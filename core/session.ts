@@ -64,7 +64,7 @@ export class Session {
         : shortFrame(payload);
     this.transport.flush(); // drop late answers from earlier requests
     this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note });
-    await this.transport.write(msg);
+    await this.transport.write(msg, this.profile.link.interByteMs);
   }
 
   /** Read one frame and return its payload, logging it. */

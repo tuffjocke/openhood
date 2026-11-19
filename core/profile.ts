@@ -194,6 +194,8 @@ export interface VehicleProfile {
     alwaysAddressed?: boolean;
     /** Delay after each response before the next request (KWP2000 P3). Default 30 ms. */
     interMessageMs?: number;
+    /** Gap between bytes we send (KWP2000 P4, 0 to 20 ms). Default 0: send the frame in one go. */
+    interByteMs?: number;
   };
 
   /**
