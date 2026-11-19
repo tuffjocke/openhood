@@ -211,30 +211,27 @@ button:disabled {
   position: relative;
 }
 
+/* A quiet pill next to the wordmark. Unset, it carries one yellow dot: "look at this". */
 .vp-button {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  min-width: 260px;
+  gap: 10px;
+  height: 44px;
+  max-width: 100%;
+  padding: 0 18px;
   text-align: left;
   color: var(--ink);
   background: var(--surface);
-  border-radius: var(--r-md);
-  padding: 9px 16px 10px;
+  border-radius: 999px;
 }
 
 .vp-button:hover:not(:disabled) {
   background: var(--surface-2);
 }
 
-.vp-button.vp-unset {
-  background: var(--sign);
-  color: var(--sign-ink);
-}
-
-.vp-button.vp-unset:hover:not(:disabled) {
-  background: var(--sign);
-  filter: brightness(0.96);
+.vp-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .vp-button:disabled {
@@ -244,41 +241,35 @@ button:disabled {
   cursor: default;
 }
 
-.vp-text {
-  display: grid;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.vp-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.vp-unset .vp-label {
-  color: inherit;
-  opacity: 0.7;
+.vp-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--sign);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sign) 30%, transparent);
 }
 
 .vp-title {
-  font: 600 16px/1.25 var(--sans);
-  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 15px/1 var(--sans);
 }
 
 .vp-detail {
   margin-left: 8px;
-  font-weight: 400;
   color: var(--muted);
 }
 
 .vp-chevron {
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-3px) rotate(45deg);
-  margin-left: auto;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: 4px;
+  border-right: 1.75px solid var(--muted);
+  border-bottom: 1.75px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
   transition: transform 0.15s ease;
 }
 
@@ -288,25 +279,31 @@ button:disabled {
 
 .vp-panel {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   left: 0;
   z-index: 10;
-  width: min(580px, calc(100vw - 28px));
-  background: var(--paper);
-  border: 1.5px solid var(--ink);
+  width: min(600px, calc(100vw - 32px));
+  background: var(--surface);
   border-radius: var(--r-lg);
-  padding: 22px;
+  padding: 24px;
+}
+
+.vp-head {
+  margin: 0 0 18px;
+  font: 600 20px/1.2 var(--sans);
+  letter-spacing: -0.015em;
 }
 
 .vp-fields {
   display: grid;
   grid-template-columns: 1.3fr 1.3fr 0.8fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .vp-fields label {
+  position: relative;
   display: grid;
-  gap: 6px;
+  gap: 7px;
 }
 
 .vp-fields label > span,
@@ -315,18 +312,41 @@ button:disabled {
   color: var(--muted);
 }
 
+.vp-fields label::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  bottom: 20px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.75px solid var(--muted);
+  border-bottom: 1.75px solid var(--muted);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
 .vp-fields select {
-  font: 500 16px/1.2 var(--sans);
-  color: var(--ink);
-  background: var(--surface);
+  appearance: none;
+  width: 100%;
+  height: 48px;
+  padding: 0 36px 0 14px;
   border: 0;
   border-radius: var(--r-sm);
-  padding: 12px;
-  width: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font: 500 15px/1 var(--sans);
+  cursor: pointer;
+}
+
+.vp-fields select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .vp-fields select:disabled {
-  opacity: 0.45;
+  cursor: default;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--paper) 50%, var(--surface));
 }
 
 .vp-engines {
@@ -348,7 +368,7 @@ button:disabled {
 }
 
 .vp-foot {
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   font-size: 14px;
   color: var(--muted);
 }
@@ -1177,69 +1197,137 @@ pre {
   margin-top: 36px;
 }
 
-/* Where's the socket */
+/* Where's the socket: drawn like a workshop manual figure. */
 .socket {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: clamp(28px, 5vw, 72px);
-  align-items: center;
+  align-items: start;
 }
 
 .socket-art {
-  display: grid;
-  gap: 16px;
-  padding: 28px;
+  margin: 0;
+  padding: clamp(24px, 3vw, 36px);
   border-radius: var(--r-lg);
   background: var(--surface);
 }
 
-.socket-scene,
-.socket-pins {
+.connector {
+  display: block;
   width: 100%;
   height: auto;
 }
 
-.socket-pins {
-  max-width: 240px;
-  justify-self: center;
+.connector .shell {
+  fill: var(--ink);
 }
 
-.socket-scene .dash {
-  fill: var(--surface-2);
+.connector .face {
+  fill: var(--ink-soft);
 }
 
-.socket-scene .wheel {
-  fill: none;
+.connector .cavity {
+  fill: var(--ink);
   stroke: var(--muted);
-  stroke-width: 9;
+  stroke-width: 1.5;
 }
 
-.socket-scene .hub,
-.socket-scene .column,
-.socket-scene .pedal {
-  fill: var(--surface-2);
-}
-
-.socket-scene .hit circle {
-  fill: none;
-  stroke: var(--sign);
-  stroke-width: 4;
-}
-
-.socket-scene .hit rect {
-  fill: var(--ink);
-}
-
-.socket-pins .shell {
-  fill: var(--ink);
-}
-
-.socket-pins .pin {
-  fill: var(--surface-2);
-}
-
-.socket-pins .pin.k {
+.connector .cavity.data {
   fill: var(--sign);
+  stroke: var(--sign);
+}
+
+.connector .cavity.power {
+  fill: var(--paper);
+  stroke: var(--paper);
+}
+
+.connector .cavity.ground {
+  stroke: var(--paper);
+  stroke-width: 2.5;
+}
+
+.connector .pin-no {
+  fill: var(--surface-2);
+  font: 600 15px var(--num);
+  text-anchor: middle;
+}
+
+@media (prefers-color-scheme: dark) {
+  .connector .shell {
+    fill: #0e1214;
+  }
+  .connector .face {
+    fill: #262e31;
+  }
+  .connector .cavity {
+    fill: #0e1214;
+  }
+  .connector .cavity.power {
+    fill: var(--ink);
+    stroke: var(--ink);
+  }
+  .connector .cavity.ground {
+    stroke: var(--ink);
+  }
+  .connector .pin-no {
+    fill: var(--muted);
+  }
+}
+
+.pin-legend {
+  display: grid;
+  gap: 12px;
+  margin: 26px 0 0;
+}
+
+.pin-legend div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.pin-legend dt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 18px/1 var(--num);
+  letter-spacing: 0.01em;
+}
+
+.pin-legend dd {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.swatch {
+  width: 10px;
+  height: 16px;
+  border-radius: 3px;
+  flex: none;
+  background: var(--ink);
+}
+
+.swatch.data {
+  background: var(--sign);
+}
+
+.swatch.power {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.swatch.ground {
+  background: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--paper);
+}
+
+.socket-art figcaption {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .socket-text p {
@@ -1249,8 +1337,34 @@ pre {
 }
 
 .socket-text h3 {
-  margin: 28px 0 0;
+  margin: 30px 0 0;
   font: 600 18px/1.25 var(--sans);
+}
+
+.look {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: look;
+  max-width: 48ch;
+}
+
+.look li {
+  counter-increment: look;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  padding: 10px 0;
+  color: var(--ink-soft);
+}
+
+.look li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.look li::before {
+  content: counter(look);
+  font: 600 18px/1.4 var(--num);
+  color: var(--muted);
 }
 
 .socket-text .text-button {
@@ -1367,6 +1481,15 @@ pre {
   .decoder {
     padding: 22px 20px 20px;
   }
+  .socket-text {
+    order: -1;
+  }
+  .pin-legend div {
+    grid-template-columns: 96px 1fr;
+  }
+  .pin-legend dt {
+    font-size: 16px;
+  }
   .engine-light {
     width: 48px;
     height: 33px;
@@ -1407,6 +1530,13 @@ pre {
   .mark .vp,
   .vp-button {
     width: 100%;
+  }
+  .vp-chevron {
+    margin-left: auto;
+  }
+  .vp-panel {
+    width: 100%;
+    padding: 20px;
   }
   /* Connect / Disconnect live in a bar at the bottom, within thumb reach. */
   .top .actions {

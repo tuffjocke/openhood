@@ -100,19 +100,19 @@ export function VehiclePicker({
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-label={selection.chosen ? `Your car: ${label.title}. Change` : "Choose your car"}
       >
-        <span className="vp-text">
-          <span className="vp-label">{selection.chosen ? "Your car" : "Start here"}</span>
-          <span className="vp-title">
-            {selection.chosen ? label.title : "Choose your car"}
-            {selection.chosen && label.detail && <span className="vp-detail">{label.detail}</span>}
-          </span>
+        {!selection.chosen && <i className="vp-dot" aria-hidden />}
+        <span className="vp-title">
+          {selection.chosen ? label.title : "Choose your car"}
+          {selection.chosen && label.detail && <span className="vp-detail">{label.detail}</span>}
         </span>
         {!disabled && <span className="vp-chevron" aria-hidden />}
       </button>
 
       {open && (
         <div className="vp-panel" role="dialog" aria-label="Choose your car">
+          <p className="vp-head">Which car is it?</p>
           <div className="vp-fields">
             <label>
               <span>Make</span>
@@ -150,7 +150,7 @@ export function VehiclePicker({
                     }}
                   >
                     <option value="" disabled>
-                      {make ? "Choose" : ""}
+                      {make ? "Choose" : "Pick a make first"}
                     </option>
                     {modelList.map((m) => (
                       <option key={m} value={m}>
