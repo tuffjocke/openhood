@@ -7,6 +7,7 @@ const CABLE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/hardware
 /** Shown instead of the empty gauges until the first connection: three steps and one clear action. */
 export function FirstRun({
   vehicle,
+  chosen,
   profile,
   serialOk,
   connecting,
@@ -15,6 +16,8 @@ export function FirstRun({
   onSimulator,
 }: {
   vehicle: string;
+  /** Has the person picked a car yet? */
+  chosen: boolean;
   profile: VehicleProfile;
   serialOk: boolean;
   /** Which connection is in progress, if any. */
@@ -30,7 +33,9 @@ export function FirstRun({
           <span className="step-no">01</span>
           <h3>Choose your car</h3>
           <p>
-            {vehicle ? (
+            {!chosen ? (
+              "Make, model and year. If yours isn't listed, the generic option works on most cars from the 2000s."
+            ) : vehicle ? (
               <strong>{vehicle}</strong>
             ) : (
               <>
@@ -38,8 +43,8 @@ export function FirstRun({
               </>
             )}
           </p>
-          <button className="link-button" onClick={onChangeCar}>
-            Change car
+          <button className={chosen ? "quiet" : ""} onClick={onChangeCar}>
+            {chosen ? "Change car" : "Choose your car"}
           </button>
         </li>
         <li>

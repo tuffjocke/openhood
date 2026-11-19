@@ -10,6 +10,8 @@ export interface Selection {
   model?: string;
   year?: number;
   engine?: string;
+  /** False until the person has picked a car themselves (first visit). */
+  chosen?: boolean;
 }
 
 const OTHER = "__other";
@@ -17,7 +19,7 @@ const ADD_CAR_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding
 
 export function selectionLabel(sel: Selection, profile: VehicleProfile) {
   if (sel.make && sel.model && sel.year) return { title: `${sel.make} ${sel.model} ${sel.year}`, detail: sel.engine };
-  return { title: profile.name, detail: undefined };
+  return { title: profile.name, detail: profile.generic ? "car not listed" : undefined };
 }
 
 /** Make → model → year (→ engine if several profiles fit) picker. */
@@ -71,7 +73,7 @@ export function VehiclePicker({
   }
 
   function choose(s: Selection) {
-    onSelect(s);
+    onSelect({ ...s, chosen: true });
     setOpen(false);
   }
 
@@ -93,14 +95,20 @@ export function VehiclePicker({
   return (
     <div className="vp" ref={root}>
       <button
-        className="vp-button"
+        className={`vp-button${selection.chosen ? "" : " vp-unset"}`}
         onClick={() => (open ? setOpen(false) : openPanel())}
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <span>{label.title}</span>
-        {label.detail && <span className="vp-detail">{label.detail}</span>}
+        <span className="vp-text">
+          <span className="vp-label">{selection.chosen ? "Your car" : "Start here"}</span>
+          <span className="vp-title">
+            {selection.chosen ? label.title : "Choose your car"}
+            {selection.chosen && label.detail && <span className="vp-detail">{label.detail}</span>}
+          </span>
+        </span>
+        {!disabled && <span className="vp-chevron" aria-hidden />}
       </button>
 
       {open && (

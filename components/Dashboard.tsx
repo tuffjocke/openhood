@@ -78,7 +78,7 @@ export default function Dashboard() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(VEHICLE_KEY) ?? "null") as Selection | null;
-      if (saved && getProfile(saved.profileId)) setSelection(saved);
+      if (saved && getProfile(saved.profileId)) setSelection({ ...saved, chosen: true });
     } catch {}
     setSerialOk(WebSerialTransport.supported());
   }, []);
@@ -353,6 +353,7 @@ export default function Dashboard() {
       {showFirstRun ? (
         <FirstRun
           vehicle={vehicleText}
+          chosen={!!selection.chosen}
           profile={profile}
           serialOk={serialOk}
           connecting={status === "connecting" ? source : null}

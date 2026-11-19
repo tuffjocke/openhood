@@ -46,7 +46,7 @@ body {
 .top {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
   padding-bottom: 18px;
@@ -55,7 +55,7 @@ body {
 
 .mark {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
 }
 
@@ -81,28 +81,70 @@ h2 {
 
 .vp-button {
   display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  font: 500 15px/1.2 var(--sans);
+  align-items: center;
+  gap: 14px;
+  min-width: 250px;
+  text-align: left;
   color: var(--ink);
   background: transparent;
-  border: 0;
-  border-bottom: 1.5px dashed var(--rule);
-  padding: 2px 0 3px;
+  border: 1px solid var(--rule);
+  padding: 7px 12px 8px;
 }
 
 .vp-button:hover:not(:disabled) {
-  border-bottom-color: var(--ink);
+  border-color: var(--ink);
+}
+
+.vp-button.vp-unset {
+  border: 1.5px solid var(--ink);
 }
 
 .vp-button:disabled {
-  border-bottom-color: transparent;
+  border-color: transparent;
+  padding-left: 0;
   opacity: 1;
+  cursor: default;
+}
+
+.vp-text {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.vp-label {
+  font: 500 10px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.vp-title {
+  font: 500 15px/1.25 var(--sans);
+}
+
+.vp-unset .vp-title {
+  font-weight: 600;
 }
 
 .vp-detail {
+  margin-left: 8px;
   font: 400 12px/1 var(--mono);
   color: var(--muted);
+}
+
+.vp-chevron {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--ink);
+  margin-left: auto;
+}
+
+.vp-button[aria-expanded="true"] .vp-chevron {
+  transform: rotate(180deg);
 }
 
 .vp-panel {
@@ -350,6 +392,10 @@ button:focus-visible {
 
 .steps .link-button {
   font-size: 13px;
+}
+
+.steps button {
+  padding: 8px 14px;
 }
 
 .first-run-actions {
@@ -911,9 +957,12 @@ pre {
     align-items: flex-start;
     gap: 10px;
   }
+  .mark .vp,
   .vp-button {
-    flex-wrap: wrap;
-    text-align: left;
+    width: 100%;
+  }
+  .mark {
+    flex: 1;
   }
   .vp-fields {
     grid-template-columns: 1fr;
