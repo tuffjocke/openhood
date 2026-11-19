@@ -35,7 +35,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       three-step guide shown until the first connection with the selected car
+components/FirstRun       hero (what Openhood does, live simulated preview) and steps, until the first connection
+components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles
@@ -84,9 +85,12 @@ Follow docs/adding-a-vehicle.md. In short:
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.
 - Every profile must have a working simulator. The app and tests must work with no hardware.
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.
-- UI style: quiet instrument look. Plain CSS in `app/globals.css`, CSS variables for colour,
-  IBM Plex Sans/Mono, hairline rules, no shadows, no gradients, no rounded cards, one accent
-  colour (`--signal`) used only for live/warning states. Must work on a phone and in dark mode (follows the system setting).
+- UI style: for petrol heads, minimal and Scandinavian. A Nordic workshop with a digital dash on the bench.
+  Plain CSS in `app/globals.css` using its tokens: birch paper, granite ink, tonal surfaces (no hairline
+  boxes, no shadows, no gradients), readouts in the dark instrument cluster with segmented bar gauges
+  (`components/Gauge.tsx`). Road-sign yellow (`--sign`) means "look at this", falu red (`--falu`) only
+  "fix now". Familjen Grotesk for text, Barlow Condensed for numbers, both self-hosted. Sentence-case labels,
+  no all-caps. Must work on a phone and in dark mode (follows the system setting).
 - Writing: plain English, no em or en dashes in UI text.
 - **Credit and licences.** Code or data ported from another project must be compatible with GPL-3.0
   (MIT, BSD, Apache, GPL) and get an entry in THIRD_PARTY_NOTICES.md. A project with no licence may

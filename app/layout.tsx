@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import "@fontsource-variable/familjen-grotesk";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
 import "./globals.css";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";

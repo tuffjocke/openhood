@@ -7,7 +7,7 @@
  *   offline even if you never opened it twice.
  * Bump VERSION to throw away old caches.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `openhood-${VERSION}`;
 const SCOPE = new URL(self.registration.scope).pathname; // e.g. "/openhood/"
 

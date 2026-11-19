@@ -17,7 +17,8 @@ import { SimulatedTransport } from "@/core/transport/simulated";
 import { TimeoutError } from "@/core/transport/types";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
-import { Sparkline, type Point } from "./Sparkline";
+import { Gauge } from "./Gauge";
+import type { Point } from "./Sparkline";
 import { FaultPanel, FaultSummary } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
@@ -364,30 +365,24 @@ export default function Dashboard() {
       ) : (
         <>
           <FaultSummary faults={faults} pending={pending} readiness={readiness} explanations={profile.faults?.explanations} />
-          <section className="grid">
+          <section className="grid cluster">
             {profile.channels.map((c) => {
               const v = latest.current[c.key];
               const warn = isWarn(c, v);
               return (
                 <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
-                  <div className="cell-head">
-                    <span>{c.label}</span>
-                    <span>{c.unit}</span>
+                  <div className="cell-head">{c.label}</div>
+                  <div className="value-row">
+                    {unavailable.has(c.key) ? (
+                      <span className="value na" title="This car doesn't report this value">
+                        n/a
+                      </span>
+                    ) : (
+                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
+                    )}
+                    <span className="unit">{c.unit}</span>
                   </div>
-                  {unavailable.has(c.key) ? (
-                    <div className="value na" title="This car doesn't report this value">
-                      n/a
-                    </div>
-                  ) : (
-                    <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
-                  )}
-                  <Sparkline
-                    points={history.current[c.key] ?? []}
-                    now={now}
-                    min={c.min}
-                    max={c.max}
-                    warn={c.warnAbove ?? c.warnBelow}
-                  />
+                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
                 </div>
               );
             })}

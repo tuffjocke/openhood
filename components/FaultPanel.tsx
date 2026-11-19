@@ -100,7 +100,7 @@ export function FaultSummary({
   if (pending?.length) parts.push(`${pending.length} pending`);
   return (
     <a className={`summary summary-${level}`} href="#faults">
-      <span>{parts.join(" · ")}</span>
+      <span>{parts.join(". ")}.</span>
       {groups.length > 0 && <span className="summary-go">See faults</span>}
     </a>
   );
@@ -351,7 +351,7 @@ export function FaultPanel({
   return (
     <div className="panel" id="faults">
       <div className="panel-head">
-        <h2>Fault memory</h2>
+        <h2>Faults</h2>
         <div>
           <button className="quiet" disabled={!live || busy} onClick={onRead}>
             Read
