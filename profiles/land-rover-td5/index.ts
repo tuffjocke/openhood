@@ -1,0 +1,40 @@
+import type { VehicleProfile } from "@/core/profile";
+import { channels, groups } from "./data";
+import { faults } from "./faults";
+import { td5Key } from "./keygen";
+import { createTd5Simulator } from "./simulator";
+
+/**
+ * Land Rover Td5 engine ECU. Reference profile: copy its shape for new vehicles.
+ * Status and sources: ./README.md
+ */
+export const landRoverTd5: VehicleProfile = {
+  id: "land-rover-td5",
+  name: "Land Rover Td5",
+  covers: "Defender, Discovery 2 · 1998 to 2006",
+  ecu: "Engine ECU (MSB / NNN)",
+  status: "experimental",
+
+  link: {
+    baudRate: 10400,
+    init: "fast",
+    addresses: { ecu: 0x13, tester: 0xf7 },
+    interMessageMs: 30,
+  },
+
+  async connect(ecu) {
+    await ecu.request([0x81], { addressed: true, note: "start communication" });
+    await ecu.request([0x10, 0xa0], { note: "diagnostic session" });
+    const seed = await ecu.request([0x27, 0x01], { note: "request seed" });
+    const key = td5Key((seed[2] << 8) | seed[3]);
+    await ecu.request([0x27, 0x02, key >> 8, key & 0xff], { note: "send key" });
+  },
+
+  channels,
+  groups,
+  // rpm, boost and pedal three times as often as the slow stuff
+  schedule: ["rpm", "manifold", "pedal", "speed", "rpm", "manifold", "pedal", "temperatures", "rpm", "manifold", "pedal", "battery"],
+  slowGroups: ["ambient"],
+  faults,
+  simulator: createTd5Simulator,
+};

@@ -1,0 +1,110 @@
+/**
+ * KWP2000 (ISO 14230) framing. Vehicle independent.
+ *
+ * Frame:  [format] ([target] [source]) [payload ...] [checksum]
+ *  - format with bit 7 set: addressed header, payload length in the low 6 bits
+ *  - format without it:     the byte is just the payload length (no addresses)
+ *  - checksum:              sum of all previous bytes, mod 256
+ *
+ * "payload" everywhere in this codebase means service id + data, e.g. [0x21, 0x09].
+ */
+
+export function checksum(bytes: ArrayLike<number>, len = bytes.length) {
+  let s = 0;
+  for (let i = 0; i < len; i++) s = (s + bytes[i]) & 0xff;
+  return s;
+}
+
+export interface Addresses {
+  /** ECU address, e.g. 0x13 for the Td5 engine ECU. */
+  ecu: number;
+  /** Our (tester) address, usually 0xF1 or 0xF7. */
+  tester: number;
+}
+
+/** Short frame: [len] [payload...] [cs] */
+export function shortFrame(payload: ArrayLike<number>): Uint8Array {
+  const out = [payload.length, ...Array.from(payload)];
+  out.push(checksum(out));
+  return Uint8Array.from(out);
+}
+
+/** Addressed frame: [0x80|len] [target] [source] [payload...] [cs] */
+export function addressedFrame(payload: ArrayLike<number>, target: number, source: number): Uint8Array {
+  const out = [0x80 | payload.length, target, source, ...Array.from(payload)];
+  out.push(checksum(out));
+  return Uint8Array.from(out);
+}
+
+/** How many bytes follow the first (format) byte of a frame. */
+export function remainingLength(format: number) {
+  return format & 0x80 ? (format & 0x3f) + 3 : format + 1;
+}
+
+export interface Frame {
+  raw: Uint8Array;
+  addressed: boolean;
+  /** Service id + data, without header or checksum. */
+  payload: Uint8Array;
+}
+
+export function parseFrame(raw: Uint8Array): Frame {
+  if (checksum(raw, raw.length - 1) !== raw[raw.length - 1]) {
+    throw new Error(`Bad checksum in ${hex(raw)}`);
+  }
+  const addressed = (raw[0] & 0x80) !== 0;
+  return { raw, addressed, payload: raw.subarray(addressed ? 3 : 1, raw.length - 1) };
+}
+
+/** Standard KWP2000 service ids. Profiles may use others. */
+export const SID = {
+  startDiagnosticSession: 0x10,
+  ecuReset: 0x11,
+  clearDiagnosticInfo: 0x14,
+  readDtcByStatus: 0x18,
+  readEcuId: 0x1a,
+  readDataByLocalId: 0x21,
+  securityAccess: 0x27,
+  testerPresent: 0x3e,
+  startCommunication: 0x81,
+  stopCommunication: 0x82,
+  negativeResponse: 0x7f,
+} as const;
+
+/** A positive response SID is the request SID + 0x40. */
+export const positive = (sid: number) => sid + 0x40;
+
+export const NRC: Record<number, string> = {
+  0x10: "general reject",
+  0x11: "service not supported",
+  0x12: "sub-function not supported",
+  0x21: "busy, repeat request",
+  0x22: "conditions not correct",
+  0x31: "request out of range",
+  0x33: "security access denied",
+  0x35: "invalid key",
+  0x36: "exceeded number of attempts",
+  0x37: "required time delay not expired",
+  0x78: "response pending",
+};
+
+export class NegativeResponse extends Error {
+  constructor(public service: number, public code: number) {
+    super(`ECU refused service 0x${h2(service)}: ${NRC[code] ?? "code 0x" + h2(code)}`);
+  }
+}
+
+export const h2 = (n: number) => n.toString(16).toUpperCase().padStart(2, "0");
+export const hex = (b: ArrayLike<number>) => Array.from(b, h2).join(" ");
+/** Big-endian unsigned 16 bit at index i. */
+export const u16 = (d: ArrayLike<number>, i: number) => (d[i] << 8) | d[i + 1];
+/** Big-endian signed 16 bit at index i. */
+export const s16 = (d: ArrayLike<number>, i: number) => {
+  const v = u16(d, i);
+  return v & 0x8000 ? v - 0x10000 : v;
+};
+/** Number to two big-endian bytes (clamped to 0..65535). */
+export const be16 = (v: number) => {
+  const n = Math.max(0, Math.min(0xffff, Math.round(v)));
+  return [(n >> 8) & 0xff, n & 0xff];
+};

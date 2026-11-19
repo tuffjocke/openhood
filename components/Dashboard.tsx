@@ -1,0 +1,348 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { hex, NegativeResponse } from "@/core/kwp2000/frame";
+import type { Channel, Values } from "@/core/profile";
+import { Session, type TrafficEvent } from "@/core/session";
+import { SimulatedTransport } from "@/core/transport/simulated";
+import { TimeoutError } from "@/core/transport/types";
+import { WebSerialTransport } from "@/core/transport/webserial";
+import { getProfile, PROFILES } from "@/profiles";
+import { Sparkline, type Point } from "./Sparkline";
+
+type Status = "idle" | "connecting" | "live" | "error";
+type Source = "serial" | "simulator";
+
+const HISTORY_MS = 60_000;
+const LOG_LINES = 300;
+const PROFILE_KEY = "openhood.profile";
+
+/** toFixed without "-0.00". */
+function fmt(v: number, decimals: number) {
+  const s = v.toFixed(decimals);
+  return /^-0(\.0+)?$/.test(s) ? s.slice(1) : s;
+}
+
+function isWarn(c: Channel, v: number | undefined) {
+  if (v === undefined) return false;
+  return (c.warnAbove !== undefined && v > c.warnAbove) || (c.warnBelow !== undefined && v < c.warnBelow);
+}
+
+function explain(e: unknown): string | null {
+  if (e instanceof DOMException && e.name === "NotFoundError") return null; // picker cancelled
+  if (e instanceof TimeoutError)
+    return "No answer from the ECU. Check that the ignition is on and that the cable is a KKL type, not an ELM327.";
+  if (e instanceof NegativeResponse) return e.message;
+  return e instanceof Error ? e.message : String(e);
+}
+
+export default function Dashboard() {
+  const [profileId, setProfileId] = useState(PROFILES[0].id);
+  const profile = getProfile(profileId) ?? PROFILES[0];
+  const [status, setStatus] = useState<Status>("idle");
+  const [source, setSource] = useState<Source | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [faults, setFaults] = useState<string[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
+  const [serialOk, setSerialOk] = useState(true);
+  const [now, setNow] = useState(0);
+  const [night, setNight] = useState(false);
+
+  const session = useRef<Session | null>(null);
+  const latest = useRef<Values>({});
+  const history = useRef<Record<string, Point[]>>({});
+  const traffic = useRef<TrafficEvent[]>([]);
+  const reads = useRef<number[]>([]);
+  const rows = useRef<string[]>([]);
+  const recStart = useRef(0);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PROFILE_KEY);
+      if (saved && getProfile(saved)) setProfileId(saved);
+    } catch {}
+    setSerialOk(WebSerialTransport.supported());
+    setNight(window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }, []);
+
+  // Repaint at 10 Hz; also the recording clock.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = performance.now();
+      setNow(t);
+      if (recording && status === "live") {
+        const v = latest.current;
+        rows.current.push(
+          [((t - recStart.current) / 1000).toFixed(1), ...profile.channels.map((c) => v[c.key]?.toFixed(c.decimals + 1) ?? "")].join(","),
+        );
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [recording, status, profile]);
+
+  const onValues = useCallback((v: Values) => {
+    const t = performance.now();
+    Object.assign(latest.current, v);
+    for (const [k, val] of Object.entries(v)) {
+      const h = (history.current[k] ??= []);
+      h.push({ t, v: val as number });
+      while (h.length && t - h[0].t > HISTORY_MS) h.shift();
+    }
+    reads.current.push(t);
+    while (reads.current.length && t - reads.current[0] > 2000) reads.current.shift();
+  }, []);
+
+  const onTraffic = useCallback((e: TrafficEvent) => {
+    traffic.current.push(e);
+    if (traffic.current.length > LOG_LINES) traffic.current.shift();
+  }, []);
+
+  async function connect(kind: Source) {
+    setError(null);
+    setFaults(null);
+    setSource(kind);
+    setStatus("connecting");
+    latest.current = {};
+    history.current = {};
+    traffic.current = [];
+    const transport =
+      kind === "serial" ? new WebSerialTransport({ baudRate: profile.link.baudRate }) : new SimulatedTransport(profile);
+    const s = new Session(profile, transport, onTraffic);
+    session.current = s;
+    try {
+      await s.connect();
+      setStatus("live");
+      s.readFaults().then(setFaults, () => {});
+      void s.poll(onValues, (e) => {
+        setStatus("error");
+        setError(explain(e) ?? "Lost the ECU.");
+      });
+    } catch (e) {
+      const msg = explain(e);
+      setStatus(msg ? "error" : "idle");
+      setError(msg);
+    }
+  }
+
+  async function disconnect() {
+    setRecording(false);
+    await session.current?.disconnect();
+    session.current = null;
+    setStatus("idle");
+    setSource(null);
+  }
+
+  async function faultAction(clear: boolean) {
+    if (!session.current) return;
+    setBusy(true);
+    try {
+      if (clear) await session.current.clearFaults();
+      setFaults(await session.current.readFaults());
+    } catch (e) {
+      setError(explain(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function toggleRecording() {
+    if (!recording) {
+      rows.current = [];
+      recStart.current = performance.now();
+      setRecording(true);
+      return;
+    }
+    setRecording(false);
+    const header = ["time_s", ...profile.channels.map((c) => `${c.key}_${c.unit.replace(/[^a-z%]/gi, "")}`)].join(",");
+    const blob = new Blob([header + "\n" + rows.current.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${profile.id}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function toggleNight() {
+    document.documentElement.dataset.theme = night ? "day" : "night";
+    setNight(!night);
+  }
+
+  function pickProfile(id: string) {
+    setProfileId(id);
+    setFaults(null);
+    latest.current = {};
+    history.current = {};
+    try {
+      localStorage.setItem(PROFILE_KEY, id);
+    } catch {}
+  }
+
+  const live = status === "live";
+  const rate = reads.current.length / 2;
+  const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
+
+  return (
+    <main className="shell">
+      <header className="top">
+        <div className="mark">
+          <span className="mark-name">Openhood</span>
+          <select
+            className="picker"
+            value={profile.id}
+            onChange={(e) => pickProfile(e.target.value)}
+            disabled={status === "live" || status === "connecting"}
+            aria-label="Vehicle"
+          >
+            {PROFILES.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="top-right">
+          <span className={`status status-${status}`}>
+            <i />
+            {status === "idle" && "Not connected"}
+            {status === "connecting" && "Waking ECU…"}
+            {status === "live" && `${source === "simulator" ? "Simulator" : "Live"} · ${rate.toFixed(0)} reads/s`}
+            {status === "error" && "Stopped"}
+          </span>
+          {status === "idle" || status === "error" ? (
+            <>
+              <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Web Serial not available here"}>
+                Connect cable
+              </button>
+              <button className="quiet" onClick={() => connect("simulator")}>
+                Simulator
+              </button>
+            </>
+          ) : (
+            <button onClick={disconnect} disabled={status === "connecting"}>
+              Disconnect
+            </button>
+          )}
+          <button className="quiet" onClick={toggleNight}>
+            {night ? "Day" : "Night"}
+          </button>
+        </div>
+      </header>
+
+      <p className="sub">
+        {profile.covers} · {profile.ecu} · K-line {profile.link.baudRate}
+        {profile.status === "experimental" && <span className="tag">experimental</span>}
+      </p>
+
+      {error && (
+        <p className="notice" role="alert">
+          {error}
+        </p>
+      )}
+      {!serialOk && status === "idle" && !error && (
+        <p className="notice quiet-notice">
+          This browser can&rsquo;t open serial ports. Use Chrome or Edge on a computer, or Chrome on Android. The
+          simulator works anywhere.
+        </p>
+      )}
+
+      <section className="grid">
+        {profile.channels.map((c) => {
+          const v = latest.current[c.key];
+          const warn = isWarn(c, v);
+          return (
+            <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
+              <div className="cell-head">
+                <span>{c.label}</span>
+                <span>{c.unit}</span>
+              </div>
+              <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
+              <Sparkline
+                points={history.current[c.key] ?? []}
+                now={now}
+                min={c.min}
+                max={c.max}
+                warn={c.warnAbove ?? c.warnBelow}
+              />
+            </div>
+          );
+        })}
+      </section>
+
+      {status === "idle" && !error && (
+        <p className="hint">
+          KKL cable into the OBD socket, ignition on, then <em>Connect cable</em>. Engine can be off or running.
+          Nothing is written to the ECU. No car nearby? Try the <em>Simulator</em>.
+        </p>
+      )}
+
+      <section className="lower">
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Fault memory</h2>
+            <div>
+              <button className="quiet" disabled={!live || busy} onClick={() => faultAction(false)}>
+                Read
+              </button>
+              <button
+                className="quiet"
+                disabled={!live || busy || !faults?.length || !profile.faults?.clear}
+                onClick={() => faultAction(true)}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          {!profile.faults ? (
+            <p className="muted">This profile can&rsquo;t read faults yet.</p>
+          ) : faults === null ? (
+            <p className="muted">{live ? "Reading…" : "Connect to read stored faults."}</p>
+          ) : faults.length === 0 ? (
+            <p className="muted">No stored faults.</p>
+          ) : (
+            <ol className="faults">
+              {faults.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Log a drive</h2>
+            <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
+              {recording ? "Stop and save CSV" : "Start"}
+            </button>
+          </div>
+          <p className="muted">
+            {recording
+              ? `Recording ${Math.floor(recSeconds / 60)}:${String(recSeconds % 60).padStart(2, "0")} · ${rows.current.length} rows at 10 Hz`
+              : "Every channel, ten times a second, saved as CSV when you stop."}
+          </p>
+        </div>
+      </section>
+
+      <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
+        <summary>K-line traffic</summary>
+        {logOpen && (
+          <pre>
+            {traffic.current
+              .slice(-80)
+              .map(
+                (e) =>
+                  `${(e.t / 1000).toFixed(3).padStart(9)}  ${e.dir === "tx" ? "→" : "←"}  ${hex(e.bytes)}${e.note ? `   ${e.note}` : ""}`,
+              )
+              .join("\n") || "Nothing yet."}
+          </pre>
+        )}
+      </details>
+
+      <footer className="foot">
+        <a href="https://github.com/tuffjocke/openhood">Open source on GitHub</a>
+        <a href="https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md">Add your car</a>
+      </footer>
+    </main>
+  );
+}
