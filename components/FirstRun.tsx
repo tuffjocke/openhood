@@ -5,8 +5,9 @@ import type { Channel, VehicleProfile } from "@/core/profile";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { Gauge } from "./Gauge";
-
-const CABLE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/hardware.md";
+import { CodeLookup } from "./landing/CodeLookup";
+import { Decoder } from "./landing/Decoder";
+import { SocketGuide } from "./landing/SocketGuide";
 
 /** A live reading from the selected profile's simulator, shown in the hero. Stops when unmounted. */
 function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
@@ -78,7 +79,7 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
   );
 }
 
-/** The first thing people see: what Openhood does, a live example, and how to start. */
+/** The first thing people see: the problem it solves, how to start, and a deeper layer for the curious. */
 export function FirstRun({
   vehicle,
   chosen,
@@ -104,65 +105,79 @@ export function FirstRun({
     <section className="first-run" aria-label="Getting started">
       <div className="hero">
         <div className="hero-text">
-          <h1>Talk to your engine.</h1>
+          <h1>Engine light on? Find out why.</h1>
           <p className="lede">
-            Openhood plugs into the engine computer of cars from about 1996 to 2008. Live boost, temperatures, air flow
-            and revs. Fault codes in plain words, cleared when you&rsquo;re done. A cheap USB cable and this browser: no
-            dealer tool, nothing to install, free and open source.
+            Plug a cheap USB cable into your car and Openhood reads the fault codes, then tells you in plain words what
+            they mean and how urgent they are. Right here in the browser. Free, nothing to install.
           </p>
           <div className="hero-actions">
             {serialOk ? (
               <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-                {connecting === "serial" ? "Waking the car…" : "Connect cable"}
+                {connecting === "serial" ? "Waking the car…" : "Read my car"}
               </button>
             ) : (
               <p className="hero-note">
-                This browser can&rsquo;t talk to a cable. Use Chrome or Edge on a computer, or Chrome on Android.
+                Reading a car needs Chrome or Edge on a computer, or Chrome on Android. You can still look up a code below.
               </p>
             )}
             <button className="ghost big" onClick={onSimulator} disabled={!!connecting}>
-              {connecting === "simulator" ? "Starting the simulator…" : "Try the simulator"}
+              {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
             </button>
           </div>
+          <p className="trust">Openhood only reads. Nothing in your car is changed, and nothing leaves this browser.</p>
         </div>
-        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
+        <Decoder />
       </div>
 
-      <ol className="steps" aria-label="How to connect">
-        <li>
-          <span className="step-no">1</span>
-          <div>
-            <h3>Choose your car</h3>
-            <p>
-              {!chosen
-                ? "Make, model and year. Not listed? The generic option reads the standard values most cars from the 2000s report."
-                : vehicle
-                  ? `${vehicle}.`
-                  : `${profile.name}, for cars that aren't listed yet.`}
-            </p>
-            <button className="text-button" onClick={onChangeCar}>
-              {chosen ? "Change car" : "Choose your car"}
-            </button>
-          </div>
-        </li>
-        <li>
-          <span className="step-no">2</span>
-          <div>
-            <h3>Plug in the cable</h3>
-            <p>{profile.hardware ?? "A KKL cable in the OBD socket under the dashboard."}</p>
-            <a className="text-button" href={CABLE_URL}>
-              Which cable to buy
-            </a>
-          </div>
-        </li>
-        <li>
-          <span className="step-no">3</span>
-          <div>
-            <h3>Ignition on, then connect</h3>
-            <p>The engine can be off or running. Openhood only reads, so nothing in the car is changed.</p>
-          </div>
-        </li>
-      </ol>
+      <section className="how" aria-labelledby="how-title">
+        <h2 id="how-title">Three steps, about five minutes</h2>
+        <ol className="steps">
+          <li>
+            <span className="step-no">1</span>
+            <div>
+              <h3>Choose your car</h3>
+              <p>
+                {!chosen
+                  ? "Make, model and year. Not on the list? Pick \u201cMy car isn\u2019t listed\u201d and Openhood reads the standard codes most cars share."
+                  : vehicle
+                    ? `${vehicle}.`
+                    : "Your car isn\u2019t listed yet, so Openhood reads the standard codes most cars share."}
+              </p>
+              <button className="text-button" onClick={onChangeCar}>
+                {chosen ? "Change car" : "Choose your car"}
+              </button>
+            </div>
+          </li>
+          <li>
+            <span className="step-no">2</span>
+            <div>
+              <h3>Plug in the cable</h3>
+              <p>{profile.hardware ?? "Into the socket under the dashboard, then into your computer or phone."}</p>
+            </div>
+          </li>
+          <li>
+            <span className="step-no">3</span>
+            <div>
+              <h3>Turn the key and press read</h3>
+              <p>Ignition on is enough; the engine can be off. You&rsquo;ll see each fault in plain words.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <SocketGuide />
+      <CodeLookup />
+
+      <section className="curious" aria-labelledby="curious-title">
+        <div className="curious-text">
+          <h2 id="curious-title">Live data, for the curious</h2>
+          <p>
+            Once connected, the dash comes alive: revs, temperatures, boost and air flow as you drive, with logging to a
+            file. This is a demo car running right now.
+          </p>
+        </div>
+        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
+      </section>
     </section>
   );
 }

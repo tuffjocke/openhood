@@ -1028,6 +1028,354 @@ pre {
   text-underline-offset: 4px;
 }
 
+/* ----------------------------------------------------------- landing */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.hero {
+  align-items: center;
+}
+
+.hero h1 {
+  max-width: 12ch;
+}
+
+.trust {
+  margin: 22px 0 0;
+  max-width: 44ch;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* The signature moment: a code becomes plain words. */
+.decoder {
+  margin: 0;
+  padding: 28px 30px 24px;
+  border-radius: var(--r-lg);
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+}
+
+.decoder-top {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.engine-light {
+  width: 64px;
+  height: 44px;
+  flex: none;
+  color: var(--cl-off);
+  transition: color 0.25s ease, filter 0.25s ease;
+}
+
+.engine-light.lit {
+  color: #f5a300;
+  filter: drop-shadow(0 0 10px rgba(245, 163, 0, 0.45));
+}
+
+.decoder-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1em;
+  font: 600 clamp(64px, 8vw, 104px) / 0.9 var(--num);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.8em;
+  margin-left: 0.06em;
+  background: var(--cl-ink);
+  opacity: 0;
+}
+
+.caret.on {
+  animation: blink 0.9s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 1;
+  }
+}
+
+.decoder-words {
+  margin-top: auto;
+  padding-top: 26px;
+  border-top: 1px solid var(--cl-line);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.decoder-words.in {
+  opacity: 1;
+  transform: none;
+}
+
+.decoder-title {
+  margin: 0;
+  font: 600 26px/1.15 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.decoder-plain {
+  margin: 10px 0 0;
+  max-width: 44ch;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--cl-muted);
+}
+
+.decoder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  margin: 18px 0 0;
+  font-size: 14px;
+  color: var(--cl-ink);
+}
+
+.decoder .urgency-ok {
+  background: var(--cl-line);
+  color: var(--cl-ink);
+}
+
+.decoder figcaption {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--cl-muted);
+}
+
+.how,
+.socket,
+.lookup,
+.curious {
+  margin-top: clamp(72px, 10vw, 136px);
+}
+
+.first-run h2 {
+  margin: 0;
+  font: 600 clamp(30px, 3.6vw, 44px) / 1.05 var(--sans);
+  letter-spacing: -0.03em;
+}
+
+.how .steps {
+  margin-top: 36px;
+}
+
+/* Where's the socket */
+.socket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+}
+
+.socket-art {
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.socket-scene,
+.socket-pins {
+  width: 100%;
+  height: auto;
+}
+
+.socket-pins {
+  max-width: 240px;
+  justify-self: center;
+}
+
+.socket-scene .dash {
+  fill: var(--surface-2);
+}
+
+.socket-scene .wheel {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 9;
+}
+
+.socket-scene .hub,
+.socket-scene .column,
+.socket-scene .pedal {
+  fill: var(--surface-2);
+}
+
+.socket-scene .hit circle {
+  fill: none;
+  stroke: var(--sign);
+  stroke-width: 4;
+}
+
+.socket-scene .hit rect {
+  fill: var(--ink);
+}
+
+.socket-pins .shell {
+  fill: var(--ink);
+}
+
+.socket-pins .pin {
+  fill: var(--surface-2);
+}
+
+.socket-pins .pin.k {
+  fill: var(--sign);
+}
+
+.socket-text p {
+  margin: 16px 0 0;
+  max-width: 48ch;
+  color: var(--ink-soft);
+}
+
+.socket-text h3 {
+  margin: 28px 0 0;
+  font: 600 18px/1.25 var(--sans);
+}
+
+.socket-text .text-button {
+  display: inline-block;
+  margin-top: 14px;
+}
+
+/* Look up a code */
+.lookup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: start;
+}
+
+.lookup-ask p {
+  margin: 16px 0 0;
+  max-width: 42ch;
+  color: var(--ink-soft);
+}
+
+.lookup-field input {
+  width: 100%;
+  max-width: 320px;
+  margin-top: 26px;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 44px/1 var(--num);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lookup-field input::placeholder {
+  color: var(--surface-2);
+}
+
+.lookup-field input:focus-visible {
+  outline: 3px solid var(--sign);
+  outline-offset: 2px;
+}
+
+.lookup-hint {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--muted);
+}
+
+.lookup-card {
+  padding: 26px 28px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.lookup-card h3 {
+  margin: 12px 0 0;
+  font: 600 24px/1.2 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.lookup-card p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+}
+
+.lookup-card ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--ink-soft);
+}
+
+.lookup-code {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 600 28px/1 var(--num);
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.lookup-card .text-button {
+  display: inline-block;
+  margin-top: 14px;
+}
+
+/* For the curious */
+.curious {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+}
+
+.curious-text p {
+  margin: 16px 0 0;
+  max-width: 42ch;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .socket,
+  .lookup,
+  .curious {
+    grid-template-columns: 1fr;
+  }
+  .decoder {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 760px) {
+  .decoder {
+    padding: 22px 20px 20px;
+  }
+  .engine-light {
+    width: 48px;
+    height: 33px;
+  }
+  .decoder-title {
+    font-size: 22px;
+  }
+}
+
 /* ------------------------------------------------------------------ phone */
 
 @media (max-width: 900px) {

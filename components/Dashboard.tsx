@@ -444,7 +444,7 @@ export default function Dashboard() {
       )}
 
       <p className="profile-info">
-        Profile: {profile.name} · {profile.ecu} · K-line {profile.link.baudRate} baud
+        Reading as: {profile.name}, {profile.ecu}
         {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
         <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
       </p>

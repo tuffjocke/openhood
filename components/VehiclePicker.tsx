@@ -19,7 +19,7 @@ const ADD_CAR_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding
 
 export function selectionLabel(sel: Selection, profile: VehicleProfile) {
   if (sel.make && sel.model && sel.year) return { title: `${sel.make} ${sel.model} ${sel.year}`, detail: sel.engine };
-  return { title: profile.name, detail: profile.generic ? "car not listed" : undefined };
+  return { title: profile.generic ? "Any car" : profile.name, detail: profile.generic ? "standard codes" : undefined };
 }
 
 /** Make → model → year (→ engine if several profiles fit) picker. */
@@ -133,7 +133,7 @@ export function VehiclePicker({
                     {m}
                   </option>
                 ))}
-                {generic && <option value={OTHER}>Other or not listed</option>}
+                {generic && <option value={OTHER}>My car isn’t listed</option>}
               </select>
             </label>
 
@@ -194,10 +194,10 @@ export function VehiclePicker({
           {make === OTHER && generic && (
             <div className="vp-other">
               <p>
-                Not listed yet. <strong>{generic.name}</strong> reads the standard values most K-line cars from about
-                2001 (petrol) and 2004 (diesel) in Europe report, or 1996 in the US.
+                No problem. Openhood can still read the standard fault codes most cars share: in Europe petrol cars from
+                about 2001 and diesels from about 2004, in the US from 1996.
               </p>
-              <button onClick={() => choose({ profileId: generic.id })}>Use {generic.name}</button>
+              <button onClick={() => choose({ profileId: generic.id })}>Use standard codes</button>
             </div>
           )}
 

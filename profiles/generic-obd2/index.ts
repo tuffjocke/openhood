@@ -11,13 +11,13 @@ import { createObdSimulator } from "./simulator";
  */
 export const genericObd2: VehicleProfile = {
   id: "generic-obd2",
-  name: "Generic OBD-II",
+  name: "Standard codes (any car)",
   covers: "Most K-line cars with OBD-II or EOBD, roughly 2001 to 2008 in Europe",
   vehicles: [],
   generic: true,
   ecu: "Engine (standard OBD values)",
   hardware:
-    "Standard KKL cable in the OBD socket, usually under the dashboard. Some cars take a few seconds longer to answer; that's normal.",
+    "Into the diagnostic socket under the dashboard, then into your computer or phone. Some cars take a few seconds to answer; that's normal.",
   status: "experimental",
 
   link: {

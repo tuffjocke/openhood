@@ -9,7 +9,7 @@ const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
   title: "Openhood",
-  description: "Browser-based diagnostics for K-line era cars. Live data, fault codes and drive logging with a cheap USB cable.",
+  description: "Engine light on? Read your car’s fault codes in plain words with a cheap USB cable and your browser. Free and open source.",
   manifest: `${base}/manifest.webmanifest`,
   icons: {
     icon: [{ url: `${base}/favicon-32.png`, sizes: "32x32", type: "image/png" }],

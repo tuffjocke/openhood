@@ -35,7 +35,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       hero (what Openhood does, live simulated preview) and steps, until the first connection
+components/FirstRun       landing until the first connection: hero, steps, socket guide, code lookup, live demo
+components/landing/       Decoder (code to plain words animation), CodeLookup (no cable, #P0171 links), SocketGuide, EngineLight
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
@@ -48,6 +49,7 @@ tests/profiles.test.ts    contract tests, run for every registered profile autom
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
+tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```

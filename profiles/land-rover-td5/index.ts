@@ -18,7 +18,7 @@ export const landRoverTd5: VehicleProfile = {
     { make: "Land Rover", model: "Discovery 2", from: 1998, to: 2004, engine: "2.5 Td5 diesel" },
   ],
   ecu: "Engine ECU (MSB / NNN)",
-  hardware: "Standard KKL cable in the OBD socket under the dashboard.",
+  hardware: "Into the diagnostic socket under the dashboard, below the steering wheel, then into your computer or phone.",
   status: "experimental",
 
   link: {
