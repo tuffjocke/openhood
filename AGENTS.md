@@ -29,10 +29,12 @@ core/                     vehicle independent, change rarely
 profiles/                 one folder per vehicle/ECU, all vehicle knowledge lives here
   index.ts                registry: add new profiles here
   land-rover-td5/         reference profile: index, data, faults, keygen, simulator, README
+  generic-obd2/           standard OBD-II: functional addressing, supported-PID detection, DTCs
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
+tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```
 
@@ -70,6 +72,10 @@ Follow docs/adding-a-vehicle.md. In short:
 
 - The K-line is half duplex. All ECU traffic goes through `Session.exclusive`. Profile code gets an
   `EcuLink` and must not touch the transport directly.
+- `EcuLink.request` waits for the response matching the request's SID and ignores other frames.
+  Use `requestMany` when several frames answer (functional requests, more than three DTCs).
+- Groups the ECU doesn't support: give them `available(state)` and `provides`. They are skipped
+  when polling and their channels show "n/a". `connect` can write to `state` to decide this.
 - Response payloads include the positive SID: for request `[0x21, 0x09]` the response is
   `[0x61, 0x09, ...data]`, so data starts at index 2.
 - KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo.

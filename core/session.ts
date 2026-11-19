@@ -1,6 +1,14 @@
-import { addressedFrame, NegativeResponse, parseFrame, remainingLength, shortFrame, SID } from "./kwp2000/frame";
-import type { EcuLink, Values, VehicleProfile } from "./profile";
-import { sleep, type Transport } from "./transport/types";
+import {
+  addressedFrame,
+  NegativeResponse,
+  parseFrame,
+  positive,
+  remainingLength,
+  shortFrame,
+  SID,
+} from "./kwp2000/frame";
+import type { EcuLink, RequestOptions, Values, VehicleProfile } from "./profile";
+import { sleep, TimeoutError, type Transport } from "./transport/types";
 
 export interface TrafficEvent {
   t: number;
@@ -20,6 +28,10 @@ export class Session {
   private queue: Promise<unknown> = Promise.resolve();
   private polling = false;
   readonly state: Values = {};
+  /** Group ids the ECU supports, decided after connect. */
+  private activeGroups = new Set<string>();
+  /** Channel keys whose only source groups are unsupported by this ECU. */
+  unavailableChannels = new Set<string>();
 
   constructor(
     readonly profile: VehicleProfile,
@@ -33,30 +45,73 @@ export class Session {
     return run;
   }
 
+  /** Send one request frame. */
+  private async send(payload: number[], opts: RequestOptions) {
+    const { addresses, addressMode = "physical", alwaysAddressed = false } = this.profile.link;
+    const addressed = opts.addressed ?? alwaysAddressed;
+    const msg = addressed
+      ? addressedFrame(payload, addresses.ecu, addresses.tester, addressMode)
+      : shortFrame(payload);
+    this.transport.flush(); // drop late answers from earlier requests
+    this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note });
+    await this.transport.write(msg);
+  }
+
+  /** Read one frame and return its payload, logging it. */
+  private async readFrame(timeoutMs: number): Promise<Uint8Array> {
+    const head = await this.transport.read(1, timeoutMs);
+    const rest = await this.transport.read(remainingLength(head[0]), RESPONSE_TIMEOUT_MS);
+    const raw = new Uint8Array(1 + rest.length);
+    raw[0] = head[0];
+    raw.set(rest, 1);
+    this.onTraffic({ t: performance.now(), dir: "rx", bytes: raw });
+    return parseFrame(raw).payload;
+  }
+
+  /**
+   * Wait for a response to `sid`: positive (sid + 0x40) or negative (7F sid code).
+   * Frames meant for other requests are ignored. "Response pending" keeps waiting.
+   */
+  private async awaitResponse(sid: number, timeoutMs: number): Promise<Uint8Array> {
+    const deadline = performance.now() + timeoutMs;
+    for (;;) {
+      const left = deadline - performance.now();
+      if (left <= 0) throw new TimeoutError(1, 0);
+      const res = await this.readFrame(left);
+      if (res[0] === positive(sid)) return res;
+      if (res[0] === SID.negativeResponse && res[1] === sid) {
+        if (res[2] === 0x78) continue;
+        throw new NegativeResponse(res[1], res[2]);
+      }
+    }
+  }
+
   /** The EcuLink handed to profile code. Only call inside exclusive(). */
   private link: EcuLink = {
     request: async (payload, opts = {}) => {
-      const { addresses, interMessageMs = 30 } = this.profile.link;
-      const msg = opts.addressed ? addressedFrame(payload, addresses.ecu, addresses.tester) : shortFrame(payload);
-      this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note });
-      await this.transport.write(msg);
-
-      for (;;) {
-        const head = await this.transport.read(1, RESPONSE_TIMEOUT_MS);
-        const rest = await this.transport.read(remainingLength(head[0]), RESPONSE_TIMEOUT_MS);
-        const raw = new Uint8Array(1 + rest.length);
-        raw[0] = head[0];
-        raw.set(rest, 1);
-        this.onTraffic({ t: performance.now(), dir: "rx", bytes: raw });
-        const { payload: res } = parseFrame(raw);
-
-        if (res[0] === SID.negativeResponse) {
-          if (res[2] === 0x78) continue; // response pending, keep listening
-          await sleep(interMessageMs);
-          throw new NegativeResponse(res[1], res[2]);
+      await this.send(payload, opts);
+      try {
+        return await this.awaitResponse(payload[0], RESPONSE_TIMEOUT_MS);
+      } finally {
+        await sleep(this.profile.link.interMessageMs ?? 30);
+      }
+    },
+    requestMany: async (payload, opts = {}) => {
+      await this.send(payload, opts);
+      const out: Uint8Array[] = [];
+      try {
+        out.push(await this.awaitResponse(payload[0], RESPONSE_TIMEOUT_MS));
+        for (;;) {
+          try {
+            out.push(await this.awaitResponse(payload[0], opts.windowMs ?? 80));
+          } catch (e) {
+            if (e instanceof TimeoutError) break;
+            throw e;
+          }
         }
-        await sleep(interMessageMs);
-        return res;
+        return out;
+      } finally {
+        await sleep(this.profile.link.interMessageMs ?? 30);
       }
     },
   };
@@ -66,13 +121,31 @@ export class Session {
       await this.transport.open();
       await this.exclusive(async () => {
         await this.transport.fastInit();
-        await this.profile.connect(this.link);
+        await this.profile.connect(this.link, this.state);
       });
-      for (const id of this.profile.slowGroups ?? []) await this.readGroup(id);
+      this.decideAvailability();
+      for (const id of this.profile.slowGroups ?? []) if (this.activeGroups.has(id)) await this.readGroup(id);
     } catch (e) {
       await this.transport.close();
       throw e;
     }
+  }
+
+  private decideAvailability() {
+    const groups = this.profile.groups;
+    this.activeGroups = new Set(groups.filter((g) => g.available?.(this.state) ?? true).map((g) => g.id));
+    const supplied = new Set(groups.filter((g) => this.activeGroups.has(g.id)).flatMap((g) => g.provides ?? []));
+    this.unavailableChannels = new Set(
+      groups
+        .filter((g) => !this.activeGroups.has(g.id))
+        .flatMap((g) => g.provides ?? [])
+        .filter((k) => !supplied.has(k)),
+    );
+  }
+
+  /** Whether the connected ECU supports this group. */
+  isActive(id: string) {
+    return this.activeGroups.has(id);
   }
 
   async readGroup(id: string): Promise<Values> {
@@ -86,7 +159,12 @@ export class Session {
 
   /** Poll live data until stop(). Gives up after 5 failures in a row. */
   async poll(onValues: (v: Values) => void, onError: (e: unknown) => void) {
-    const { schedule, slowGroups = [] } = this.profile;
+    const schedule = this.profile.schedule.filter((id) => this.activeGroups.has(id));
+    const slowGroups = (this.profile.slowGroups ?? []).filter((id) => this.activeGroups.has(id));
+    if (!schedule.length) {
+      onError(new Error("The ECU doesn't support any of the values this profile reads."));
+      return;
+    }
     this.polling = true;
     let i = 0;
     let misses = 0;

@@ -175,8 +175,10 @@ No changes to `core/` or `components/` are needed.
    positive SID (`[0x61, localId, ...data]`, data at index 2). `state` holds earlier values.
 5. `encode` next to every `decode`, and a **simulator** whose `handle` answers the same requests.
 6. **Schedule**: repeat fast groups to poll them more often. `slowGroups` for rarely changing values.
-7. Optional **faults** with `read` and `clear`.
-8. Register in `profiles/index.ts`, write the profile README, run `npm run check`.
+7. Optional **faults** with `read` and `clear`. Use `ecu.requestMany` if answers can span frames.
+8. If the ECU only supports some groups, store what it reports in `state` during `connect` and give
+   groups `available(state)` and `provides` (see `profiles/generic-obd2`).
+9. Register in `profiles/index.ts`, write the profile README, run `npm run check`.
 
 ### Confidence levels
 

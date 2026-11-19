@@ -39,6 +39,14 @@ export interface Group {
   /** Request payload (service id + data), e.g. [0x21, 0x09]. */
   request: number[];
   /**
+   * Optional: is this group supported by the connected ECU? Checked once after connect,
+   * using whatever `connect` stored in state (e.g. OBD "supported PIDs" bitmasks).
+   * Unavailable groups are skipped when polling. Default: always available.
+   */
+  available?(state: Readonly<Values>): boolean;
+  /** Channel keys this group produces. Lets the UI mark channels "n/a" when the group is unavailable. */
+  provides?: string[];
+  /**
    * Turn the response payload into values.
    * `res` is the full response payload including the positive SID, e.g. [0x61, 0x09, 0x03, 0x1F].
    * `state` holds every value decoded so far (read-only), for values that depend on others.
@@ -54,15 +62,29 @@ export interface EcuLink {
    * Throws NegativeResponse if the ECU refuses, TimeoutError if it says nothing.
    * Handles "response pending" (0x78) and the inter-message delay for you.
    */
-  request(payload: number[], opts?: { addressed?: boolean; note?: string }): Promise<Uint8Array>;
+  request(payload: number[], opts?: RequestOptions): Promise<Uint8Array>;
+  /**
+   * Like request, but keeps listening after the first answer and returns every matching response
+   * frame (several ECUs answering a functional request, or one answer split over frames).
+   * Stops after `windowMs` of silence (default 80 ms).
+   */
+  requestMany(payload: number[], opts?: RequestOptions & { windowMs?: number }): Promise<Uint8Array[]>;
+}
+
+export interface RequestOptions {
+  /** Send with an address header. Default: link.alwaysAddressed. */
+  addressed?: boolean;
+  /** Shown next to the request in the traffic log. */
+  note?: string;
 }
 
 export interface SimulatedEcu {
   /**
    * Answer one request payload with a response payload, or null for silence.
    * Return [0x7F, sid, code] for a negative response.
+   * Return an array of payloads to answer with several frames (e.g. several ECUs answering).
    */
-  handle(payload: Uint8Array): number[] | null;
+  handle(payload: Uint8Array): number[] | number[][] | null;
 }
 
 export interface VehicleProfile {
@@ -87,12 +109,22 @@ export interface VehicleProfile {
     /** Only "fast" (ISO 14230 fast init) is implemented so far. */
     init: "fast";
     addresses: Addresses;
+    /**
+     * "physical" (default): talk to one ECU at addresses.ecu (header 0x80).
+     * "functional": broadcast to a function address such as 0x33 for OBD-II (header 0xC0).
+     */
+    addressMode?: "physical" | "functional";
+    /** Put an address header on every request, not only where `addressed: true`. OBD-II needs this. */
+    alwaysAddressed?: boolean;
     /** Delay after each response before the next request (KWP2000 P3). Default 30 ms. */
     interMessageMs?: number;
   };
 
-  /** Wake-up is done by the core. This runs right after: start session, unlock, etc. */
-  connect(ecu: EcuLink): Promise<void>;
+  /**
+   * Wake-up is done by the core. This runs right after: start session, unlock, etc.
+   * `state` is writable here: store anything groups need later (e.g. supported PID bitmasks).
+   */
+  connect(ecu: EcuLink, state: Values): Promise<void>;
 
   channels: Channel[];
   groups: Group[];

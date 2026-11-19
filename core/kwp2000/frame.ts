@@ -29,9 +29,17 @@ export function shortFrame(payload: ArrayLike<number>): Uint8Array {
   return Uint8Array.from(out);
 }
 
-/** Addressed frame: [0x80|len] [target] [source] [payload...] [cs] */
-export function addressedFrame(payload: ArrayLike<number>, target: number, source: number): Uint8Array {
-  const out = [0x80 | payload.length, target, source, ...Array.from(payload)];
+/**
+ * Addressed frame: [0x80|len] [target] [source] [payload...] [cs] with physical addressing (one ECU),
+ * or [0xC0|len] ... with functional addressing (every ECU that serves that function, e.g. 0x33 = OBD).
+ */
+export function addressedFrame(
+  payload: ArrayLike<number>,
+  target: number,
+  source: number,
+  mode: "physical" | "functional" = "physical",
+): Uint8Array {
+  const out = [(mode === "functional" ? 0xc0 : 0x80) | payload.length, target, source, ...Array.from(payload)];
   out.push(checksum(out));
   return Uint8Array.from(out);
 }
@@ -64,6 +72,10 @@ export const SID = {
   readDtcByStatus: 0x18,
   readEcuId: 0x1a,
   readDataByLocalId: 0x21,
+  /** OBD-II (SAE J1979) modes travel as KWP2000 service ids too. */
+  obdCurrentData: 0x01,
+  obdReadDtcs: 0x03,
+  obdClearDtcs: 0x04,
   securityAccess: 0x27,
   testerPresent: 0x3e,
   startCommunication: 0x81,

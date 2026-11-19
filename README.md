@@ -15,6 +15,7 @@ No installs, no dealer tools.
 
 | Vehicle | ECU | Status |
 | --- | --- | --- |
+| [Generic OBD-II](profiles/generic-obd2) (most K-line cars with OBD-II/EOBD, fast init) | Engine, standard values | experimental, not yet tested on a car |
 | [Land Rover Td5](profiles/land-rover-td5) (Defender, Discovery 2, 1998 to 2006) | Engine | experimental, not yet tested on a car |
 
 Your car isn't here? [Add it](docs/adding-a-vehicle.md), no coding experience needed if you can chat with an AI.

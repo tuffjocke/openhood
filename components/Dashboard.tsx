@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [serialOk, setSerialOk] = useState(true);
   const [now, setNow] = useState(0);
   const [night, setNight] = useState(false);
+  const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -102,6 +103,7 @@ export default function Dashboard() {
   async function connect(kind: Source) {
     setError(null);
     setFaults(null);
+    setUnavailable(new Set());
     setSource(kind);
     setStatus("connecting");
     latest.current = {};
@@ -113,6 +115,7 @@ export default function Dashboard() {
     session.current = s;
     try {
       await s.connect();
+      setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
       s.readFaults().then(setFaults, () => {});
       void s.poll(onValues, (e) => {
@@ -257,7 +260,13 @@ export default function Dashboard() {
                 <span>{c.label}</span>
                 <span>{c.unit}</span>
               </div>
-              <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
+              {unavailable.has(c.key) ? (
+                <div className="value na" title="This car doesn't report this value">
+                  n/a
+                </div>
+              ) : (
+                <div className="value">{v === undefined ? "—" : fmt(v, c.decimals)}</div>
+              )}
               <Sparkline
                 points={history.current[c.key] ?? []}
                 now={now}

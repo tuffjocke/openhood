@@ -28,7 +28,7 @@ framing, checksums, echo or timing. That keeps a profile small enough to read in
 
 ## Not yet supported (good first core contributions)
 
-- 5-baud slow init (ISO 9141-2, KWP2000 slow init)
+- 5-baud slow init (ISO 9141-2, KWP2000 slow init): unlocks generic OBD-II on many more cars
 - KWP1281 (older VAG)
 - CAN / ISO 15765 (needs different hardware)
 - ESP32 Wi-Fi bridge transport (would make iPhones work)

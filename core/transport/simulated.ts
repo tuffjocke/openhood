@@ -29,10 +29,13 @@ export class SimulatedTransport implements Transport {
     const req = parseFrame(bytes);
     const res = this.ecu.handle(req.payload);
     if (!res) return;
+    const frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     const { ecu, tester } = this.profile.link.addresses;
-    const reply = req.addressed ? addressedFrame(res, tester, ecu) : shortFrame(res);
-    // A real ECU answers within P2 (~25 ms).
-    setTimeout(() => this.rx.push(reply), 8 + Math.random() * 12);
+    // A real ECU answers within P2 (~25 ms); extra frames follow a little later.
+    frames.forEach((payload, i) => {
+      const reply = req.addressed ? addressedFrame(payload, tester, ecu) : shortFrame(payload);
+      setTimeout(() => this.rx.push(reply), 8 + Math.random() * 12 + i * 15);
+    });
   }
 
   read(n: number, timeoutMs: number) {
