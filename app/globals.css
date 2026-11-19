@@ -11,17 +11,8 @@
   color-scheme: light;
 }
 
-:root[data-theme="night"] {
-  --paper: #0e0f0e;
-  --ink: #e6e3d9;
-  --muted: #77746b;
-  --rule: #262724;
-  --signal: #e8642f;
-  color-scheme: dark;
-}
-
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="day"]) {
+  :root {
     --paper: #0e0f0e;
     --ink: #e6e3d9;
     --muted: #77746b;
@@ -236,10 +227,6 @@ h2 {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.top .night {
-  order: 3;
 }
 
 .top .actions {
@@ -865,10 +852,6 @@ pre {
   .top {
     flex-wrap: nowrap;
     align-items: flex-start;
-  }
-  .top .night {
-    margin-left: auto;
-    padding: 7px 10px;
   }
   /* Connect / Disconnect live in a bar at the bottom, within thumb reach. */
   .top .actions {

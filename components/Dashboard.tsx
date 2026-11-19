@@ -63,7 +63,6 @@ export default function Dashboard() {
   const [logOpen, setLogOpen] = useState(false);
   const [serialOk, setSerialOk] = useState(true);
   const [now, setNow] = useState(0);
-  const [night, setNight] = useState(false);
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [everLive, setEverLive] = useState(false);
   const [pickerRequest, setPickerRequest] = useState(0);
@@ -82,7 +81,6 @@ export default function Dashboard() {
       if (saved && getProfile(saved.profileId)) setSelection(saved);
     } catch {}
     setSerialOk(WebSerialTransport.supported());
-    setNight(window.matchMedia("(prefers-color-scheme: dark)").matches);
   }, []);
 
   // Repaint at 10 Hz; also the recording clock.
@@ -276,11 +274,6 @@ export default function Dashboard() {
     URL.revokeObjectURL(a.href);
   }
 
-  function toggleNight() {
-    document.documentElement.dataset.theme = night ? "day" : "night";
-    setNight(!night);
-  }
-
   function pickVehicle(sel: Selection) {
     setSelection(sel);
     setEverLive(false);
@@ -317,9 +310,6 @@ export default function Dashboard() {
             openRequest={pickerRequest}
           />
         </div>
-        <button className="quiet night" onClick={toggleNight}>
-          {night ? "Day" : "Night"}
-        </button>
         {!showFirstRun && (
           <div className="actions">
             <span className={`status status-${status}`}>

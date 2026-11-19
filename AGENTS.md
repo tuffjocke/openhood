@@ -86,7 +86,7 @@ Follow docs/adding-a-vehicle.md. In short:
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.
 - UI style: quiet instrument look. Plain CSS in `app/globals.css`, CSS variables for colour,
   IBM Plex Sans/Mono, hairline rules, no shadows, no gradients, no rounded cards, one accent
-  colour (`--signal`) used only for live/warning states. Must work on a phone and in night mode.
+  colour (`--signal`) used only for live/warning states. Must work on a phone and in dark mode (follows the system setting).
 - Writing: plain English, no em or en dashes in UI text.
 - **Credit and licences.** Code or data ported from another project must be compatible with GPL-3.0
   (MIT, BSD, Apache, GPL) and get an entry in THIRD_PARTY_NOTICES.md. A project with no licence may
