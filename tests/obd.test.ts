@@ -10,6 +10,7 @@ import { genericObd2 } from "@/profiles/generic-obd2";
 import { decodeDtc, decodeDtcFrames, encodeDtc } from "@/profiles/generic-obd2/dtc";
 import { pidSupported, supportKey } from "@/profiles/generic-obd2/pids";
 import { decodeReadiness } from "@/profiles/generic-obd2/readiness";
+import { asMode01 } from "@/profiles/generic-obd2/freeze";
 import { OBD_EXPLANATIONS, OBD_TITLES } from "@/profiles/shared/obd-codes";
 
 describe("generic OBD-II", () => {
@@ -71,6 +72,28 @@ describe("generic OBD-II", () => {
     const r = await s.readReadiness();
     assert.equal(r?.milOn, false);
     assert.ok(r?.monitors.some((m) => !m.complete));
+    await s.disconnect();
+  });
+});
+
+describe("pending codes and freeze frames", () => {
+  it("reshapes a mode 02 answer for the mode 01 decoders", () => {
+    assert.deepEqual([...asMode01(Uint8Array.from([0x42, 0x0c, 0x00, 0x26, 0x48]))], [0x41, 0x0c, 0x26, 0x48]);
+  });
+
+  it("reads pending codes and the snapshot for the code that set it", async () => {
+    const s = new Session(genericObd2, new SimulatedTransport(genericObd2));
+    await s.connect();
+    const pending = await s.readPending();
+    assert.deepEqual(pending?.map((f) => f.code), ["P0130"]);
+    const [p0171, p0420] = await s.readFaults();
+    const ff = await s.readFreezeFrame(p0171);
+    assert.equal(ff?.rpm, 2450);
+    assert.equal(ff?.coolant, 34);
+    assert.equal(await s.readFreezeFrame(p0420), null, "no snapshot for other codes");
+    await s.clearFaults();
+    assert.deepEqual(await s.readPending(), []);
+    assert.equal(await s.readFreezeFrame(p0171), null, "clearing removes the snapshot");
     await s.disconnect();
   });
 });

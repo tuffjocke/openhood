@@ -10,6 +10,7 @@
  */
 import type { EcuLink, Fault } from "@/core/profile";
 import { OBD_EXPLANATIONS, OBD_TITLES } from "../shared/obd-codes";
+import { readFreezeFrame } from "./freeze";
 import { readReadiness } from "./readiness";
 
 const LETTERS = ["P", "C", "B", "U"];
@@ -41,13 +42,15 @@ export function decodeDtcFrames(frames: Uint8Array[]): string[] {
   return codes;
 }
 
+const toFault = (code: string): Fault => ({ id: code, code, name: OBD_TITLES[code] ?? "No description yet" });
+
 export const faults = {
   read: async (ecu: EcuLink): Promise<Fault[]> =>
-    decodeDtcFrames(await ecu.requestMany([0x03], { note: "read trouble codes" })).map((code) => ({
-      id: code,
-      code,
-      name: OBD_TITLES[code] ?? "No description yet",
-    })),
+    decodeDtcFrames(await ecu.requestMany([0x03], { note: "read trouble codes" })).map(toFault),
+  /** Mode 07: same frame format as mode 03, with response SID 0x47. */
+  readPending: async (ecu: EcuLink): Promise<Fault[]> =>
+    decodeDtcFrames(await ecu.requestMany([0x07], { note: "read pending codes" })).map(toFault),
+  freezeFrame: readFreezeFrame,
   clear: async (ecu: EcuLink) => {
     await ecu.request([0x04], { note: "clear trouble codes" });
   },

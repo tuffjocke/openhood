@@ -29,17 +29,19 @@ core/                     vehicle independent, change rarely
 profiles/                 one folder per vehicle/ECU, all vehicle knowledge lives here
   index.ts                registry: add new profiles here
   land-rover-td5/         reference profile: index, data, faults, keygen, simulator, README
-  generic-obd2/           standard OBD-II: functional addressing, supported-PID detection, DTCs, self-tests
+  generic-obd2/           standard OBD-II: functional addressing, supported PIDs, DTCs, pending, freeze frame, self-tests
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
-components/FaultPanel     fault list with plain-language explanations, urgency, self-tests, clear warning
+components/FaultPanel     faults: explanations, urgency, freeze frames, pending, history, self-tests, clear warning
+core/history.ts           fault history merge logic (stored per car in the browser)
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
+tests/history.test.ts     fault history
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```
 

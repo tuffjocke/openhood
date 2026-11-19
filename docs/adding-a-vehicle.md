@@ -184,6 +184,8 @@ No changes to `core/` or `components/` are needed.
    Use `ecu.requestMany` if answers can span frames. Add plain-language `explanations` keyed by
    fault id (see the writing guide in `profiles/shared/obd-codes.ts`). If the ECU reports standard
    P0 codes, reuse `OBD_EXPLANATIONS`. Set `clearResetsReadiness` for OBD-II cars.
+   If the ECU can, add `readPending` (unconfirmed faults) and `freezeFrame` (the snapshot stored
+   when a fault was set, as values with your channel keys). The fault history works automatically.
 8. If the ECU only supports some groups, store what it reports in `state` during `connect` and give
    groups `available(state)` and `provides` (see `profiles/generic-obd2`).
 9. Register in `profiles/index.ts`, write the profile README, run `npm run check`.

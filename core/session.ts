@@ -195,6 +195,18 @@ export class Session {
     return this.exclusive(() => r(this.link));
   }
 
+  readPending(): Promise<Fault[] | null> {
+    const r = this.profile.faults?.readPending;
+    if (!r) return Promise.resolve(null);
+    return this.exclusive(() => r(this.link));
+  }
+
+  readFreezeFrame(fault: Fault): Promise<Values | null> {
+    const r = this.profile.faults?.freezeFrame;
+    if (!r) return Promise.resolve(null);
+    return this.exclusive(() => r(this.link, fault, this.state));
+  }
+
   readFaults(): Promise<Fault[]> {
     const f = this.profile.faults;
     if (!f) return Promise.resolve([]);

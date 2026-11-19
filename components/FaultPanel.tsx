@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { HistoryEntry } from "@/core/history";
 import type { Fault, FaultInfo, Readiness, Urgency, Values, VehicleProfile } from "@/core/profile";
 
 const URGENCY: Record<Urgency, string> = {
@@ -9,15 +10,29 @@ const URGENCY: Record<Urgency, string> = {
   now: "Fix now",
 };
 
-/** The question a person can paste into any AI chat about one fault. */
-export function aiQuestion(vehicle: string, fault: Fault, profile: VehicleProfile, values: Values): string {
-  const readings = profile.channels
+/** "rpm 2450 rpm, coolant 34 °C" for the values a profile knows about. */
+function describeValues(profile: VehicleProfile, values: Values) {
+  return profile.channels
     .filter((c) => values[c.key] !== undefined)
     .map((c) => `${c.label.toLowerCase()} ${values[c.key].toFixed(c.decimals)} ${c.unit}`)
     .join(", ");
+}
+
+/** The question a person can paste into any AI chat about one fault. */
+export function aiQuestion(
+  vehicle: string,
+  fault: Fault,
+  profile: VehicleProfile,
+  values: Values,
+  opts: { pending?: boolean; snapshot?: Values | null } = {},
+): string {
+  const readings = describeValues(profile, values);
+  const snapshot = opts.snapshot ? describeValues(profile, opts.snapshot) : "";
   const what = fault.code ? `fault code ${fault.code} (${fault.name})` : `the fault "${fault.name}"`;
   return [
-    `I have a ${vehicle}. The engine computer reports ${what}.`,
+    vehicle ? `I have a ${vehicle}.` : "",
+    `The engine computer reports ${what}${opts.pending ? " as pending (not confirmed yet)" : ""}.`,
+    snapshot ? `When it was set: ${snapshot}.` : "",
     readings ? `Current readings: ${readings}.` : "",
     "I'm not a mechanic. What does this mean, how urgent is it, what are the most likely causes, and what should I check first?",
   ]
@@ -25,18 +40,39 @@ export function aiQuestion(vehicle: string, fault: Fault, profile: VehicleProfil
     .join(" ");
 }
 
+type Snapshot = Values | null | "loading" | undefined;
+
 function FaultRow({
   fault,
   info,
   vehicle,
-  question,
+  profile,
+  values,
+  pending,
+  live,
+  onFreezeFrame,
 }: {
   fault: Fault;
   info?: FaultInfo;
   vehicle: string;
-  question: string;
+  profile: VehicleProfile;
+  values: Values;
+  pending?: boolean;
+  live: boolean;
+  onFreezeFrame?: (f: Fault) => Promise<Values | null>;
 }) {
   const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
+  const [snapshot, setSnapshot] = useState<Snapshot>(undefined);
+  const question = aiQuestion(vehicle, fault, profile, values, {
+    pending,
+    snapshot: snapshot === "loading" ? null : snapshot,
+  });
+
+  function onToggle(e: React.SyntheticEvent<HTMLDetailsElement>) {
+    if (!e.currentTarget.open || snapshot !== undefined || !onFreezeFrame || !live || pending) return;
+    setSnapshot("loading");
+    onFreezeFrame(fault).then(setSnapshot, () => setSnapshot(null));
+  }
 
   async function copy() {
     try {
@@ -48,13 +84,17 @@ function FaultRow({
     }
   }
 
-  const search = `https://www.google.com/search?q=${encodeURIComponent(`${vehicle} ${fault.code ?? fault.name}`)}`;
+  const search = `https://www.google.com/search?q=${encodeURIComponent(`${vehicle} ${fault.code ?? fault.name}`.trim())}`;
 
   return (
     <li>
-      <details className="fault">
+      <details className="fault" onToggle={onToggle}>
         <summary>
-          {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
+          {pending ? (
+            <span className="urgency">Pending</span>
+          ) : (
+            info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>
+          )}
           {fault.code && <span className="fault-code">{fault.code}</span>}
           <span className="fault-title">{info?.title ?? fault.name}</span>
         </summary>
@@ -79,9 +119,13 @@ function FaultRow({
                   Official name: {fault.code} {fault.name}
                 </p>
               )}
+              <SnapshotView snapshot={snapshot} profile={profile} />
             </>
           ) : (
-            <p className="muted">No plain-language explanation for this one yet. Ask an AI or search:</p>
+            <>
+              <p className="muted">No plain-language explanation for this one yet. Ask an AI or search:</p>
+              <SnapshotView snapshot={snapshot} profile={profile} />
+            </>
           )}
           <div className="fault-actions">
             <button className="quiet" onClick={copy}>
@@ -98,6 +142,69 @@ function FaultRow({
   );
 }
 
+function SnapshotView({ snapshot, profile }: { snapshot: Snapshot; profile: VehicleProfile }) {
+  if (snapshot === undefined || snapshot === null) return null;
+  if (snapshot === "loading") return <p className="muted small">Reading what the car stored when this was set…</p>;
+  return (
+    <div className="snapshot">
+      <p className="fault-label">When it was set</p>
+      <dl>
+        {profile.channels
+          .filter((c) => snapshot[c.key] !== undefined)
+          .map((c) => (
+            <div key={c.key}>
+              <dt>{c.label}</dt>
+              <dd>
+                {snapshot[c.key].toFixed(c.decimals)} <span>{c.unit}</span>
+              </dd>
+            </div>
+          ))}
+      </dl>
+    </div>
+  );
+}
+
+const fmtDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+function HistoryView({
+  history,
+  explanations,
+  onForget,
+}: {
+  history: HistoryEntry[];
+  explanations?: Record<string, FaultInfo>;
+  onForget: () => void;
+}) {
+  if (!history.length) return null;
+  return (
+    <details className="readiness history">
+      <summary>
+        History · <strong>{history.length}</strong> {history.length === 1 ? "fault" : "faults"} seen on this car
+      </summary>
+      <ul>
+        {history.map((e) => (
+          <li key={e.id}>
+            <span>
+              {e.code && <span className="fault-code">{e.code} </span>}
+              {explanations?.[e.id]?.title ?? e.name}
+              {e.pendingOnly && <span className="muted"> · only pending</span>}
+            </span>
+            <span className="done">
+              {e.daysSeen === 1 ? fmtDate(e.lastSeen) : `${e.daysSeen} days, last ${fmtDate(e.lastSeen)}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">
+        Kept in this browser only. Faults that keep coming back are worth fixing even if they clear themselves.{" "}
+        <button className="link-button" onClick={onForget}>
+          Forget history
+        </button>
+      </p>
+    </details>
+  );
+}
+
 export function FaultPanel({
   profile,
   vehicle,
@@ -105,9 +212,13 @@ export function FaultPanel({
   live,
   busy,
   faults,
+  pending,
   readiness,
+  history,
   onRead,
   onClear,
+  onFreezeFrame,
+  onForgetHistory,
 }: {
   profile: VehicleProfile;
   vehicle: string;
@@ -115,9 +226,13 @@ export function FaultPanel({
   live: boolean;
   busy: boolean;
   faults: Fault[] | null;
+  pending: Fault[] | null;
   readiness: Readiness | null;
+  history: HistoryEntry[];
   onRead: () => void;
   onClear: () => void;
+  onFreezeFrame: (f: Fault) => Promise<Values | null>;
+  onForgetHistory: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const f = profile.faults;
@@ -211,11 +326,40 @@ export function FaultPanel({
               fault={fault}
               info={f.explanations?.[fault.id]}
               vehicle={vehicle}
-              question={aiQuestion(vehicle, fault, profile, values)}
+              profile={profile}
+              values={values}
+              live={live}
+              onFreezeFrame={f.freezeFrame ? onFreezeFrame : undefined}
             />
           ))}
         </ol>
       )}
+
+      {pending && pending.length > 0 && (
+        <>
+          <p className="fault-label pending-label">Pending, not confirmed yet</p>
+          <p className="muted small">
+            The car has noticed these but hasn&rsquo;t turned the engine light on. They may go away, or become real
+            faults if they happen again.
+          </p>
+          <ol className="faults">
+            {pending.map((fault) => (
+              <FaultRow
+                key={fault.id}
+                fault={fault}
+                info={f?.explanations?.[fault.id]}
+                vehicle={vehicle}
+                profile={profile}
+                values={values}
+                live={live}
+                pending
+              />
+            ))}
+          </ol>
+        </>
+      )}
+
+      <HistoryView history={history} explanations={f?.explanations} onForget={onForgetHistory} />
     </div>
   );
 }

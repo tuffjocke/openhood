@@ -200,6 +200,13 @@ export interface VehicleProfile {
     clearResetsReadiness?: boolean;
     /** Optional: read the warning light and emissions self-test status. */
     readiness?(ecu: EcuLink): Promise<Readiness>;
+    /** Optional: faults the ECU has noticed but not yet confirmed (no warning light yet). */
+    readPending?(ecu: EcuLink): Promise<Fault[]>;
+    /**
+     * Optional: the snapshot the ECU stored when this fault was set (rpm, speed, temperature...).
+     * Values use the profile's channel keys. Return null if there is no snapshot for this fault.
+     */
+    freezeFrame?(ecu: EcuLink, fault: Fault, state: Readonly<Values>): Promise<Values | null>;
     confidence: Confidence;
   };
 

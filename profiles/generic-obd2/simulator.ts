@@ -21,6 +21,18 @@ export interface SimSnapshot {
   voltage: number;
 }
 
+/** Mode 03/07 answer: three codes per frame, padded with 00 00. */
+function dtcFrames(sid: number, codes: string[]): number[][] {
+  if (!codes.length) return [[sid, 0, 0, 0, 0, 0, 0]];
+  const frames: number[][] = [];
+  for (let i = 0; i < codes.length; i += 3) {
+    const chunk = codes.slice(i, i + 3).flatMap(encodeDtc);
+    while (chunk.length < 6) chunk.push(0);
+    frames.push([sid, ...chunk]);
+  }
+  return frames;
+}
+
 /** Bitmask word for PIDs base+1 .. base+32, plus the "next block supported" bit. */
 function supportWord(base: number, pids: number[], hasNext: boolean) {
   let w = 0;
@@ -33,7 +45,14 @@ export function createObdSimulator(): SimulatedEcu {
   const pids = [0x01, ...groups.map((g) => g.request[1])];
   // Four codes: more than fit in one frame, to exercise multi-frame reading.
   let stored = ["P0171", "P0420", "P0300", "P0442"];
+  let pending = ["P0130"];
   let cleared = false;
+  // Snapshot stored when P0171 set: a cold engine pulling hard on the motorway slip road.
+  const freeze: SimSnapshot | null = {
+    rpm: 2450, speed: 87, load: 62, throttle: 41, coolant: 34, airTemp: 6,
+    maf: 24.5, map: 71, timing: 18, stft: 18, ltft: 9.4, voltage: 14.2,
+  };
+  let freezeCode: string | null = "P0171";
   const engine = new EngineModel();
 
   return {
@@ -59,18 +78,25 @@ export function createObdSimulator(): SimulatedEcu {
           const g = groups.find((g) => g.request[1] === pid);
           return g ? g.encode(engine.sample()) : [0x7f, 0x01, 0x12];
         }
-        case 0x03: {
-          if (!stored.length) return [0x43, 0, 0, 0, 0, 0, 0];
-          const frames: number[][] = [];
-          for (let i = 0; i < stored.length; i += 3) {
-            const chunk = stored.slice(i, i + 3).flatMap(encodeDtc);
-            while (chunk.length < 6) chunk.push(0);
-            frames.push([0x43, ...chunk]);
+        case 0x03:
+          return dtcFrames(0x43, stored);
+        case 0x07:
+          return dtcFrames(0x47, pending);
+        case 0x02: {
+          const pid = p[1];
+          if (pid === 0x02) {
+            const [hi, lo] = freezeCode ? encodeDtc(freezeCode) : [0, 0];
+            return [0x42, 0x02, 0x00, hi, lo];
           }
-          return frames;
+          const g = groups.find((g) => g.request[1] === pid);
+          if (!freezeCode || !freeze || !g) return [0x7f, 0x02, 0x12];
+          const mode01 = g.encode(freeze);
+          return [0x42, pid, 0x00, ...mode01.slice(2)];
         }
         case 0x04:
           stored = [];
+          pending = [];
+          freezeCode = null;
           cleared = true;
           return [0x44];
         default:

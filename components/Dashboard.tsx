@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hex, NegativeResponse } from "@/core/kwp2000/frame";
+import { historyKey, mergeHistory, type HistoryEntry } from "@/core/history";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { Session, type TrafficEvent } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
@@ -46,6 +47,8 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [faults, setFaults] = useState<Fault[] | null>(null);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [pending, setPending] = useState<Fault[] | null>(null);
+  const [faultHistory, setFaultHistory] = useState<HistoryEntry[]>([]);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -107,6 +110,7 @@ export default function Dashboard() {
     setError(null);
     setFaults(null);
     setReadiness(null);
+    setPending(null);
     setUnavailable(new Set());
     setSource(kind);
     setStatus("connecting");
@@ -121,10 +125,7 @@ export default function Dashboard() {
       await s.connect();
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
-      s.readFaults()
-        .then(setFaults, () => {})
-        .then(() => s.readReadiness())
-        .then(setReadiness, () => {});
+      void refreshFaults(s);
       void s.poll(onValues, (e) => {
         setStatus("error");
         setError(explain(e) ?? "Lost the ECU.");
@@ -144,13 +145,54 @@ export default function Dashboard() {
     setSource(null);
   }
 
+  const hKey = historyKey([selection.profileId, selection.make, selection.model, selection.year]);
+
+  // Load this car's fault history when the car changes.
+  useEffect(() => {
+    try {
+      setFaultHistory(JSON.parse(localStorage.getItem(hKey) ?? "[]") as HistoryEntry[]);
+    } catch {
+      setFaultHistory([]);
+    }
+  }, [hKey]);
+
+  function remember(found: Fault[], isPending: boolean) {
+    if (!found.length) return;
+    setFaultHistory((prev) => {
+      const next = mergeHistory(prev, found, Date.now(), isPending);
+      try {
+        localStorage.setItem(hKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
+
+  function forgetHistory() {
+    setFaultHistory([]);
+    try {
+      localStorage.removeItem(hKey);
+    } catch {}
+  }
+
+  /** Read stored faults, pending faults and self-tests, one after the other (half duplex). */
+  async function refreshFaults(s: Session) {
+    try {
+      const stored = await s.readFaults();
+      setFaults(stored);
+      remember(stored, false);
+      const pend = await s.readPending();
+      setPending(pend);
+      if (pend) remember(pend, true);
+      setReadiness(await s.readReadiness());
+    } catch {}
+  }
+
   async function faultAction(clear: boolean) {
     if (!session.current) return;
     setBusy(true);
     try {
       if (clear) await session.current.clearFaults();
-      setFaults(await session.current.readFaults());
-      setReadiness(await session.current.readReadiness());
+      await refreshFaults(session.current);
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -184,6 +226,7 @@ export default function Dashboard() {
     setSelection(sel);
     setFaults(null);
     setReadiness(null);
+    setPending(null);
     latest.current = {};
     history.current = {};
     try {
@@ -193,7 +236,8 @@ export default function Dashboard() {
 
   const live = status === "live";
   const label = selectionLabel(selection, profile);
-  const vehicleText = [label.title, label.detail].filter(Boolean).join(" ");
+  // Empty for a generic profile: "I have a Generic OBD-II" would read oddly in the AI question.
+  const vehicleText = selection.make ? [label.title, label.detail].filter(Boolean).join(" ") : "";
   const rate = reads.current.length / 2;
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
@@ -300,9 +344,13 @@ export default function Dashboard() {
           live={live}
           busy={busy}
           faults={faults}
+          pending={pending}
           readiness={readiness}
+          history={faultHistory}
           onRead={() => faultAction(false)}
           onClear={() => faultAction(true)}
+          onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
+          onForgetHistory={forgetHistory}
         />
 
         <div className="panel">
