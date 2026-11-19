@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hex, NegativeResponse } from "@/core/kwp2000/frame";
-import type { Channel, Values } from "@/core/profile";
+import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { Session, type TrafficEvent } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { TimeoutError } from "@/core/transport/types";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Sparkline, type Point } from "./Sparkline";
-import { VehiclePicker, type Selection } from "./VehiclePicker";
+import { FaultPanel } from "./FaultPanel";
+import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
 type Source = "serial" | "simulator";
@@ -43,7 +44,8 @@ export default function Dashboard() {
   const [status, setStatus] = useState<Status>("idle");
   const [source, setSource] = useState<Source | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [faults, setFaults] = useState<string[] | null>(null);
+  const [faults, setFaults] = useState<Fault[] | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -104,6 +106,7 @@ export default function Dashboard() {
   async function connect(kind: Source) {
     setError(null);
     setFaults(null);
+    setReadiness(null);
     setUnavailable(new Set());
     setSource(kind);
     setStatus("connecting");
@@ -118,7 +121,10 @@ export default function Dashboard() {
       await s.connect();
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
-      s.readFaults().then(setFaults, () => {});
+      s.readFaults()
+        .then(setFaults, () => {})
+        .then(() => s.readReadiness())
+        .then(setReadiness, () => {});
       void s.poll(onValues, (e) => {
         setStatus("error");
         setError(explain(e) ?? "Lost the ECU.");
@@ -144,6 +150,7 @@ export default function Dashboard() {
     try {
       if (clear) await session.current.clearFaults();
       setFaults(await session.current.readFaults());
+      setReadiness(await session.current.readReadiness());
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -176,6 +183,7 @@ export default function Dashboard() {
   function pickVehicle(sel: Selection) {
     setSelection(sel);
     setFaults(null);
+    setReadiness(null);
     latest.current = {};
     history.current = {};
     try {
@@ -184,6 +192,8 @@ export default function Dashboard() {
   }
 
   const live = status === "live";
+  const label = selectionLabel(selection, profile);
+  const vehicleText = [label.title, label.detail].filter(Boolean).join(" ");
   const rate = reads.current.length / 2;
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
@@ -283,36 +293,17 @@ export default function Dashboard() {
       )}
 
       <section className="lower">
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Fault memory</h2>
-            <div>
-              <button className="quiet" disabled={!live || busy} onClick={() => faultAction(false)}>
-                Read
-              </button>
-              <button
-                className="quiet"
-                disabled={!live || busy || !faults?.length || !profile.faults?.clear}
-                onClick={() => faultAction(true)}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          {!profile.faults ? (
-            <p className="muted">This profile can&rsquo;t read faults yet.</p>
-          ) : faults === null ? (
-            <p className="muted">{live ? "Reading…" : "Connect to read stored faults."}</p>
-          ) : faults.length === 0 ? (
-            <p className="muted">No stored faults.</p>
-          ) : (
-            <ol className="faults">
-              {faults.map((f) => (
-                <li key={f}>{f}</li>
-              ))}
-            </ol>
-          )}
-        </div>
+        <FaultPanel
+          profile={profile}
+          vehicle={vehicleText}
+          values={latest.current}
+          live={live}
+          busy={busy}
+          faults={faults}
+          readiness={readiness}
+          onRead={() => faultAction(false)}
+          onClear={() => faultAction(true)}
+        />
 
         <div className="panel">
           <div className="panel-head">

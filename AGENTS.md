@@ -29,10 +29,12 @@ core/                     vehicle independent, change rarely
 profiles/                 one folder per vehicle/ECU, all vehicle knowledge lives here
   index.ts                registry: add new profiles here
   land-rover-td5/         reference profile: index, data, faults, keygen, simulator, README
-  generic-obd2/           standard OBD-II: functional addressing, supported-PID detection, DTCs
+  generic-obd2/           standard OBD-II: functional addressing, supported-PID detection, DTCs, self-tests
+  shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
+components/FaultPanel     fault list with plain-language explanations, urgency, self-tests, clear warning
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 app/                      Next.js shell + globals.css (all styling)
@@ -76,6 +78,9 @@ Follow docs/adding-a-vehicle.md. In short:
   IBM Plex Sans/Mono, hairline rules, no shadows, no gradients, no rounded cards, one accent
   colour (`--signal`) used only for live/warning states. Must work on a phone and in night mode.
 - Writing: plain English, no em or en dashes in UI text.
+- **Fault explanations are for non-mechanics.** Follow the writing guide at the top of
+  `profiles/shared/obd-codes.ts`: everyday title, one or two sentences, 2 to 4 causes (most common first),
+  one first check, honest urgency. Write them yourself; never copy text from code lists or manuals.
 
 ## Gotchas
 

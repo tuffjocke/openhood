@@ -7,7 +7,7 @@ import {
   shortFrame,
   SID,
 } from "./kwp2000/frame";
-import type { EcuLink, RequestOptions, Values, VehicleProfile } from "./profile";
+import type { EcuLink, Fault, Readiness, RequestOptions, Values, VehicleProfile } from "./profile";
 import { sleep, TimeoutError, type Transport } from "./transport/types";
 
 export interface TrafficEvent {
@@ -189,7 +189,13 @@ export class Session {
     this.polling = false;
   }
 
-  readFaults(): Promise<string[]> {
+  readReadiness(): Promise<Readiness | null> {
+    const r = this.profile.faults?.readiness;
+    if (!r) return Promise.resolve(null);
+    return this.exclusive(() => r(this.link));
+  }
+
+  readFaults(): Promise<Fault[]> {
     const f = this.profile.faults;
     if (!f) return Promise.resolve([]);
     return this.exclusive(() => f.read(this.link));

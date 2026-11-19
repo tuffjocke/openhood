@@ -5,7 +5,7 @@
  * faults. To map it: provoke a known fault on the car (e.g. unplug the fuel temp
  * sensor with ignition on), read, see which bit sets, fix the table, mark verified.
  */
-import type { EcuLink } from "@/core/profile";
+import type { EcuLink, Fault } from "@/core/profile";
 
 export const FAULT_BITS = [
   "Coolant temperature sensor",
@@ -33,8 +33,10 @@ export const FAULT_BITS = [
 export const READ_FAULTS = [0x21, 0x3b];
 export const CLEAR_FAULTS = [0x14, 0x31, 0x31];
 
-export function decodeFaults(res: Uint8Array): string[] {
-  return FAULT_BITS.filter((_, i) => (res[2 + (i >> 3)] ?? 0) & (1 << (i & 7)));
+export function decodeFaults(res: Uint8Array): Fault[] {
+  return FAULT_BITS.flatMap((name, i) =>
+    (res[2 + (i >> 3)] ?? 0) & (1 << (i & 7)) ? [{ id: `td5-bit-${i}`, name }] : [],
+  );
 }
 
 export function encodeFaults(active: Set<number>): number[] {

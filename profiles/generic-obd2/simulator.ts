@@ -30,9 +30,10 @@ function supportWord(base: number, pids: number[], hasNext: boolean) {
 }
 
 export function createObdSimulator(): SimulatedEcu {
-  const pids = groups.map((g) => g.request[1]);
+  const pids = [0x01, ...groups.map((g) => g.request[1])];
   // Four codes: more than fit in one frame, to exercise multi-frame reading.
   let stored = ["P0171", "P0420", "P0300", "P0442"];
+  let cleared = false;
   const engine = new EngineModel();
 
   return {
@@ -47,6 +48,14 @@ export function createObdSimulator(): SimulatedEcu {
           if (pid === 0x00) return [0x41, 0x00, ...supportWord(0x00, pids, true)];
           if (pid === 0x20) return [0x41, 0x20, ...supportWord(0x20, pids, true)];
           if (pid === 0x40) return [0x41, 0x40, ...supportWord(0x40, pids, false)];
+          if (pid === 0x01) {
+            // MIL on while codes are stored; all spark tests complete until codes are cleared
+            const a = (stored.length ? 0x80 : 0) | Math.min(stored.length, 0x7f);
+            const b = 0x07 | (cleared ? 0x30 : 0); // misfire, fuel, components available
+            const cAvail = 0b1110_0101; // catalyst, evap, O2 sensor, O2 heater, EGR
+            const d = cleared ? 0b1010_0101 : 0;
+            return [0x41, 0x01, a, b, cAvail, d];
+          }
           const g = groups.find((g) => g.request[1] === pid);
           return g ? g.encode(engine.sample()) : [0x7f, 0x01, 0x12];
         }
@@ -62,6 +71,7 @@ export function createObdSimulator(): SimulatedEcu {
         }
         case 0x04:
           stored = [];
+          cleared = true;
           return [0x44];
         default:
           return [0x7f, p[0], 0x11];

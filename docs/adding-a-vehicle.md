@@ -180,7 +180,10 @@ No changes to `core/` or `components/` are needed.
    positive SID (`[0x61, localId, ...data]`, data at index 2). `state` holds earlier values.
 5. `encode` next to every `decode`, and a **simulator** whose `handle` answers the same requests.
 6. **Schedule**: repeat fast groups to poll them more often. `slowGroups` for rarely changing values.
-7. Optional **faults** with `read` and `clear`. Use `ecu.requestMany` if answers can span frames.
+7. Optional **faults**: `read` returns `Fault`s (`id`, optional `code`, `name`), plus `clear`.
+   Use `ecu.requestMany` if answers can span frames. Add plain-language `explanations` keyed by
+   fault id (see the writing guide in `profiles/shared/obd-codes.ts`). If the ECU reports standard
+   P0 codes, reuse `OBD_EXPLANATIONS`. Set `clearResetsReadiness` for OBD-II cars.
 8. If the ECU only supports some groups, store what it reports in `state` during `connect` and give
    groups `available(state)` and `provides` (see `profiles/generic-obd2`).
 9. Register in `profiles/index.ts`, write the profile README, run `npm run check`.

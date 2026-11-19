@@ -55,6 +55,46 @@ export interface Group {
   confidence: Confidence;
 }
 
+/** One stored fault as the ECU reports it. */
+export interface Fault {
+  /** Stable key, used to look up `explanations`. For OBD codes: the code, e.g. "P0171". */
+  id: string;
+  /** Code to show, if the ECU uses codes ("P0171"). Omit for ECUs that only report named faults. */
+  code?: string;
+  /** Short name to show when there is no explanation: the official title or the profile's own name. */
+  name: string;
+}
+
+/**
+ * How urgent a fault is, as guidance for a non-mechanic:
+ *  - "ok":   fine to keep driving, fix when convenient
+ *  - "soon": drive gently, get it fixed soon
+ *  - "now":  risk of damage or unsafe: stop or go straight to a garage
+ */
+export type Urgency = "ok" | "soon" | "now";
+
+/** A plain-language explanation of a fault, written for people who aren't mechanics. */
+export interface FaultInfo {
+  /** Everyday title: "Engine is getting too much air or too little fuel". */
+  title: string;
+  /** One or two sentences: what it means and what happens if you ignore it. */
+  plain: string;
+  /** Common causes, most likely first. */
+  causes: string[];
+  /** The first, cheapest thing to check. */
+  check?: string;
+  urgency: Urgency;
+  confidence: Confidence;
+}
+
+/** Emissions self-test status (OBD "readiness monitors"). */
+export interface Readiness {
+  /** Engine warning light on. */
+  milOn: boolean;
+  /** Each supported self-test and whether it has finished since the last clear. */
+  monitors: { name: string; complete: boolean }[];
+}
+
 /** What a profile gets to talk to the ECU with. */
 export interface EcuLink {
   /**
@@ -152,8 +192,14 @@ export interface VehicleProfile {
   slowGroups?: string[];
 
   faults?: {
-    read(ecu: EcuLink): Promise<string[]>;
+    read(ecu: EcuLink): Promise<Fault[]>;
     clear?(ecu: EcuLink): Promise<void>;
+    /** Plain-language explanations by Fault.id. Faults without one show their name only. */
+    explanations?: Record<string, FaultInfo>;
+    /** Clearing also resets emissions self-tests (true for OBD-II cars). Shown as a warning. */
+    clearResetsReadiness?: boolean;
+    /** Optional: read the warning light and emissions self-test status. */
+    readiness?(ecu: EcuLink): Promise<Readiness>;
     confidence: Confidence;
   };
 

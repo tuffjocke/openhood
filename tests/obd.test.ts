@@ -9,6 +9,8 @@ import { SimulatedTransport } from "@/core/transport/simulated";
 import { genericObd2 } from "@/profiles/generic-obd2";
 import { decodeDtc, decodeDtcFrames, encodeDtc } from "@/profiles/generic-obd2/dtc";
 import { pidSupported, supportKey } from "@/profiles/generic-obd2/pids";
+import { decodeReadiness } from "@/profiles/generic-obd2/readiness";
+import { OBD_EXPLANATIONS, OBD_TITLES } from "@/profiles/shared/obd-codes";
 
 describe("generic OBD-II", () => {
   it("builds the standard ISO 14230-4 start communication frame", () => {
@@ -42,7 +44,49 @@ describe("generic OBD-II", () => {
     await s.connect();
     const codes = await s.readFaults();
     assert.equal(codes.length, 4);
-    assert.ok(codes[0].startsWith("P0171"));
+    assert.equal(codes[0].code, "P0171");
+    assert.equal(codes[0].name, "System too lean, bank 1");
     await s.disconnect();
+  });
+
+  it("decodes the warning light and self-tests", () => {
+    // MIL on, 2 codes; petrol; misfire+fuel+components available, fuel incomplete;
+    // catalyst + O2 sensor available, O2 sensor incomplete
+    const r = decodeReadiness(Uint8Array.from([0x41, 0x01, 0x82, 0x27, 0x21, 0x20]));
+    assert.equal(r.milOn, true);
+    assert.deepEqual(r.monitors, [
+      { name: "Misfire", complete: true },
+      { name: "Fuel system", complete: false },
+      { name: "Components", complete: true },
+      { name: "Catalytic converter", complete: true },
+      { name: "Oxygen sensors", complete: false },
+    ]);
+  });
+
+  it("resets self-tests when codes are cleared", async () => {
+    const s = new Session(genericObd2, new SimulatedTransport(genericObd2));
+    await s.connect();
+    assert.equal((await s.readReadiness())?.milOn, true);
+    await s.clearFaults();
+    const r = await s.readReadiness();
+    assert.equal(r?.milOn, false);
+    assert.ok(r?.monitors.some((m) => !m.complete));
+    await s.disconnect();
+  });
+});
+
+describe("plain-language code explanations", () => {
+  it("explains every code that has an official title", () => {
+    for (const code of Object.keys(OBD_TITLES)) assert.ok(OBD_EXPLANATIONS[code], `no explanation for ${code}`);
+  });
+
+  it("follows the writing guide", () => {
+    for (const [code, e] of Object.entries(OBD_EXPLANATIONS)) {
+      assert.match(code, /^[PCBU][0-3][0-9A-F]{3}$/);
+      assert.ok(e.title.length <= 70, `${code} title too long`);
+      assert.ok(e.causes.length >= 2 && e.causes.length <= 4, `${code} needs 2 to 4 causes`);
+      for (const text of [e.title, e.plain, e.check ?? "", ...e.causes])
+        assert.ok(!/[\u2013\u2014]/.test(text), `${code} uses an en or em dash`);
+    }
   });
 });
