@@ -25,6 +25,15 @@ for (const p of all) {
       assert.equal(new Set(keys).size, keys.length, "duplicate channel key");
     });
 
+    it("lists the vehicles it is for", () => {
+      if (p.generic) return;
+      assert.ok(p.vehicles.length > 0, "non-generic profile without vehicles");
+      for (const v of p.vehicles) {
+        assert.ok(v.make && v.model && v.engine, "make, model and engine are required");
+        assert.ok(v.from >= 1980 && v.from <= v.to && v.to <= 2030, `bad years ${v.from} to ${v.to}`);
+      }
+    });
+
     it("only schedules groups that exist", () => {
       const gids = new Set(p.groups.map((g) => g.id));
       for (const id of [...p.schedule, ...(p.slowGroups ?? [])]) assert.ok(gids.has(id), `unknown group "${id}"`);
@@ -56,6 +65,12 @@ for (const p of all) {
     });
   });
 }
+
+describe("registry", () => {
+  it("has exactly one generic profile", () => {
+    assert.equal(PROFILES.filter((p) => p.generic).length, 1);
+  });
+});
 
 // Known-answer tests for security algorithms go here once captured from real ECUs:
 // it("td5Key matches a real ECU", () => assert.equal(td5Key(0x1234), 0xABCD));

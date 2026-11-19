@@ -67,6 +67,7 @@ export const templateProfile: VehicleProfile = {
   id: "template",
   name: "Template",
   covers: "Make, models · years",
+  vehicles: [{ make: "Make", model: "Model", from: 2000, to: 2005, engine: "2.0 petrol" }],
   ecu: "Which ECU",
   hardware: "Standard KKL cable. Where the OBD socket is, and any adapter needed.",
   status: "experimental",

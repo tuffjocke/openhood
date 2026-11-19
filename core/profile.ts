@@ -87,13 +87,31 @@ export interface SimulatedEcu {
   handle(payload: Uint8Array): number[] | number[][] | null;
 }
 
+/** One make/model/year range a profile works with. Shown in the vehicle picker. */
+export interface VehicleMatch {
+  make: string;
+  model: string;
+  /** First and last model year, inclusive. */
+  from: number;
+  to: number;
+  /** Engine or variant, to tell profiles apart for the same car: "2.5 Td5 diesel". */
+  engine: string;
+}
+
 export interface VehicleProfile {
   /** Folder name, kebab-case: "land-rover-td5". */
   id: string;
   /** Shown in the picker: "Land Rover Td5". */
   name: string;
-  /** Which vehicles and years: "Defender, Discovery 2 · 1998 to 2006". */
+  /** Which vehicles and years in one line: "Defender, Discovery 2 · 1998 to 2006". */
   covers: string;
+  /**
+   * The cars this profile is for, used by the make/model/year picker.
+   * Leave empty only for a generic profile (see `generic`).
+   */
+  vehicles: VehicleMatch[];
+  /** A catch-all profile offered for cars that aren't listed (generic OBD-II). */
+  generic?: boolean;
   /** Which ECU this talks to: "Engine ECU (MSB/NNN)". */
   ecu: string;
   /**

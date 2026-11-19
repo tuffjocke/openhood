@@ -9,13 +9,14 @@ import { TimeoutError } from "@/core/transport/types";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Sparkline, type Point } from "./Sparkline";
+import { VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
 type Source = "serial" | "simulator";
 
 const HISTORY_MS = 60_000;
 const LOG_LINES = 300;
-const PROFILE_KEY = "openhood.profile";
+const VEHICLE_KEY = "openhood.vehicle";
 
 /** toFixed without "-0.00". */
 function fmt(v: number, decimals: number) {
@@ -37,8 +38,8 @@ function explain(e: unknown): string | null {
 }
 
 export default function Dashboard() {
-  const [profileId, setProfileId] = useState(PROFILES[0].id);
-  const profile = getProfile(profileId) ?? PROFILES[0];
+  const [selection, setSelection] = useState<Selection>({ profileId: PROFILES[0].id });
+  const profile = getProfile(selection.profileId) ?? PROFILES[0];
   const [status, setStatus] = useState<Status>("idle");
   const [source, setSource] = useState<Source | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +62,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(PROFILE_KEY);
-      if (saved && getProfile(saved)) setProfileId(saved);
+      const saved = JSON.parse(localStorage.getItem(VEHICLE_KEY) ?? "null") as Selection | null;
+      if (saved && getProfile(saved.profileId)) setSelection(saved);
     } catch {}
     setSerialOk(WebSerialTransport.supported());
     setNight(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -172,13 +173,13 @@ export default function Dashboard() {
     setNight(!night);
   }
 
-  function pickProfile(id: string) {
-    setProfileId(id);
+  function pickVehicle(sel: Selection) {
+    setSelection(sel);
     setFaults(null);
     latest.current = {};
     history.current = {};
     try {
-      localStorage.setItem(PROFILE_KEY, id);
+      localStorage.setItem(VEHICLE_KEY, JSON.stringify(sel));
     } catch {}
   }
 
@@ -191,19 +192,13 @@ export default function Dashboard() {
       <header className="top">
         <div className="mark">
           <span className="mark-name">Openhood</span>
-          <select
-            className="picker"
-            value={profile.id}
-            onChange={(e) => pickProfile(e.target.value)}
+          <VehiclePicker
+            profiles={PROFILES}
+            selection={selection}
+            profile={profile}
             disabled={status === "live" || status === "connecting"}
-            aria-label="Vehicle"
-          >
-            {PROFILES.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onSelect={pickVehicle}
+          />
         </div>
         <div className="top-right">
           <span className={`status status-${status}`}>
@@ -234,7 +229,7 @@ export default function Dashboard() {
       </header>
 
       <p className="sub">
-        {profile.covers} · {profile.ecu} · K-line {profile.link.baudRate}
+        Profile: {profile.name} · {profile.ecu} · K-line {profile.link.baudRate}
         {profile.status === "experimental" && <span className="tag">experimental</span>}
       </p>
 

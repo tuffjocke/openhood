@@ -32,6 +32,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   generic-obd2/           standard OBD-II: functional addressing, supported-PID detection, DTCs
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
+components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
+core/catalog.ts           make/model/year lookups over profiles
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
@@ -43,7 +45,8 @@ docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-l
 Follow docs/adding-a-vehicle.md. In short:
 
 1. `cp -r profiles/_template profiles/<make>-<engine-or-ecu>` (kebab-case, e.g. `bmw-m52`).
-2. Fill in link settings, `hardware`, `connect`, channels, groups, schedule, simulator.
+2. Fill in `vehicles` (make/model/years/engine for the picker), link settings, `hardware`, `connect`,
+   channels, groups, schedule, simulator.
 3. Keep each group's simulator `encode` next to its `decode` so they cannot drift.
 4. Register it in `profiles/index.ts`.
 5. Write the profile README (status table, connect bytes, sources).

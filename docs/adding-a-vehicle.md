@@ -170,6 +170,9 @@ No changes to `core/` or `components/` are needed.
 
 1. `cp -r profiles/_template profiles/<make>-<engine-or-ecu>`, kebab-case, `id` = folder name.
 2. Set `name`, `covers`, `ecu`, `link` (baud, init, addresses) and `connect` (session, security).
+   List the cars in `vehicles` (make, model, first and last model year, engine): that's what the
+   make/model/year picker shows. Use the make and model names people use, so they line up with
+   other profiles (e.g. "Land Rover", "Defender").
 3. **Channels**: what the UI shows (label, unit, decimals, min/max, optional `warnAbove`/`warnBelow`).
 4. **Groups**: one per request. `decode(res, state)` gets the response payload including the
    positive SID (`[0x61, localId, ...data]`, data at index 2). `state` holds earlier values.

@@ -84,34 +84,113 @@ h2 {
   color: var(--muted);
 }
 
-.picker {
-  font: 500 15px/1 var(--sans);
+.vp {
+  position: relative;
+}
+
+.vp-button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font: 500 15px/1.2 var(--sans);
   color: var(--ink);
   background: transparent;
   border: 0;
   border-bottom: 1.5px dashed var(--rule);
-  border-radius: 0;
-  padding: 2px 18px 3px 0;
-  appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: right 4px center, right 0 center;
-  background-size: 4px 4px;
-  background-repeat: no-repeat;
-  cursor: pointer;
+  padding: 2px 0 3px;
 }
 
-.picker:disabled {
+.vp-button:hover:not(:disabled) {
+  border-bottom-color: var(--ink);
+}
+
+.vp-button:disabled {
   border-bottom-color: transparent;
-  background-image: none;
-  padding-right: 0;
-  cursor: default;
   opacity: 1;
 }
 
-.picker:focus-visible {
+.vp-detail {
+  font: 400 12px/1 var(--mono);
+  color: var(--muted);
+}
+
+.vp-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  z-index: 10;
+  width: min(560px, calc(100vw - 28px));
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  padding: 18px;
+}
+
+.vp-fields {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 0.8fr;
+  gap: 12px;
+}
+
+.vp-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.vp-fields label > span,
+.vp-engines > span {
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.vp-fields select {
+  font: 400 15px/1.2 var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.vp-fields select:focus-visible {
   outline: 2px solid var(--signal);
-  outline-offset: 2px;
+  outline-offset: 1px;
+}
+
+.vp-fields select:disabled {
+  opacity: 0.4;
+}
+
+.vp-engines {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.vp-other {
+  margin-top: 16px;
+}
+
+.vp-other p {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.vp-foot {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.vp-foot a {
+  color: var(--ink);
+  text-underline-offset: 3px;
 }
 
 .sub {
@@ -421,6 +500,18 @@ pre {
   .value {
     font-size: 38px;
     margin: 14px 0 10px;
+  }
+  .mark {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .vp-button {
+    flex-wrap: wrap;
+    text-align: left;
+  }
+  .vp-fields {
+    grid-template-columns: 1fr;
   }
   .lower {
     grid-template-columns: 1fr;

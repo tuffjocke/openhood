@@ -13,6 +13,8 @@ export const genericObd2: VehicleProfile = {
   id: "generic-obd2",
   name: "Generic OBD-II",
   covers: "Most K-line cars with OBD-II or EOBD, roughly 2001 to 2008 in Europe",
+  vehicles: [],
+  generic: true,
   ecu: "Engine (standard OBD values)",
   hardware:
     "Standard KKL cable. Only cars using ISO 14230 fast init for now; cars that need the 5-baud wake-up (ISO 9141-2) won't answer yet.",
