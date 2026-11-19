@@ -116,8 +116,9 @@ export function FirstRun({
                 {connecting === "serial" ? "Waking the car…" : "Read my car"}
               </button>
             ) : (
-              <p className="hero-note">
-                Reading a car needs Chrome or Edge on a computer, or Chrome on Android. You can still look up a code below.
+              <p className="hero-note" role="note">
+                <strong>This browser can&rsquo;t read a car.</strong> Open this page in Chrome or Edge on a computer, or
+                Chrome on Android. You can still try the demo and look up codes here.
               </p>
             )}
             <button className="ghost big" onClick={onSimulator} disabled={!!connecting}>

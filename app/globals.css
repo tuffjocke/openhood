@@ -414,10 +414,23 @@ button:disabled {
   margin-top: 34px;
 }
 
+/* Unsupported browser: a road-sign yellow notice, since nothing else on the page will work for a car. */
 .hero-note {
-  margin: 0;
-  max-width: 34ch;
-  color: var(--muted);
+  flex-basis: 100%;
+  margin: 0 0 6px;
+  max-width: 46ch;
+  padding: 16px 20px;
+  border-radius: var(--r-md);
+  background: var(--sign);
+  color: var(--sign-ink);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.hero-note strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 16px;
 }
 
 /* The one loud thing: a live reading, set like an instrument. */
