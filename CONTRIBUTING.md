@@ -2,8 +2,9 @@
 
 Thanks for helping. The most valuable contributions, in order:
 
-1. **Testing on a real car.** Run the app, open the K-line traffic panel, report what works and
-   what doesn't. Even "connects but rpm reads double" is gold.
+1. **Testing on a real car.** Run the app, connect, then click **Send test report** at the bottom of
+   the page. It opens a GitHub issue with your car, the values and the K-line traffic filled in;
+   just answer the two questions. Even "connects but rpm reads double" is gold.
 2. **New vehicles.** See [docs/adding-a-vehicle.md](docs/adding-a-vehicle.md).
 3. **Verifying existing profiles.** Move things from `community` to `verified`, with the car you tested on.
 4. **Core features** listed in [docs/architecture.md](docs/architecture.md).

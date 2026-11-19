@@ -221,6 +221,11 @@ h2 {
   color: var(--muted);
 }
 
+.foot-links {
+  display: flex;
+  gap: 18px;
+}
+
 .foot a {
   color: var(--ink);
   text-underline-offset: 3px;
@@ -607,6 +612,19 @@ span.fault-label {
 
 .history li {
   gap: 12px;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.notice a {
+  color: var(--ink);
+  text-underline-offset: 3px;
 }
 
 .history .done {

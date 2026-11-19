@@ -40,3 +40,72 @@ export function mergeHistory(prev: HistoryEntry[], faults: Fault[], now: number,
 export function historyKey(parts: (string | number | undefined)[]): string {
   return "openhood.history." + parts.filter((p) => p !== undefined && p !== "").join("|");
 }
+
+/** Combine two histories of the same car (e.g. from an import). Keeps the widest picture of each fault. */
+export function combineHistories(a: HistoryEntry[], b: HistoryEntry[]): HistoryEntry[] {
+  const byId = new Map(a.map((e) => [e.id, { ...e }]));
+  for (const e of b) {
+    const cur = byId.get(e.id);
+    if (!cur) {
+      byId.set(e.id, { ...e });
+      continue;
+    }
+    cur.firstSeen = Math.min(cur.firstSeen, e.firstSeen);
+    if (e.lastSeen > cur.lastSeen) {
+      cur.lastSeen = e.lastSeen;
+      cur.name = e.name;
+    }
+    cur.daysSeen = Math.max(cur.daysSeen, e.daysSeen);
+    cur.pendingOnly = cur.pendingOnly && e.pendingOnly;
+  }
+  return [...byId.values()].sort((x, y) => y.lastSeen - x.lastSeen);
+}
+
+/** The export file: every car's history from this browser. */
+export interface HistoryExport {
+  app: "openhood";
+  kind: "fault-history";
+  version: 1;
+  exportedAt: string;
+  /** Storage key (see historyKey) → entries. */
+  cars: Record<string, HistoryEntry[]>;
+}
+
+export function buildExport(cars: Record<string, HistoryEntry[]>, now = new Date()): HistoryExport {
+  return { app: "openhood", kind: "fault-history", version: 1, exportedAt: now.toISOString(), cars };
+}
+
+const isEntry = (e: unknown): e is HistoryEntry => {
+  const x = e as HistoryEntry;
+  return (
+    !!x &&
+    typeof x.id === "string" &&
+    typeof x.name === "string" &&
+    typeof x.firstSeen === "number" &&
+    typeof x.lastSeen === "number" &&
+    typeof x.daysSeen === "number" &&
+    typeof x.pendingOnly === "boolean" &&
+    (x.code === undefined || typeof x.code === "string")
+  );
+};
+
+/** Parse and check an export file. Throws a readable error for anything else. */
+export function parseExport(text: string): HistoryExport {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("That file isn't an Openhood history export.");
+  }
+  const d = data as HistoryExport;
+  if (d?.app !== "openhood" || d.kind !== "fault-history" || typeof d.cars !== "object" || !d.cars) {
+    throw new Error("That file isn't an Openhood history export.");
+  }
+  if (d.version !== 1) throw new Error("This export is from a newer version of Openhood.");
+  for (const [key, entries] of Object.entries(d.cars)) {
+    if (!key.startsWith("openhood.history.") || !Array.isArray(entries) || !entries.every(isEntry)) {
+      throw new Error("The history file is damaged.");
+    }
+  }
+  return d;
+}

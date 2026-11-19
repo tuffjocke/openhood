@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hex, NegativeResponse } from "@/core/kwp2000/frame";
-import { historyKey, mergeHistory, type HistoryEntry } from "@/core/history";
+import {
+  buildExport,
+  combineHistories,
+  historyKey,
+  mergeHistory,
+  parseExport,
+  type HistoryEntry,
+} from "@/core/history";
+import { reportUrl } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { Session, type TrafficEvent } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
@@ -174,6 +182,53 @@ export default function Dashboard() {
     } catch {}
   }
 
+  function exportHistory() {
+    const cars: Record<string, HistoryEntry[]> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("openhood.history.")) cars[k] = JSON.parse(localStorage.getItem(k) ?? "[]");
+      }
+    } catch {}
+    const blob = new Blob([JSON.stringify(buildExport(cars), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `openhood-history-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importHistory(file: File): Promise<string> {
+    try {
+      const data = parseExport(await file.text());
+      const keys = Object.keys(data.cars);
+      for (const k of keys) {
+        const mine = JSON.parse(localStorage.getItem(k) ?? "[]") as HistoryEntry[];
+        localStorage.setItem(k, JSON.stringify(combineHistories(mine, data.cars[k])));
+      }
+      setFaultHistory(JSON.parse(localStorage.getItem(hKey) ?? "[]") as HistoryEntry[]);
+      return keys.length === 1 ? "Imported history for 1 car." : `Imported history for ${keys.length} cars.`;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Couldn't import that file.";
+    }
+  }
+
+  /** Fill in the GitHub issue link at click time, so it has the latest values and traffic. */
+  function fillReportLink(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.currentTarget.href = reportUrl({
+      vehicle: vehicleText,
+      profile,
+      source,
+      status,
+      error,
+      readsPerSecond: reads.current.length / 2,
+      values: latest.current,
+      faults,
+      traffic: traffic.current,
+      userAgent: navigator.userAgent,
+    });
+  }
+
   /** Read stored faults, pending faults and self-tests, one after the other (half duplex). */
   async function refreshFaults(s: Session) {
     try {
@@ -289,7 +344,12 @@ export default function Dashboard() {
 
       {error && (
         <p className="notice" role="alert">
-          {error}
+          {error}{" "}
+          {source === "serial" && (
+            <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink}>
+              Send a test report
+            </a>
+          )}
         </p>
       )}
       {!serialOk && status === "idle" && !error && (
@@ -351,6 +411,8 @@ export default function Dashboard() {
           onClear={() => faultAction(true)}
           onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
           onForgetHistory={forgetHistory}
+          onExportHistory={exportHistory}
+          onImportHistory={importHistory}
         />
 
         <div className="panel">
@@ -385,7 +447,12 @@ export default function Dashboard() {
 
       <footer className="foot">
         <a href="https://github.com/tuffjocke/openhood">Open source on GitHub</a>
-        <a href="https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md">Add your car</a>
+        <span className="foot-links">
+          <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title="Opens a pre-filled GitHub issue">
+            Send test report
+          </a>
+          <a href="https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md">Add your car</a>
+        </span>
       </footer>
     </main>
   );

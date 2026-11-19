@@ -35,13 +35,15 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
 components/FaultPanel     faults: explanations, urgency, freeze frames, pending, history, self-tests, clear warning
-core/history.ts           fault history merge logic (stored per car in the browser)
+core/history.ts           fault history: merge, export/import (stored per car in the browser)
+core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
-tests/history.test.ts     fault history
+tests/history.test.ts     fault history, export/import
+tests/report.test.ts      test report contents and link length
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
 ```
 
@@ -73,6 +75,8 @@ Follow docs/adding-a-vehicle.md. In short:
   The tests reject unknown names.
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
+- **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens
+  only when the user chooses to (export file, GitHub issue). Discuss in an issue before changing that.
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.
 - Every profile must have a working simulator. The app and tests must work with no hardware.
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.

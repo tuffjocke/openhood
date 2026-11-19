@@ -170,37 +170,71 @@ function HistoryView({
   history,
   explanations,
   onForget,
+  onExport,
+  onImport,
 }: {
   history: HistoryEntry[];
   explanations?: Record<string, FaultInfo>;
   onForget: () => void;
+  onExport: () => void;
+  onImport: (file: File) => Promise<string>;
 }) {
-  if (!history.length) return null;
+  const [message, setMessage] = useState<string | null>(null);
   return (
     <details className="readiness history">
       <summary>
-        History · <strong>{history.length}</strong> {history.length === 1 ? "fault" : "faults"} seen on this car
+        History ·{" "}
+        {history.length ? (
+          <>
+            <strong>{history.length}</strong> {history.length === 1 ? "fault" : "faults"} seen on this car
+          </>
+        ) : (
+          "nothing yet for this car"
+        )}
       </summary>
-      <ul>
-        {history.map((e) => (
-          <li key={e.id}>
-            <span>
-              {e.code && <span className="fault-code">{e.code} </span>}
-              {explanations?.[e.id]?.title ?? e.name}
-              {e.pendingOnly && <span className="muted"> · only pending</span>}
-            </span>
-            <span className="done">
-              {e.daysSeen === 1 ? fmtDate(e.lastSeen) : `${e.daysSeen} days, last ${fmtDate(e.lastSeen)}`}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {history.length > 0 && (
+        <ul>
+          {history.map((e) => (
+            <li key={e.id}>
+              <span>
+                {e.code && <span className="fault-code">{e.code} </span>}
+                {explanations?.[e.id]?.title ?? e.name}
+                {e.pendingOnly && <span className="muted"> · only pending</span>}
+              </span>
+              <span className="done">
+                {e.daysSeen === 1 ? fmtDate(e.lastSeen) : `${e.daysSeen} days, last ${fmtDate(e.lastSeen)}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="muted small">
-        Kept in this browser only. Faults that keep coming back are worth fixing even if they clear themselves.{" "}
-        <button className="link-button" onClick={onForget}>
-          Forget history
-        </button>
+        Kept in this browser only. Faults that keep coming back are worth fixing even if they clear themselves.
       </p>
+      <div className="history-actions">
+        <button className="link-button" onClick={onExport}>
+          Export all cars
+        </button>
+        <label className="link-button">
+          Import
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) setMessage(await onImport(file));
+            }}
+          />
+        </label>
+        {history.length > 0 && (
+          <button className="link-button" onClick={onForget}>
+            Forget this car
+          </button>
+        )}
+      </div>
+      {message && <p className="small">{message}</p>}
     </details>
   );
 }
@@ -219,6 +253,8 @@ export function FaultPanel({
   onClear,
   onFreezeFrame,
   onForgetHistory,
+  onExportHistory,
+  onImportHistory,
 }: {
   profile: VehicleProfile;
   vehicle: string;
@@ -233,6 +269,8 @@ export function FaultPanel({
   onClear: () => void;
   onFreezeFrame: (f: Fault) => Promise<Values | null>;
   onForgetHistory: () => void;
+  onExportHistory: () => void;
+  onImportHistory: (file: File) => Promise<string>;
 }) {
   const [confirming, setConfirming] = useState(false);
   const f = profile.faults;
@@ -359,7 +397,15 @@ export function FaultPanel({
         </>
       )}
 
-      <HistoryView history={history} explanations={f?.explanations} onForget={onForgetHistory} />
+      {f && (
+        <HistoryView
+          history={history}
+          explanations={f.explanations}
+          onForget={onForgetHistory}
+          onExport={onExportHistory}
+          onImport={onImportHistory}
+        />
+      )}
     </div>
   );
 }

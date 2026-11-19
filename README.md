@@ -6,9 +6,11 @@ No installs, no dealer tools.
 **[Open the app](https://tuffjocke.github.io/openhood/)** · try the Simulator, no car needed
 
 - Live data with 60 second traces
-- Read and clear fault memory
+- Fault codes in plain language, with urgency, freeze frames, pending codes and history
+- Fault history export and import (kept in your browser, no account)
 - Log a drive to CSV at 10 Hz
 - Raw K-line traffic view for reverse engineering
+- One-click test reports to GitHub, with the traffic log included
 - Works on laptops (Chrome, Edge) and Android phones (Chrome 148+)
 
 ## Supported vehicles
