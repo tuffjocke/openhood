@@ -12,6 +12,7 @@ import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { templateProfile } from "@/profiles/_template";
 import { PROFILES } from "@/profiles";
+import { VEHICLE_NAMES } from "@/profiles/names";
 
 const all: VehicleProfile[] = [...PROFILES, templateProfile];
 
@@ -31,6 +32,12 @@ for (const p of all) {
       for (const v of p.vehicles) {
         assert.ok(v.make && v.model && v.engine, "make, model and engine are required");
         assert.ok(v.from >= 1980 && v.from <= v.to && v.to <= 2030, `bad years ${v.from} to ${v.to}`);
+        if (p === templateProfile) continue;
+        assert.ok(v.make in VEHICLE_NAMES, `unknown make "${v.make}": use a name from profiles/names.ts or add it there`);
+        assert.ok(
+          VEHICLE_NAMES[v.make].includes(v.model),
+          `unknown model "${v.make} ${v.model}": use a name from profiles/names.ts or add it there`,
+        );
       }
     });
 
@@ -65,6 +72,25 @@ for (const p of all) {
     });
   });
 }
+
+describe("vehicle names", () => {
+  const lower = (xs: string[]) => xs.map((x) => x.toLocaleLowerCase());
+  const sorted = (xs: string[]) => [...xs].sort((a, b) => a.localeCompare(b));
+
+  it("has no duplicate or near-duplicate makes, and is alphabetical", () => {
+    const makes = Object.keys(VEHICLE_NAMES);
+    assert.equal(new Set(lower(makes)).size, makes.length);
+    assert.deepEqual(makes, sorted(makes));
+  });
+
+  it("has no duplicate models within a make, and each list is alphabetical", () => {
+    for (const [make, models] of Object.entries(VEHICLE_NAMES)) {
+      assert.equal(new Set(lower(models)).size, models.length, `duplicate model under ${make}`);
+      assert.deepEqual(models, sorted(models), `${make} models not alphabetical`);
+      for (const m of models) assert.ok(!m.toLocaleLowerCase().startsWith(make.toLocaleLowerCase() + " "), `"${m}" repeats the make`);
+    }
+  });
+});
 
 describe("registry", () => {
   it("has exactly one generic profile", () => {

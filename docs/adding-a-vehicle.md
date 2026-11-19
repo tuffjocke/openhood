@@ -53,7 +53,8 @@ The plan:
 6. Help me commit, push and open a pull request with GitHub Desktop, with a short summary of
    what was tested.
 
-Rules: never make up protocol details. Say clearly what is sourced, what is a guess and what
+Rules: use only official make and model names from profiles/names.ts and real model years.
+Never make up protocol details. Say clearly what is sourced, what is a guess and what
 I need to check on the car. Stay read-only: nothing that writes to the ECU, and nothing to do
 with immobilisers, keys or odometers. Remind me to test with the car parked.
 
@@ -171,8 +172,9 @@ No changes to `core/` or `components/` are needed.
 1. `cp -r profiles/_template profiles/<make>-<engine-or-ecu>`, kebab-case, `id` = folder name.
 2. Set `name`, `covers`, `ecu`, `link` (baud, init, addresses) and `connect` (session, security).
    List the cars in `vehicles` (make, model, first and last model year, engine): that's what the
-   make/model/year picker shows. Use the make and model names people use, so they line up with
-   other profiles (e.g. "Land Rover", "Defender").
+   make/model/year picker shows. Names must come from `profiles/names.ts` (official spelling, e.g.
+   "Land Rover", "Defender"). If your model isn't there, add it, correctly spelled and alphabetical.
+   Put engine and variant in `engine`, not in the model name. The tests reject unknown names.
 3. **Channels**: what the UI shows (label, unit, decimals, min/max, optional `warnAbove`/`warnBelow`).
 4. **Groups**: one per request. `decode(res, state)` gets the response payload including the
    positive SID (`[0x61, localId, ...data]`, data at index 2). `state` holds earlier values.

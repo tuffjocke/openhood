@@ -12,7 +12,9 @@ Add a new vehicle profile for: $ARGUMENTS
    Mark everything "community" or "guess". Never "verified".
 4. If the ECU needs something core/profile.ts can't express (e.g. 5-baud slow init), stop and
    propose a general change to the core before writing the profile.
-5. Implement channels, groups (encode next to decode), schedule, faults if known, and a simulator.
-6. Register it in profiles/index.ts.
-7. Run `npm run check` and fix everything.
-8. Summarise what is sourced, what is guessed and what a person needs to verify on a real car.
+5. Fill in `vehicles` using only names from profiles/names.ts and model years you can source.
+   If the model is missing there, add it with the official spelling, alphabetically, and tell the person.
+6. Implement channels, groups (encode next to decode), schedule, faults if known, and a simulator.
+7. Register it in profiles/index.ts.
+8. Run `npm run check` and fix everything.
+9. Summarise what is sourced, what is guessed and what a person needs to verify on a real car.

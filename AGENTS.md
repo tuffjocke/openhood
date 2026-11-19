@@ -34,6 +34,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
 core/catalog.ts           make/model/year lookups over profiles
+profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 app/                      Next.js shell + globals.css (all styling)
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
@@ -61,6 +62,11 @@ Follow docs/adding-a-vehicle.md. In short:
   Only a person who tested on a real car may set `"verified"`, and the README must say on what.
 - **The simulator proves self-consistency only, not correctness.** Do not describe a profile as
   working because tests pass.
+- **Only real, correctly spelled makes, models and years.** `vehicles` may only use names from
+  `profiles/names.ts` (official manufacturer spelling, model without engine or trim). Model years must
+  be ones the car was actually sold with that engine, from a source. Don't add a new make or model to
+  `names.ts` unless you are sure it exists and is spelled the official way; if unsure, ask the person.
+  The tests reject unknown names.
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.
