@@ -23,7 +23,10 @@ byte in `tests/td5.test.ts` against values those projects published.
 | Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient | community | SimonRafferty, discotd5 |
 | Battery `21 10` (mV) | community | SimonRafferty |
 | Accelerator tracks `21 1B` (mV, track 1 shown) | community | SimonRafferty |
-| Fault memory `21 3B` and bit names (`faults.ts`) | guess | Needs mapping, see below |
+| Fault memory `21 3B`: 35-byte block, one bit per fault | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
+| Fault names, 210 bits (`fault-map.ts`) | community | discovery2-diag, cross-checked with Ekaitza_Itzali and a reference tool |
+| Clear faults `31 DD` + 18 zeros → `71 DD` | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (cleared on a car) |
+| Plain-language explanations (`fault-explanations.ts`) | community | Written for Openhood, grouped by fault family |
 
 Tested on: nothing yet. When you test on a car, add a line here:
 `- 2026-12-01 · Defender 90 1999 · NNN ECU · connect + live data OK (@yourname)`
@@ -40,6 +43,10 @@ fast init (25 ms low, 25 ms high)
 ← 04 67 01 SH SL CS       seed, high byte first
 → 04 27 02 KH KL CS       key, high byte first (seed 34 A5 → key 54 D3)
 ← 02 67 02 6B             unlocked
+→ 02 21 3B 5E             read fault memory
+← 25 61 3B <35 bytes> CS
+→ 14 31 DD 00×18 22       clear fault memory
+← 02 71 DD 50             (can take ~300 ms)
 ```
 
 Bytes are sent 5 ms apart and requests 55 ms after each answer. Continuous polling keeps the
@@ -47,9 +54,8 @@ session alive.
 
 ## Known gaps
 
-- **Fault memory.** The request and the bit-to-name table are placeholders. Ekaitza_Itzali and
-  discovery2-diag both have a fault map cross-checked against a community fault list: port it from
-  there (with credit), then confirm by unplugging a sensor with the ignition on.
+- **Fault codes as Nanocom shows them** (like `28-7`) aren't mapped to the bit positions yet; we show
+  names instead. A capture with both visible at once would bridge them.
 - **Pedal as a percentage.** The ECU reports track voltages; the conversion to percent isn't sourced
   yet, so we show track 1 in volts.
 - **Not read yet:** injector balance (`21 40`, five signed cylinder trims), input switches
@@ -65,3 +71,6 @@ session alive.
 - TD5-Dash, Raspberry Pi dash with a confirmed protocol document: https://github.com/JRogers83/TD5-Dash
 - discovery2-diag, Discovery 2 Td5 platform, MAF proven on a car: https://github.com/Leijoma/discovery2-diag
 - discotd5.com, Nanocom log format and boost definition: https://discotd5.com/scripts-and-code
+- Ekaitza_Itzali sniffed sessions (Sniffing/…/Read_Faults_and_clear.log): fault read, clear, second key pair (021C → 4043)
+
+Licences and notices: [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).

@@ -6,10 +6,39 @@ import { describe, it } from "node:test";
 import { hex, shortFrame, addressedFrame } from "@/core/kwp2000/frame";
 import { td5Key } from "@/profiles/land-rover-td5/keygen";
 import { groups } from "@/profiles/land-rover-td5/data";
+import { CLEAR_FAULTS, decodeFaults, explanations } from "@/profiles/land-rover-td5/faults";
+import { TD5_FAULT_MAP } from "@/profiles/land-rover-td5/fault-map";
 
 describe("Land Rover Td5", () => {
-  it("computes the key from td5keygen's published example", () => {
-    assert.equal(td5Key(0x34a5), 0x54d3);
+  it("computes the key from td5keygen's published example and a sniffed session", () => {
+    assert.equal(td5Key(0x34a5), 0x54d3); // td5keygen README
+    assert.equal(td5Key(0x021c), 0x4043); // Ekaitza_Itzali Read_Faults_and_clear.log
+  });
+
+  it("builds the sniffed fault clear request byte for byte", () => {
+    // Ekaitza_Itzali Read_Faults_and_clear.log: 14 31 DD 00*18 22, answered 02 71 DD 50
+    assert.equal(hex(shortFrame(CLEAR_FAULTS)), "14 31 DD " + "00 ".repeat(18) + "22");
+  });
+
+  it("decodes the sniffed fault block", () => {
+    // Same log: 25 61 3B C0 C0 00 07 80 87 00 00 70 1D 00 00 00 FF 00 CF 00 8F 00 00 38 01 00 80 00 28 00 00 ...
+    const raw = "613bc0c0000780870000701d000000ff00cf008f00003801008000280000000000000000";
+    const res = Uint8Array.from(raw.match(/../g)!.map((h) => parseInt(h, 16)));
+    const names = decodeFaults(res).map((f) => f.name);
+    assert.ok(names.includes("Air flow circuit (Logged Low)"), names.join("; "));
+    assert.ok(names.includes("Manifold pressure circuit (Logged Low)"));
+    assert.ok(names.length > 20, "a bench ECU with sensors unplugged reports many faults");
+  });
+
+  it("has 210 named bits and explains the common ones in plain words", () => {
+    assert.equal(Object.keys(TD5_FAULT_MAP).length, 210);
+    const explained = Object.keys(explanations).length;
+    assert.ok(explained >= 180, `only ${explained} of 210 explained`);
+    for (const e of Object.values(explanations)) {
+      assert.ok(e.causes.length >= 2 && e.causes.length <= 4);
+      for (const t of [e.title, e.plain, e.check ?? "", ...e.causes]) assert.ok(!/[\u2013\u2014]/.test(t), t);
+    }
+    assert.match(explanations["td5-4.6"].title, /air flow sensor · active now/);
   });
 
   it("builds the published request frames byte for byte", () => {

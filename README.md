@@ -58,3 +58,4 @@ Immobiliser, key programming and odometer functions are out of scope.
 ## License
 
 [GPL-3.0](LICENSE). You can use, change and share it; if you distribute a modified version, it must stay open.
+Parts are based on other open projects: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

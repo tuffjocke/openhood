@@ -25,7 +25,9 @@ export function createTd5Simulator(): SimulatedEcu {
   let session = false;
   let unlocked = false;
   let seed = 0;
-  const faults = new Set([1]); // a stored "fuel temperature sensor" fault to play with
+  // Faults like those read on a real Discovery 2 Td5 (discovery2-diag): air flow circuit active
+  // and logged low, inlet air temperature logged high, and EGR vacuum logged low.
+  const faults = new Set(["4.6", "0.6", "3.0", "0.2"]);
   const engine = new EngineModel();
   const neg = (sid: number, code: number) => [0x7f, sid, code];
   const is = (p: Uint8Array, req: number[]) => req.every((b, i) => p[i] === b);
@@ -59,10 +61,11 @@ export function createTd5Simulator(): SimulatedEcu {
           const g = groups.find((g) => is(p, g.request));
           return g ? g.encode(engine.sample()) : neg(sid, 0x31);
         }
-        case 0x14:
+        case 0x31: // startRoutine: 31 DD + 18 zeros clears the fault memory
           if (!unlocked) return neg(sid, 0x33);
+          if (p[1] !== 0xdd) return neg(sid, 0x12);
           faults.clear();
-          return [0x54];
+          return [0x71, 0xdd];
         default:
           return neg(sid, 0x11);
       }
