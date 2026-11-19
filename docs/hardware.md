@@ -30,6 +30,8 @@ Look into the OBD socket (usually under the dashboard). Number the pins like thi
 ```
 
 - **Metal contact in position 7**: your car has a K-line. The standard cable is a good bet.
+  Some cars (often Asian and older European) wake up with a slower 5-baud signal; Openhood tries
+  that automatically, it just takes a few extra seconds.
 - **Contacts in 6 and 14 but not 7**: your car uses CAN. Openhood doesn't support CAN yet.
 - **No 16-pin socket at all**, or a round or odd-shaped one: older or manufacturer-specific
   connector. You'll need an adapter to a 16-pin OBD socket for your make.

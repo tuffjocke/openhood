@@ -40,6 +40,8 @@ core/report.ts            "Send test report": builds a pre-filled GitHub issue l
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 app/                      Next.js shell + globals.css (all styling)
+public/                   manifest, icons, sw.js (offline service worker, bump VERSION when its logic changes)
+components/ServiceWorker  registers sw.js in production builds
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
@@ -100,6 +102,9 @@ Follow docs/adding-a-vehicle.md. In short:
   `[0x61, 0x09, ...data]`, so data starts at index 2.
 - KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo.
 - Fast init is timed with JS timers (BREAK for 25 ms). Jitter of a few ms is normal.
+- `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
+  the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
+  length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.
 - Web Serial needs a user gesture and works in Chrome/Edge desktop and Chrome 148+ Android. Not Safari.
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.

@@ -95,6 +95,11 @@ export interface Readiness {
   monitors: { name: string; complete: boolean }[];
 }
 
+/** How the ECU was woken. After slow init the key bytes tell which protocol it speaks. */
+export type InitResult =
+  | { kind: "fast" }
+  | { kind: "slow"; keyBytes: [number, number]; protocol: "iso9141" | "kwp2000" };
+
 /** What a profile gets to talk to the ECU with. */
 export interface EcuLink {
   /**
@@ -119,6 +124,12 @@ export interface RequestOptions {
 }
 
 export interface SimulatedEcu {
+  /**
+   * Which wake-ups this ECU answers. Default: fast init only.
+   * `slow` gives the two key bytes it sends after a 5-baud init
+   * (08 08 or 94 94 = ISO 9141-2, xx 8F = ISO 14230).
+   */
+  wakeup?: { fast?: boolean; slow?: [number, number] };
   /**
    * Answer one request payload with a response payload, or null for silence.
    * Return [0x7F, sid, code] for a negative response.
@@ -164,8 +175,15 @@ export interface VehicleProfile {
 
   link: {
     baudRate: number;
-    /** Only "fast" (ISO 14230 fast init) is implemented so far. */
-    init: "fast";
+    /**
+     * How to wake the ECU:
+     *  - "fast": ISO 14230 fast init (25 ms pulse)
+     *  - "slow": 5-baud init (ISO 9141-2, or ISO 14230 with slow init), see slowInitAddress
+     *  - "auto": try fast, fall back to slow if the ECU doesn't answer
+     */
+    init: "fast" | "slow" | "auto";
+    /** Address sent at 5 baud for slow init. Default 0x33 (OBD-II). */
+    slowInitAddress?: number;
     addresses: Addresses;
     /**
      * "physical" (default): talk to one ECU at addresses.ecu (header 0x80).
@@ -182,7 +200,7 @@ export interface VehicleProfile {
    * Wake-up is done by the core. This runs right after: start session, unlock, etc.
    * `state` is writable here: store anything groups need later (e.g. supported PID bitmasks).
    */
-  connect(ecu: EcuLink, state: Values): Promise<void>;
+  connect(ecu: EcuLink, state: Values, init: InitResult): Promise<void>;
 
   channels: Channel[];
   groups: Group[];

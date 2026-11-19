@@ -75,6 +75,25 @@ export class WebSerialTransport implements Transport {
     this.rx.clear();
   }
 
+  async fiveBaud(address: number) {
+    if (!this.port) throw new Error("Port not open");
+    const set = (high: boolean) => this.port!.setSignals({ break: !high }); // BREAK = line low = 0
+    await set(true);
+    await sleep(300); // bus idle (W5)
+    const bits = [0, ...Array.from({ length: 8 }, (_, i) => (address >> i) & 1), 1]; // start, data, stop
+    const t0 = performance.now();
+    for (let i = 0; i < bits.length; i++) {
+      await set(bits[i] === 1);
+      // Aim at absolute bit edges so timer jitter doesn't add up over 2 seconds.
+      await sleep(Math.max(0, t0 + (i + 1) * 200 - performance.now()));
+    }
+    this.rx.clear(); // drop junk the UART may have seen while we were bit-banging
+  }
+
+  readUntilIdle(idleMs: number, timeoutMs: number) {
+    return this.rx.takeUntilIdle(idleMs, timeoutMs);
+  }
+
   async write(bytes: Uint8Array) {
     if (!this.port?.writable) throw new Error("Port not open");
     const w = this.port.writable.getWriter();

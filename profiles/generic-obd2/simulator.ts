@@ -41,7 +41,15 @@ function supportWord(base: number, pids: number[], hasNext: boolean) {
   return [(w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff];
 }
 
-export function createObdSimulator(): SimulatedEcu {
+/**
+ * Which flavour of OBD-II on K-line to pretend to be:
+ *  - "kwp-fast": ISO 14230-4 with fast init (default)
+ *  - "kwp-slow": ISO 14230-4 that only answers the 5-baud init (key bytes E9 8F)
+ *  - "iso9141":  ISO 9141-2, 5-baud init only (key bytes 08 08)
+ */
+export type ObdFlavour = "kwp-fast" | "kwp-slow" | "iso9141";
+
+export function createObdSimulator(flavour: ObdFlavour = "kwp-fast"): SimulatedEcu {
   const pids = [0x01, ...groups.map((g) => g.request[1])];
   // Four codes: more than fit in one frame, to exercise multi-frame reading.
   let stored = ["P0171", "P0420", "P0300", "P0442"];
@@ -56,6 +64,10 @@ export function createObdSimulator(): SimulatedEcu {
   const engine = new EngineModel();
 
   return {
+    wakeup:
+      flavour === "kwp-fast"
+        ? { fast: true, slow: [0xe9, 0x8f] }
+        : { fast: false, slow: flavour === "iso9141" ? [0x08, 0x08] : [0xe9, 0x8f] },
     handle(p) {
       switch (p[0]) {
         case 0x81:

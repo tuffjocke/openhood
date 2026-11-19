@@ -11,6 +11,9 @@ import { decodeDtc, decodeDtcFrames, encodeDtc } from "@/profiles/generic-obd2/d
 import { pidSupported, supportKey } from "@/profiles/generic-obd2/pids";
 import { decodeReadiness } from "@/profiles/generic-obd2/readiness";
 import { asMode01 } from "@/profiles/generic-obd2/freeze";
+import { createObdSimulator, type ObdFlavour } from "@/profiles/generic-obd2/simulator";
+import { iso9141Frame, iso9141Response } from "@/core/kwp2000/frame";
+import type { TrafficEvent } from "@/core/session";
 import { OBD_EXPLANATIONS, OBD_TITLES } from "@/profiles/shared/obd-codes";
 
 describe("generic OBD-II", () => {
@@ -96,6 +99,34 @@ describe("pending codes and freeze frames", () => {
     assert.equal(await s.readFreezeFrame(p0171), null, "clearing removes the snapshot");
     await s.disconnect();
   });
+});
+
+describe("wake-up and framing", () => {
+  it("builds ISO 9141-2 frames", () => {
+    assert.equal(hex(iso9141Frame([0x01, 0x0c], 0xf1)), "68 6A F1 01 0C D0");
+    assert.equal(hex(iso9141Response([0x41, 0x0c, 0x1a, 0xf8], 0x10)), "48 6B 10 41 0C 1A F8 22");
+  });
+
+  const flavours: [ObdFlavour, string, string][] = [
+    ["kwp-fast", "fast", "C2 33 F1 01 0C F3"],
+    ["kwp-slow", "kwp2000", "C2 33 F1 01 0C F3"],
+    ["iso9141", "iso9141", "68 6A F1 01 0C D0"],
+  ];
+  for (const [flavour, expected, rpmRequest] of flavours) {
+    it(`connects to a ${flavour} car and reads live data`, async () => {
+      const profile = { ...genericObd2, simulator: () => createObdSimulator(flavour) };
+      const log: TrafficEvent[] = [];
+      const s = new Session(profile, new SimulatedTransport(profile), (e) => log.push(e));
+      await s.connect();
+      assert.equal(s.init.kind === "fast" ? "fast" : s.init.protocol, expected);
+      const v = await s.readGroup("rpm");
+      assert.ok(v.rpm > 500 && v.rpm < 7000, `rpm ${v.rpm}`);
+      assert.ok(log.some((e) => hex(e.bytes) === rpmRequest), "rpm request uses the right framing");
+      const codes = await s.readFaults();
+      assert.equal(codes.length, 4, "multi-frame fault read works in every framing");
+      await s.disconnect();
+    });
+  }
 });
 
 describe("plain-language code explanations", () => {

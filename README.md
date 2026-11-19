@@ -12,6 +12,7 @@ No installs, no dealer tools.
 - Raw K-line traffic view for reverse engineering
 - One-click test reports to GitHub, with the traffic log included
 - Works on laptops (Chrome, Edge) and Android phones (Chrome 148+)
+- Install it as an app and use it offline, handy in a garage with no signal
 
 ## Supported vehicles
 
@@ -21,6 +22,11 @@ No installs, no dealer tools.
 | [Land Rover Td5](profiles/land-rover-td5) (Defender, Discovery 2, 1998 to 2006) | Engine | experimental, not yet tested on a car |
 
 Your car isn't here? [Add it](docs/adding-a-vehicle.md), no coding experience needed if you can chat with an AI.
+
+## Install as an app
+
+Open the app in Chrome or Edge and choose **Install** in the address bar (on Android: menu → **Add to
+Home screen**). After the first visit it works offline, simulator included.
 
 ## Hardware
 

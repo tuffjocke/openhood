@@ -1,4 +1,4 @@
-import { addressedFrame, parseFrame, shortFrame } from "../kwp2000/frame";
+import { addressedFrame, iso9141Response, parseFrame, parseIso9141, shortFrame } from "../kwp2000/frame";
 import type { SimulatedEcu, VehicleProfile } from "../profile";
 import { ByteQueue, sleep, type Transport } from "./types";
 
@@ -19,22 +19,57 @@ export class SimulatedTransport implements Transport {
     this.ecu = null;
   }
 
+  /** During a 5-baud handshake: the key byte we expect back inverted, and the address to ack. */
+  private handshake: { kb2: number; address: number } | null = null;
+
   async fastInit() {
     await sleep(50);
-    this.ecu = this.profile.simulator(); // a fresh ECU on every wake-up
+    const ecu = this.profile.simulator(); // a fresh ECU on every wake-up
+    this.ecu = ecu.wakeup?.fast === false ? null : ecu;
+  }
+
+  async fiveBaud(address: number) {
+    await sleep(50); // the real thing takes 2 s; no need to wait in development
+    const ecu = this.profile.simulator();
+    this.ecu = null;
+    const kb = ecu.wakeup?.slow;
+    if (!kb) return; // doesn't do slow init: silence
+    this.handshake = { kb2: kb[1], address };
+    this.pending = ecu;
+    setTimeout(() => this.rx.push(Uint8Array.of(0x55)), 20);
+    setTimeout(() => this.rx.push(Uint8Array.of(kb[0], kb[1])), 30);
+  }
+  private pending: SimulatedEcu | null = null;
+
+  readUntilIdle(idleMs: number, timeoutMs: number) {
+    return this.rx.takeUntilIdle(idleMs, timeoutMs);
   }
 
   async write(bytes: Uint8Array) {
+    if (this.handshake && bytes.length === 1) {
+      if (bytes[0] === (~this.handshake.kb2 & 0xff)) {
+        const ack = ~this.handshake.address & 0xff;
+        this.ecu = this.pending;
+        setTimeout(() => this.rx.push(Uint8Array.of(ack)), 10);
+      }
+      this.handshake = null;
+      return;
+    }
     if (!this.ecu) return; // asleep: silence, the session will time out
-    const req = parseFrame(bytes);
+    const iso = bytes[0] === 0x68;
+    const req = iso ? parseIso9141(bytes) : parseFrame(bytes);
     const res = this.ecu.handle(req.payload);
     if (!res) return;
     const frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     const { ecu, tester } = this.profile.link.addresses;
-    // A real ECU answers within P2 (~25 ms); extra frames follow a little later.
+    // A real ECU answers within P2 (~25 ms); extra frames follow after a gap (P2 min 25 ms).
     frames.forEach((payload, i) => {
-      const reply = req.addressed ? addressedFrame(payload, tester, ecu) : shortFrame(payload);
-      setTimeout(() => this.rx.push(reply), 8 + Math.random() * 12 + i * 15);
+      const reply = iso
+        ? iso9141Response(payload, 0x10)
+        : req.addressed
+          ? addressedFrame(payload, tester, ecu)
+          : shortFrame(payload);
+      setTimeout(() => this.rx.push(reply), 8 + Math.random() * 12 + i * 35);
     });
   }
 

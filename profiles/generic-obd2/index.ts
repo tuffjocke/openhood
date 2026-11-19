@@ -17,20 +17,22 @@ export const genericObd2: VehicleProfile = {
   generic: true,
   ecu: "Engine (standard OBD values)",
   hardware:
-    "Standard KKL cable. Only cars using ISO 14230 fast init for now; cars that need the 5-baud wake-up (ISO 9141-2) won't answer yet.",
+    "Standard KKL cable. Tries the fast wake-up first, then the slower 5-baud one (ISO 9141-2), which takes a few seconds.",
   status: "experimental",
 
   link: {
     baudRate: 10400,
-    init: "fast",
+    init: "auto", // ISO 14230 fast init, then 5-baud (ISO 9141-2 or ISO 14230 slow init)
+    slowInitAddress: 0x33,
     addresses: { ecu: 0x33, tester: 0xf1 },
     addressMode: "functional",
     alwaysAddressed: true,
     interMessageMs: 55, // ISO 14230-4 P3 minimum
   },
 
-  async connect(ecu, state) {
-    await ecu.request([0x81], { note: "start communication" });
+  async connect(ecu, state, init) {
+    // After a 5-baud init the link is already up; only fast init needs StartCommunication.
+    if (init.kind === "fast") await ecu.request([0x81], { note: "start communication" });
     // Ask which PIDs exist, block by block (00 → 01..20, 20 → 21..40, 40 → 41..60).
     for (const base of [0x00, 0x20, 0x40]) {
       if (base > 0 && !pidSupported(state, base)) break;
@@ -43,5 +45,5 @@ export const genericObd2: VehicleProfile = {
   groups,
   schedule: ["rpm", "speed", "throttle", "load", "rpm", "speed", "map", "maf", "rpm", "speed", "throttle", "load", "rpm", "stft", "coolant", "timing", "airTemp", "ltft", "voltage"],
   faults,
-  simulator: createObdSimulator,
+  simulator: () => createObdSimulator(),
 };

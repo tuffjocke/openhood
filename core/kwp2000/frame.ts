@@ -44,6 +44,29 @@ export function addressedFrame(
   return Uint8Array.from(out);
 }
 
+/**
+ * ISO 9141-2 (OBD over K-line with 5-baud init) frames: [0x68, 0x6A, tester, payload..., cs] out,
+ * [0x48, 0x6B, ecu, payload..., cs] back. No length byte: frames are separated by silence.
+ */
+export function iso9141Frame(payload: ArrayLike<number>, tester: number): Uint8Array {
+  const out = [0x68, 0x6a, tester, ...Array.from(payload)];
+  out.push(checksum(out));
+  return Uint8Array.from(out);
+}
+
+export function iso9141Response(payload: ArrayLike<number>, ecu: number): Uint8Array {
+  const out = [0x48, 0x6b, ecu, ...Array.from(payload)];
+  out.push(checksum(out));
+  return Uint8Array.from(out);
+}
+
+export function parseIso9141(raw: Uint8Array): Frame {
+  if (raw.length < 5 || checksum(raw, raw.length - 1) !== raw[raw.length - 1]) {
+    throw new Error(`Bad ISO 9141 frame ${hex(raw)}`);
+  }
+  return { raw, addressed: true, payload: raw.subarray(3, raw.length - 1) };
+}
+
 /** How many bytes follow the first (format) byte of a frame. */
 export function remainingLength(format: number) {
   return format & 0x80 ? (format & 0x3f) + 3 : format + 1;
