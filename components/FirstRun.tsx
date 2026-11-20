@@ -89,9 +89,6 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
         ))}
       </dl>
       {fault && <PreviewFault fault={fault} profile={profile} />}
-      <figcaption>
-        Demo car, running live.
-      </figcaption>
     </figure>
   );
 }
@@ -178,58 +175,56 @@ export function FirstRun({
         <div className="hero-text">
           <h1>Engine light on? Find out why.</h1>
           <p className="lede">
-            Plug in a cheap adapter. See what&rsquo;s wrong, in plain words.
+            Plug in a cheap adapter. See what&rsquo;s wrong, in plain words. Only reads: nothing in your car changes.
           </p>
 
           <div className="start">
-            <div className="tracks" role="tablist" aria-label="How to read your car">
-              <button
-                role="tab"
-                id="tab-browser"
-                aria-selected={track === "browser"}
-                aria-controls="panel-browser"
-                onClick={() => chooseTrack("browser")}
-              >
-                In this browser
-              </button>
-              <button
-                role="tab"
-                id="tab-agent"
-                aria-selected={track === "agent"}
-                aria-controls="panel-agent"
-                onClick={() => chooseTrack("agent")}
-              >
-                With an AI agent
-              </button>
-            </div>
-            {track === "browser" ? (
-              <div role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
-                {!serialOk && !bluetoothOk && (
+            <CarChooser
+              profiles={PROFILES}
+              selection={selection}
+              onSelect={onSelect}
+              actions={readButton}
+              notice={
+                track === "browser" &&
+                !serialOk &&
+                !bluetoothOk && (
                   <p className="hero-note" role="note">
                     <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on
                     Android.
                   </p>
-                )}
-                <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={readButton} />
-              </div>
-            ) : (
-              <div role="tabpanel" id="panel-agent" aria-labelledby="tab-agent">
-                <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={() => null} fieldsOnly />
-                <AgentTrack car={selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : ""} />
-              </div>
-            )}
+                )
+              }
+              switcher={
+                <div className="tracks" role="tablist" aria-label="How to read your car">
+                  <button role="tab" id="tab-browser" aria-selected={track === "browser"} onClick={() => chooseTrack("browser")}>
+                    In this browser
+                  </button>
+                  <button role="tab" id="tab-agent" aria-selected={track === "agent"} onClick={() => chooseTrack("agent")}>
+                    With an AI agent
+                  </button>
+                </div>
+              }
+              instead={
+                track === "agent" ? (
+                  <AgentTrack
+                    car={selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : ""}
+                  />
+                ) : undefined
+              }
+            />
           </div>
-
-          <p className="demo-line">
-            <button className="link-button" onClick={onSimulator} disabled={!!connecting}>
-              {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
-            </button>
-            <span>Only reads. Nothing in your car changes.</span>
-          </p>
         </div>
       </div>
 
-      {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
+      <section className="band band-wide" aria-labelledby="demo-title">
+        <div className="band-head">
+          <h2 id="demo-title">What you get</h2>
+          <button className="quiet" onClick={onSimulator} disabled={!!connecting}>
+            {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
+          </button>
+        </div>
+        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
+      </section>
 
       <SocketGuide />
       <CodeLookup />

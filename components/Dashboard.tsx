@@ -525,24 +525,26 @@ export default function Dashboard() {
         </p>
       )}
 
-      <p className="profile-info">
-        Reading as: {profile.name}, {profile.ecu}
-        {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
-        <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
-      </p>
-
-      <p className="disclaimer">
-        Provided as is. Use at your own risk, car parked.{" "}
-        <Link href="/disclaimer">Disclaimer</Link>
-      </p>
+      {!showFirstRun && (
+        <p className="profile-info">
+          Reading as: {profile.name}, {profile.ecu}
+          {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
+          <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
+        </p>
+      )}
 
       <footer className="foot">
-        <a href="https://github.com/tuffjocke/openhood">Open source on GitHub</a>
+        <span>
+          Provided as is. Use at your own risk, car parked. <Link href="/disclaimer">Disclaimer</Link>
+        </span>
         <span className="foot-links">
-          <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title="Opens a pre-filled GitHub issue">
-            Send test report
-          </a>
+          {!showFirstRun && (
+            <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title="Opens a pre-filled GitHub issue">
+              Send test report
+            </a>
+          )}
           <a href="https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md">Add your car</a>
+          <a href="https://github.com/tuffjocke/openhood">GitHub</a>
         </span>
       </footer>
     </main>

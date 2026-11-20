@@ -2386,3 +2386,317 @@ details.more p {
     transition: none !important;
   }
 }
+
+/* ============================================================ hierarchy
+ * One order for the start page, top to bottom:
+ *   1. headline and one sentence
+ *   2. your car: three big fields, the one thing to do
+ *   3. the answer: verdict, then how (steps and the read button)
+ *   4. three sections built the same way: heading, then content
+ *   5. one quiet footer row
+ * Type scale: h1, section h2 (28 to 32), verdict 22, body 16, small 14.
+ * This block comes last so it settles the earlier, piecemeal rules.
+ */
+
+.first-run {
+  margin-top: clamp(48px, 7vw, 88px);
+}
+
+.hero h1 {
+  font-size: clamp(42px, 6.2vw, 80px);
+}
+
+.lede {
+  margin-top: 20px;
+  max-width: none;
+  font-size: 19px;
+  color: var(--ink-soft);
+}
+
+/* 2. Your car */
+.start {
+  display: block;
+  margin-top: 36px;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.start .chooser {
+  display: block;
+}
+
+.start .car-fields {
+  grid-template-columns: 1.2fr 1.2fr 0.7fr;
+  gap: 10px;
+}
+
+.start .car-fields select,
+.start .car-fields input {
+  height: 64px;
+  padding-left: 22px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 18px;
+}
+
+.start .car-fields label:has(select)::after {
+  right: 22px;
+  bottom: 28px;
+}
+
+.start .car-fields select:disabled,
+.start .car-fields input:disabled {
+  background: var(--surface);
+  opacity: 0.55;
+}
+
+.start .field-hint {
+  margin: 10px 4px 0;
+}
+
+.start .hero-note {
+  margin: 14px 0 0;
+  max-width: none;
+}
+
+/* 3. The answer */
+.start .car-result {
+  margin: 10px 0 0;
+  padding: 22px 24px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.result-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  min-height: 28px;
+}
+
+.verdict {
+  font: 600 22px/1.25 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.result-title .car-sub {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.start .tracks {
+  margin: 0 0 0 auto;
+  padding: 3px;
+  background: var(--paper);
+}
+
+.start .tracks button {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.result-go {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+
+.result-how {
+  flex: 1 1 420px;
+}
+
+.result-go .advice,
+.result-go .read-steps li {
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.result-go .read-steps {
+  margin-top: 8px;
+}
+
+.result-go .read-steps li::before {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.result-go .chooser-actions {
+  flex: none;
+}
+
+.start details.more {
+  margin-top: 16px;
+}
+
+.start .agent {
+  margin: 18px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.agent-steps h3 {
+  font-size: 16px;
+}
+
+.agent-foot {
+  margin-top: 10px;
+}
+
+/* 4. Sections: same spacing, same heading, no rules between them */
+.band {
+  margin-top: clamp(72px, 9vw, 112px);
+  padding-top: 0;
+  border-top: 0;
+}
+
+.band h2 {
+  font: 600 clamp(26px, 2.8vw, 32px) / 1.1 var(--sans);
+  letter-spacing: -0.025em;
+}
+
+.band-wide {
+  display: block;
+}
+
+.band-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.band-wide > .preview {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.4fr);
+  gap: 0 clamp(24px, 4vw, 56px);
+  align-items: center;
+  margin: 0;
+  padding: 30px 34px;
+}
+
+.band-wide > .preview .preview-main {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.band-wide > .preview .gauge {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 14px 0 0;
+  height: 16px;
+}
+
+.band-wide > .preview .preview-value {
+  font-size: clamp(64px, 7vw, 96px);
+}
+
+.band-wide > .preview .preview-side {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  grid-template-columns: 1fr;
+  padding: 0;
+  border: 0;
+}
+
+.band-wide > .preview .preview-fault {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* 5. Footer: one quiet row */
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-top: clamp(72px, 9vw, 112px);
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.foot a {
+  color: var(--ink-soft);
+}
+
+.profile-info {
+  margin-top: 48px;
+}
+
+.profile-info + .foot {
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .band-wide > .preview {
+    grid-template-columns: 1fr 1fr;
+    padding: 22px 20px;
+  }
+  .band-wide > .preview .preview-fault {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--cl-line);
+  }
+}
+
+@media (max-width: 760px) {
+  .lede {
+    font-size: 17px;
+  }
+  .start .car-fields {
+    grid-template-columns: 1.5fr 1fr;
+  }
+  .start .car-fields select,
+  .start .car-fields input {
+    height: 56px;
+    font-size: 17px;
+  }
+  .start .car-fields label:has(select)::after {
+    bottom: 24px;
+  }
+  .start .car-result {
+    padding: 18px;
+  }
+  .start .tracks {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    order: -1;
+  }
+  .start .tracks button {
+    flex: 1;
+  }
+  .verdict {
+    font-size: 20px;
+  }
+  .result-go .chooser-actions,
+  .result-go button.big {
+    width: 100%;
+  }
+}

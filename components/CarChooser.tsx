@@ -18,16 +18,11 @@ const GUIDE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding-a
 /** What to buy for this car, decided by what its profile can run on. */
 export function AdapterAdvice({ profile, year }: { profile: VehicleProfile; year: number }) {
   const adapters = profile.adapters ?? ["kkl"];
-  if (adapters[0] === "kkl")
-    return (
-      <p className="advice">
-        <strong>Needs a KKL cable,</strong> about €20. <Link href="/adapters">Which one?</Link>
-      </p>
-    );
+  const kkl = adapters[0] === "kkl";
   return (
     <p className="advice">
-      <strong>Needs an ELM327 adapter,</strong> about €20 to €40.
-      {adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">Which one?</Link>
+      {kkl ? "Needs a KKL cable, about \u20ac20." : "Needs an ELM327 adapter, about \u20ac20 to \u20ac40."}
+      {!kkl && adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">Which one?</Link>
     </p>
   );
 }
@@ -98,7 +93,9 @@ export function CarChooser({
   actions,
   autoFocus,
   brief,
-  fieldsOnly,
+  switcher,
+  instead,
+  notice,
 }: {
   profiles: VehicleProfile[];
   selection: Selection;
@@ -108,8 +105,12 @@ export function CarChooser({
   autoFocus?: boolean;
   /** Just the car and the verdict, no steps or ways to add it (the header picker). */
   brief?: boolean;
-  /** Only make, model and year: the caller shows what comes next (the AI agent tab). */
-  fieldsOnly?: boolean;
+  /** Shown on the right of the answer line: the "in this browser / with an AI agent" switch. */
+  switcher?: ReactNode;
+  /** Shown under the answer in place of the steps and read button (the AI agent steps). */
+  instead?: ReactNode;
+  /** Shown between the fields and the answer (the "this browser can't" warning). */
+  notice?: ReactNode;
 }) {
   const [make, setMake] = useState(selection.make ?? "");
   const [model, setModel] = useState(selection.model ?? "");
@@ -157,6 +158,15 @@ export function CarChooser({
   // What others with this car found, from profiles/car-reports.json.
   const others = car ? summarise(reportsFor(car.make, car.model, car.year)) : null;
   const profile = engineChosen?.profile ?? found[0]?.profile;
+  // The profile a read would use: the car's own (once the engine is known), else standard codes.
+  const goWith = supported ? (found.length === 1 || engineChosen ? profile : undefined) : generic;
+  const sub = !car
+    ? ""
+    : supported
+      ? `${found.length === 1 ? `${found[0].engine}. ` : ""}${profile?.status === "experimental" ? "Not tested on a real car yet." : ""}`
+      : car.year < 2001
+        ? "A bit early for them. Trying can\u2019t hurt."
+        : "";
 
   return (
     <div className="chooser">
@@ -256,69 +266,68 @@ export function CarChooser({
         </p>
       )}
 
-      {!fieldsOnly && car && supported && (
-        <div className="car-result" aria-live="polite">
-          <div className="result-head">
-            <p className="verdict">
-              <i className="tick" aria-hidden />
-              Yes, Openhood knows it.
-            </p>
-            <p className="car-sub">
-              {found.length === 1 && `${found[0].engine}. `}
-              {profile?.status === "experimental" && "Not tested on a real car yet."}
-            </p>
-            {others && <p className="car-others">{others}</p>}
-          </div>
-          {found.length > 1 && (
-            <div className="engines">
-              <span>Which engine?</span>
-              {found.map((m) => (
-                <button
-                  key={m.profile.id + m.engine}
-                  className={engineChosen === m ? "" : "quiet"}
-                  aria-pressed={engineChosen === m}
-                  onClick={() => onSelect({ ...car, profileId: m.profile.id, engine: m.engine, chosen: true })}
-                >
-                  {m.engine}
-                </button>
-              ))}
-            </div>
-          )}
-          {(found.length === 1 || engineChosen) && profile && (
-            <div className="result-go">
-              <AdapterAdvice profile={profile} year={car.year} />
-              {!brief && <ReadSteps />}
-              {actions(profile, true)}
-            </div>
-          )}
-        </div>
-      )}
+      {notice}
 
-      {!fieldsOnly && car && !supported && generic && (
-        <div className="car-result" aria-live="polite">
+      {(car || switcher) && (
+        <div className="car-result">
           <div className="result-head">
-            <p className="verdict">
-              {car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.
-            </p>
-            {car.year < 2001 && <p className="car-sub">A bit early for them. Trying can&rsquo;t hurt.</p>}
-            {others && <p className="car-others">{others}</p>}
+            <div className="result-title" aria-live="polite">
+              {car && (
+                <p className="verdict">
+                  {supported
+                    ? "Yes, Openhood knows it."
+                    : `${car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.`}
+                </p>
+              )}
+              {car && (sub || others) && (
+                <p className="car-sub">
+                  {sub} {others}
+                </p>
+              )}
+            </div>
+            {switcher}
           </div>
-          <div className="result-go">
-            <AdapterAdvice profile={generic} year={car.year} />
-            {!brief && <ReadSteps />}
-            {actions(generic, false)}
-          </div>
-          {!brief && (
-            <details className="more">
-              <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
-              <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
-              <CopyPrompt car={car} />
-              <p className="path-foot">
-                Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
-                <a href={GUIDE_URL}>Guide</a>
-              </p>
-            </details>
-          )}
+
+          {instead ??
+            (car && (
+              <>
+                {found.length > 1 && (
+                  <div className="engines">
+                    <span>Which engine?</span>
+                    {found.map((m) => (
+                      <button
+                        key={m.profile.id + m.engine}
+                        className={engineChosen === m ? "" : "quiet"}
+                        aria-pressed={engineChosen === m}
+                        onClick={() => onSelect({ ...car, profileId: m.profile.id, engine: m.engine, chosen: true })}
+                      >
+                        {m.engine}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {goWith && (
+                  <div className="result-go">
+                    <div className="result-how">
+                      <AdapterAdvice profile={goWith} year={car.year} />
+                      {!brief && <ReadSteps />}
+                    </div>
+                    {actions(goWith, supported)}
+                  </div>
+                )}
+                {!supported && !brief && (
+                  <details className="more">
+                    <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
+                    <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
+                    <CopyPrompt car={car} />
+                    <p className="path-foot">
+                      Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
+                      <a href={GUIDE_URL}>Guide</a>
+                    </p>
+                  </details>
+                )}
+              </>
+            ))}
         </div>
       )}
     </div>
