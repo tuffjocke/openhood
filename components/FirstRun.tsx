@@ -174,7 +174,7 @@ export function FirstRun({
         <div className="step">
           <p className="step-ask">
             {/* Sure for a car Openhood knows; a good guess for any other car. */}
-            You {supported ? "" : "probably "}need {thing} to connect your {selection.make || "car"} to your {device}.
+            {supported ? "You" : "We think you"} need {thing} to connect your {selection.make || "car"} to your {device}.
           </p>
           <div className="chooser-actions">
             <button className="primary big" onClick={() => gotAdapter(true)}>
