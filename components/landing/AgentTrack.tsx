@@ -25,11 +25,6 @@ function Copyable({ text, label, collapsed }: { text: string; label: string; col
     <div className={`copyable${open ? "" : " folded"}`}>
       <div className="copyable-head">
         <button onClick={copy}>{copied ? "Copied" : "Copy message"}</button>
-        {collapsed && (
-          <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
-            {open ? "Hide it" : "Read it first"}
-          </button>
-        )}
       </div>
       <pre aria-label={label}>{text}</pre>
     </div>

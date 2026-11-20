@@ -48,6 +48,7 @@ export function ReadSteps() {
 
 function CopyPrompt({ car }: { car: CarDetails }) {
   const [copied, setCopied] = useState(false);
+  const [showText, setShowText] = useState(false);
   const text = addCarPrompt(car);
 
   async function copy() {
@@ -56,9 +57,7 @@ function CopyPrompt({ car }: { car: CarDetails }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 4000);
     } catch {
-      // No clipboard access: open the message so it can be selected by hand.
-      const d = document.getElementById("prompt-text") as HTMLDetailsElement | null;
-      if (d) d.open = true;
+      setShowText(true); // no clipboard access: show the message so it can be selected by hand
     }
   }
 
@@ -72,10 +71,8 @@ function CopyPrompt({ car }: { car: CarDetails }) {
           {copied ? "Now paste it into an AI chat." : ""}
         </span>
       </div>
-      <details className="prompt" id="prompt-text">
-        <summary>Read it first</summary>
-        <pre>{text}</pre>
-      </details>
+      {/* Only shown if copying failed, so the message can be selected by hand. */}
+      {showText && <pre className="prompt-fallback">{text}</pre>}
     </>
   );
 }
