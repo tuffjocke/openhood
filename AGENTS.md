@@ -50,7 +50,9 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
-components/FaultPanel     faults: the summary is the panel heading, grouped rows, explanations, urgency, freeze frames, pending, history
+components/FaultPanel     faults: the summary is the heading, then one card per fault in a grid (open a card for the
+                          explanation, freeze frame, AI question), pending, history. "Clear all" only: cars can't
+                          clear one code at a time (OBD-II mode 04 and the Td5 clear erase everything)
 components/FirstRun       landing until the first connection, one step on screen at a time: 1 the car fields (with the
                           demo section below, only until a car is picked), 2 "Got an adapter?" (I have one / What to
                           buy, remembered), 3 plug in and "Read my car" (AI agent as a quiet link)

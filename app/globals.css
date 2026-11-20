@@ -3116,3 +3116,86 @@ main > details.more {
 .grid + .lower {
   margin-top: 28px;
 }
+
+/* ------------------------------------------- faults as their own cards */
+
+#faults.panel {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+#faults .panel-head {
+  margin-bottom: 14px;
+}
+
+#faults .panel-head > div {
+  display: flex;
+  gap: 8px;
+}
+
+#faults .panel-head button.quiet {
+  background: var(--surface);
+}
+
+#faults .readiness,
+#faults .history,
+#faults > details {
+  margin: 0 4px 12px;
+}
+
+.faults {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.fault {
+  border-radius: var(--r-lg);
+}
+
+.fault summary {
+  position: relative;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 44px 20px 22px;
+}
+
+.fault summary::after {
+  position: absolute;
+  top: 24px;
+  right: 22px;
+  margin: 0;
+}
+
+.fault-code {
+  font-size: 20px;
+}
+
+.fault-title {
+  flex: 1 1 100%;
+  font: 600 17px/1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.fault-body {
+  padding: 0 22px 22px;
+}
+
+.pending-label {
+  margin: 22px 4px 10px;
+}
+
+#faults .confirm {
+  margin-bottom: 14px;
+}
+
+#faults > .muted {
+  margin: 0 4px;
+}
+
+#faults .faults + details,
+#faults .faults + .history {
+  margin-top: 18px;
+}

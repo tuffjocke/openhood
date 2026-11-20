@@ -347,6 +347,11 @@ export function FaultPanel({
           {summary.text}
         </h2>
         <div>
+          {live && !!faults?.length && f?.clear && (
+            <button className="quiet" disabled={busy || confirming} onClick={() => setConfirming(true)}>
+              Clear all
+            </button>
+          )}
           <button className="quiet" disabled={!live || busy} onClick={onRead}>
             Read again
           </button>
@@ -434,10 +439,8 @@ export function FaultPanel({
 
       {pending && pending.length > 0 && (
         <>
-          <p className="fault-label pending-label">Pending, not confirmed yet</p>
-          <p className="muted small">
-            The car has noticed these but hasn&rsquo;t turned the engine light on. They may go away, or become real
-            faults if they happen again.
+          <p className="fault-label pending-label" title="The car has noticed these but hasn't turned the engine light on. They may go away, or become real faults if they happen again.">
+            Pending, not confirmed yet
           </p>
           <ol className="faults">
             {groupFaults(pending, f?.explanations).map((g) => (
@@ -454,12 +457,6 @@ export function FaultPanel({
             ))}
           </ol>
         </>
-      )}
-
-      {live && !!faults?.length && f?.clear && !confirming && (
-        <button className="link-button clear-link" disabled={busy} onClick={() => setConfirming(true)}>
-          Clear the codes
-        </button>
       )}
 
       {f && (
