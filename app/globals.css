@@ -3208,3 +3208,13 @@ main > details.more {
 .faults {
   grid-template-columns: 1fr;
 }
+
+/* The fault column sits in the middle of the page, with what belongs to it. */
+#faults.panel,
+.lower ~ .ask,
+.lower ~ details.more,
+.more-data {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
