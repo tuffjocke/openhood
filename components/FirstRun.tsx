@@ -124,14 +124,14 @@ export function FirstRun({
     <section className="first-run" aria-label="Getting started">
       <div className="hero">
         <div className="hero-text">
-          <h1>Engine light on? Find out why.</h1>
+          <h1>Does it work on your car?</h1>
           <p className="lede">
-            Plug a cheap USB cable into your car and Openhood reads the fault codes, then tells you in plain words what
-            they mean and how urgent they are. Right here in the browser. Free, nothing to install.
+            Openhood reads the fault codes behind your engine light and tells you in plain words what&rsquo;s wrong and
+            how urgent it is. A cheap USB cable and this browser is all it takes. Pick your car and see.
           </p>
 
           <div className="start" aria-labelledby="start-title">
-            <h2 id="start-title">Which car is it?</h2>
+            <h2 id="start-title">Your car</h2>
             <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={readButton} />
           </div>
 

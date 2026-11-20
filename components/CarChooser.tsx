@@ -196,7 +196,7 @@ export function CarChooser({
         <div className="car-result" aria-live="polite">
           <p className="verdict">
             <i className="tick" aria-hidden />
-            Openhood knows the {carName(car)}.
+            Yes, Openhood knows the {carName(car)}.
           </p>
           {found.length > 1 && (
             <div className="engines">
@@ -216,7 +216,7 @@ export function CarChooser({
           <p className="car-sub">
             {found.length === 1 && `${found[0].engine}. `}
             {profile?.status === "experimental" &&
-              "It\u2019s new and not tested on a real car yet, so your first read really helps."}
+              "It\u2019s new and not tested on a real car yet. Read yours and tell us how it went: that\u2019s how it gets better."}
           </p>
           {(found.length === 1 || engineChosen) && (
             <>
@@ -229,8 +229,12 @@ export function CarChooser({
 
       {car && !supported && (
         <div className="car-result" aria-live="polite">
-          <p className="verdict">The {carName(car)} isn&rsquo;t on the list yet.</p>
-          <p className="car-sub">That&rsquo;s fine. You can still read it today, and you can help add it.</p>
+          <p className="verdict">
+            {car.year >= 2004 && car.year < 2008 ? "Probably" : "Maybe"}, with the standard codes.
+          </p>
+          <p className="car-sub">
+            The {carName(car)} doesn&rsquo;t have its own profile yet. You can read it today, and you can help add it.
+          </p>
 
           <div className="paths">
             <section className="path">
