@@ -1589,6 +1589,7 @@ body:has(.shell.is-first-run) {
   fill: var(--needle);
 }
 
+/* The needle glides to each new reading over the time since the last one (set in Dial.tsx). */
 .dial-needle {
   transform-box: view-box;
   transform-origin: 100px 100px;

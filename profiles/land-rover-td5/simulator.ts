@@ -83,8 +83,12 @@ class EngineModel {
   private rpm = 780;
   private mapKpa = AMBIENT;
   private pedal = 0;
-  private coolant = 18;
-  private fuelTemp = 12;
+  /** A warmed-up engine: a real coolant needle sits near 88 and barely moves. */
+  private coolant = 84;
+  private fuelTemp = 30;
+  /** Gear held between samples, so revs climb through a gear and drop at each change, like a real car. */
+  private gear = 0;
+  private shiftUntil = 0;
 
   private pedalTarget(t: number) {
     const p = t % 80;
@@ -110,16 +114,23 @@ class EngineModel {
     this.v = Math.max(0, this.v + (drive - drag - brake) * dt);
     if (phase < 10) this.v = Math.max(0, this.v - 8 * dt);
 
-    const gear = GEAR_KMH_PER_1000.findIndex((k) => (this.v / k) * 1000 <= 2700);
-    const ratio = GEAR_KMH_PER_1000[gear === -1 ? 4 : gear];
-    const target = this.v < 4 ? 780 + this.pedal * 12 : Math.max(800, (this.v / ratio) * 1000);
-    this.rpm += (target - this.rpm) * Math.min(1, dt * 5);
+    // A diesel: change up near 2600 rpm under power, down when the revs fall below 1200.
+    const revsIn = (g: number) => (this.v / GEAR_KMH_PER_1000[g]) * 1000;
+    if (this.v < 4) this.gear = 0;
+    else if (revsIn(this.gear) > 2600 && this.gear < GEAR_KMH_PER_1000.length - 1) {
+      this.gear++;
+      this.shiftUntil = t + 0.45;
+    } else if (revsIn(this.gear) < 1200 && this.gear > 0) this.gear--;
+    const shifting = t < this.shiftUntil;
+    const idle = 780 + this.pedal * 12 + 12 * Math.sin(t * 1.7);
+    const target = this.v < 4 ? idle : shifting ? revsIn(this.gear) * 0.92 : Math.max(800, revsIn(this.gear));
+    this.rpm += (target - this.rpm) * Math.min(1, dt * (shifting ? 8 : 5));
 
     const load = this.pedal / 100;
     const spool = Math.max(0, Math.min(1, (this.rpm - 1300) / 1300));
     this.mapKpa += (AMBIENT + 142 * load * spool - this.mapKpa) * Math.min(1, dt * 2.2);
 
-    this.coolant += (88 - this.coolant) * dt * 0.012 * (1 + load);
+    this.coolant += (87 + load * 4 - this.coolant) * dt * 0.04;
     this.fuelTemp += (46 - this.fuelTemp) * dt * 0.004;
 
     const n = (a: number) => (Math.random() - 0.5) * a;
@@ -133,7 +144,7 @@ class EngineModel {
       coolant: this.coolant,
       fuelTemp: this.fuelTemp,
       airTemp: 16 + (this.mapKpa - AMBIENT) * 0.18 + n(0.2),
-      battery: 14.05 + n(0.06),
+      battery: 13.8 + 0.3 * Math.min(1, this.rpm / 1800) + n(0.02),
     };
   }
 }

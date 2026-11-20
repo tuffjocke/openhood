@@ -126,8 +126,12 @@ class EngineModel {
   private v = 0;
   private rpm = 820;
   private throttle = 0;
-  private coolant = 15;
+  /** A warmed-up engine: a real coolant needle sits near 90 and barely moves. */
+  private coolant = 86;
   private ltft = 2.3;
+  /** Gear held between samples, so revs climb through a gear and drop at each change, like a real car. */
+  private gear = 0;
+  private shiftUntil = 0;
 
   private throttleTarget(t: number) {
     const p = t % 70;
@@ -152,14 +156,23 @@ class EngineModel {
     this.v = Math.max(0, this.v + (this.throttle * 0.14 - drag - brake) * dt);
     if (phase < 8) this.v = Math.max(0, this.v - 8 * dt);
 
-    const gear = GEAR_KMH_PER_1000.findIndex((k) => (this.v / k) * 1000 <= 3200);
-    const ratio = GEAR_KMH_PER_1000[gear === -1 ? 4 : gear];
-    const target = this.v < 4 ? 820 + this.throttle * 20 : Math.max(900, (this.v / ratio) * 1000);
-    this.rpm += (target - this.rpm) * Math.min(1, dt * 5);
+    // Change up near 3000 rpm under power, down when the revs fall below 1300.
+    const revsIn = (g: number) => (this.v / GEAR_KMH_PER_1000[g]) * 1000;
+    if (this.v < 4) this.gear = 0;
+    else if (revsIn(this.gear) > 3000 && this.gear < GEAR_KMH_PER_1000.length - 1) {
+      this.gear++;
+      this.shiftUntil = t + 0.35;
+    } else if (revsIn(this.gear) < 1300 && this.gear > 0) this.gear--;
+    const shifting = t < this.shiftUntil;
+    const idle = 820 + this.throttle * 20 + 15 * Math.sin(t * 2.1);
+    // Clutch in during a change: the revs sag for a moment, then meet the next gear.
+    const target = this.v < 4 ? idle : shifting ? revsIn(this.gear) * 0.92 : Math.max(900, revsIn(this.gear));
+    this.rpm += (target - this.rpm) * Math.min(1, dt * (shifting ? 9 : 6));
 
     const load = Math.min(100, 18 + this.throttle * 0.9);
     const map = 30 + (this.throttle / 100) * 68;
-    this.coolant += (90 - this.coolant) * dt * 0.015;
+    // The thermostat holds it near 90, a little warmer under load.
+    this.coolant += (89 + load * 0.04 - this.coolant) * dt * 0.05;
 
     return {
       rpm: this.rpm + n(12),
@@ -173,7 +186,8 @@ class EngineModel {
       timing: 8 + (this.rpm / 1000) * 4 - this.throttle * 0.08 + n(0.5),
       stft: n(6),
       ltft: this.ltft,
-      voltage: 14.1 + n(0.08),
+      // The alternator charges a touch harder once the revs are up.
+      voltage: 13.85 + 0.3 * Math.min(1, this.rpm / 2200) + n(0.02),
     };
   }
 }

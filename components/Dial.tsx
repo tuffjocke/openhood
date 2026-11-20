@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { Channel } from "@/core/profile";
 
 /**
@@ -24,6 +24,7 @@ export function Dial({
   const shown = unavailable ? "n/a" : value === undefined ? "-" : fmt(value, c.decimals);
   const alarm = value !== undefined && !unavailable && inWarn(c, value);
   const needle = value === undefined || unavailable ? START : angleOf(c, value);
+  const glide = useGlide(needle);
 
   return (
     <figure className={`dial${big ? " big" : ""}${alarm ? " warn" : ""}${unavailable ? " na" : ""}`}>
@@ -43,7 +44,7 @@ export function Dial({
           </text>
         ))}
         {battery && <BatteryBar {...battery} />}
-        <g className="dial-needle" style={{ transform: `rotate(${needle}deg)` }}>
+        <g className="dial-needle" style={{ transform: `rotate(${needle}deg)`, transitionDuration: `${glide}ms` }}>
           <line x1="100" y1="46" x2="100" y2={big ? 8 : 11} />
         </g>
       </svg>
@@ -63,6 +64,21 @@ export function Dial({
       )}
     </figure>
   );
+}
+
+/**
+ * How long the needle takes to reach a new reading: the time since the last one. Readings arrive
+ * unevenly (fast ones often, slow ones seldom), so a fixed time makes needles jump; matching the gap
+ * keeps each one sweeping steadily, the way a real gauge's needle follows the engine.
+ */
+function useGlide(angle: number) {
+  const last = useRef({ angle, t: 0, ms: 200 });
+  if (angle !== last.current.angle) {
+    const t = performance.now();
+    const gap = last.current.t ? t - last.current.t : 200;
+    last.current = { angle, t, ms: Math.max(120, Math.min(1500, gap)) };
+  }
+  return last.current.ms;
 }
 
 /** Battery voltage as a bar in the bottom gap of the scale, filling left to right. */
