@@ -65,7 +65,9 @@ components/FirstRun       landing until the first connection, like a product pag
                           then "Continue" goes to /read (app/read, same Dashboard with page="read"): the car line
                           with "Change car", then numbered steps, the current one open: 1 "Get the cable" (I have one /
                           Buy on Amazon, remembered, then folds to a done line), 2 "Plug in, ignition on" with two
-                          ways side by side: read the codes here, or ask an AI (copies the agent message). /read
+                          ways side by side: read the codes here (USB cable or Bluetooth, asked as one choice and
+                          remembered; Bluetooth tries Web Bluetooth, with paired-in-settings as the fallback), or ask
+                          an AI (copies the agent message). /read
                           without a saved car goes back to the start page
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)

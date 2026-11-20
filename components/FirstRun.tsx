@@ -72,6 +72,8 @@ function useDemoCar(profile: VehicleProfile, running: boolean) {
 }
 
 const ADAPTER_KEY = "openhood.hasAdapter";
+const LINK_KEY = "openhood.adapterLink";
+type AdapterLink = "usb" | "bluetooth";
 
 const URGENCY: Record<Urgency, string> = { ok: "Fine to drive", soon: "Fix soon", now: "Fix now" };
 const GROUP_COLOUR_WORDS: Record<ChannelGroup, string> = { air: "blue", engine: "yellow", fuel: "green" };
@@ -179,6 +181,20 @@ export function FirstRun({
       setHasAdapter(localStorage.getItem(ADAPTER_KEY) === "1");
     } catch {}
   }, []);
+  // How the adapter connects, asked in words people know: a cable or Bluetooth.
+  const [via, setVia] = useState<AdapterLink | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(LINK_KEY);
+      if (v === "usb" || v === "bluetooth") setVia(v);
+    } catch {}
+  }, []);
+  function chooseVia(v: AdapterLink) {
+    setVia(v);
+    try {
+      localStorage.setItem(LINK_KEY, v);
+    } catch {}
+  }
   function gotAdapter(yes: boolean) {
     setHasAdapter(yes);
     try {
@@ -192,6 +208,16 @@ export function FirstRun({
   const thing = kinds[0] === "kkl" ? "KKL cable" : "ELM327 adapter";
   const ble = bluetoothOk && kinds.includes("elm327");
   const canRead = serialOk || ble;
+  // KKL cables are always USB. An ELM327 can be either; without an answer yet, guess from the
+  // adapter we suggest, and a phone means Bluetooth.
+  const elm = kinds.includes("elm327");
+  const link: AdapterLink = !elm
+    ? "usb"
+    : (via ?? (device !== "computer" || buy?.pick.connects === "Bluetooth" ? "bluetooth" : "usb"));
+  // Bluetooth Low Energy adapters connect straight from the browser. Older ones are paired in the
+  // computer's settings first and then read like a cable.
+  const readBle = link === "bluetooth" && ble;
+  const busy = connecting === (readBle ? "bluetooth" : "serial");
   // Steps for the chosen car: 1 get the cable, 2 read it here or with an AI agent.
   const steps = (
     <ol className="steps">
@@ -252,18 +278,45 @@ export function FirstRun({
                       <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
                     </p>
                   )}
-                  <div className="chooser-actions">
-                    {serialOk && (
-                      <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-                        {connecting === "serial" ? "Waking the car…" : "Read my car"}
+                  {canRead && elm && (
+                    <div className="link-choice" role="group" aria-label="How does your adapter connect?">
+                      {(["usb", "bluetooth"] as const).map((v) => (
+                        <button key={v} aria-pressed={link === v} onClick={() => chooseVia(v)}>
+                          {v === "usb" ? "USB cable" : "Bluetooth"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {canRead && !readBle && !serialOk && (
+                    <p className="link-hint">This browser only reaches Bluetooth adapters.</p>
+                  )}
+                  {(readBle || serialOk) && (
+                    <div className="chooser-actions">
+                      <button
+                        className="primary big"
+                        onClick={readBle ? onBluetooth : onConnect}
+                        disabled={!!connecting}
+                      >
+                        {busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car"}
                       </button>
-                    )}
-                    {ble && (
-                      <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
-                        {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                  {canRead && link === "bluetooth" && (
+                    <p className="link-hint">
+                      {readBle && serialOk ? (
+                        <>
+                          Not found?{" "}
+                          <button className="link-button" onClick={onConnect} disabled={!!connecting}>
+                            Pair it in your settings, then read it here
+                          </button>
+                        </>
+                      ) : readBle ? (
+                        "Turn the adapter on. No pairing needed."
+                      ) : (
+                        `Pair it in your ${device}\u2019s Bluetooth settings first.`
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div className="way">
                   <h3>Ask an AI</h3>
