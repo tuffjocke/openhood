@@ -8,6 +8,7 @@ import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { Gauge } from "./Gauge";
 import { CodeLookup } from "./landing/CodeLookup";
+import { AgentTrack } from "./landing/AgentTrack";
 import { EngineLight } from "./landing/EngineLight";
 import { SocketGuide } from "./landing/SocketGuide";
 import type { Selection } from "./VehiclePicker";
@@ -143,6 +144,16 @@ export function FirstRun({
   onBluetooth: () => void;
   onSimulator: () => void;
 }) {
+  // Two ways in. #agent links straight to the second.
+  const [track, setTrack] = useState<"browser" | "agent">("browser");
+  useEffect(() => {
+    if (location.hash === "#agent") setTrack("agent");
+  }, []);
+  function chooseTrack(t: "browser" | "agent") {
+    setTrack(t);
+    history.replaceState(null, "", t === "agent" ? "#agent" : location.pathname + location.search);
+  }
+
   const readButton = (p: VehicleProfile, supported: boolean) => {
     const ble = bluetoothOk && (p.adapters ?? ["kkl"]).includes("elm327");
     return serialOk || ble ? (
@@ -177,9 +188,36 @@ export function FirstRun({
             how urgent it is. A cheap USB cable and this browser is all it takes. Pick your car and see.
           </p>
 
-          <div className="start" aria-labelledby="start-title">
-            <h2 id="start-title">Your car</h2>
-            <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={readButton} />
+          <div className="start">
+            <div className="tracks" role="tablist" aria-label="How to read your car">
+              <button
+                role="tab"
+                id="tab-browser"
+                aria-selected={track === "browser"}
+                aria-controls="panel-browser"
+                onClick={() => chooseTrack("browser")}
+              >
+                In this browser
+              </button>
+              <button
+                role="tab"
+                id="tab-agent"
+                aria-selected={track === "agent"}
+                aria-controls="panel-agent"
+                onClick={() => chooseTrack("agent")}
+              >
+                With an AI agent
+              </button>
+            </div>
+            {track === "browser" ? (
+              <div role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
+                <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={readButton} />
+              </div>
+            ) : (
+              <div role="tabpanel" id="panel-agent" aria-labelledby="tab-agent">
+                <AgentTrack car={selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : ""} />
+              </div>
+            )}
           </div>
 
           <p className="demo-line">

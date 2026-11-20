@@ -48,9 +48,10 @@ components/CarChooser     make, model, year (any car in names.ts, model typed if
                           read it if a profile fits, else standard codes or the add-your-car AI prompt
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       landing until the first connection: hero (CarChooser + live demo with one explained fault),
-                          socket guide, code lookup
-components/landing/       CodeLookup (no cable, #P0171 links), SocketGuide, EngineLight
+components/FirstRun       landing until the first connection: hero with two tracks (in this browser: CarChooser;
+                          with an AI agent: AgentTrack, #agent) + live demo with one explained fault, socket guide, code lookup
+components/landing/       AgentTrack (setup + ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
+                          SocketGuide, EngineLight
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a-vehicle.md, tested)
