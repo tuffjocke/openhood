@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
@@ -91,7 +90,7 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
       </dl>
       {fault && <PreviewFault fault={fault} profile={profile} />}
       <figcaption>
-        A demo car with made-up readings, running live in your browser. {main ? `${main.label} in ${main.unit}.` : ""}
+        Demo car, running live.
       </figcaption>
     </figure>
   );
@@ -169,11 +168,6 @@ export function FirstRun({
             {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
           </button>
         )}
-        {serialOk && ble && <p className="actions-hint">USB adapters and paired Bluetooth adapters use the first button.</p>}
-        <p className="actions-hint">
-          Free software, provided as is. Use it at your own risk, with the car parked.{" "}
-          <Link href="/disclaimer">Disclaimer</Link>
-        </p>
       </div>
     ) : null; // the browser warning is shown once, above the car fields
   };
@@ -184,8 +178,7 @@ export function FirstRun({
         <div className="hero-text">
           <h1>Engine light on? Find out why.</h1>
           <p className="lede">
-            Openhood reads the fault codes behind your engine light and tells you in plain words what&rsquo;s wrong and
-            how urgent it is. A cheap adapter and this browser are all it takes. Pick your car and see.
+            Plug in a cheap adapter. See what&rsquo;s wrong, in plain words.
           </p>
 
           <div className="start">
@@ -213,8 +206,8 @@ export function FirstRun({
               <div role="tabpanel" id="panel-browser" aria-labelledby="tab-browser">
                 {!serialOk && !bluetoothOk && (
                   <p className="hero-note" role="note">
-                    <strong>This browser can&rsquo;t read a car.</strong> Open this page in Chrome or Edge on a computer,
-                    or Chrome on Android. Here you can still try the demo and look up codes.
+                    <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on
+                    Android.
                   </p>
                 )}
                 <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={readButton} />
@@ -227,15 +220,10 @@ export function FirstRun({
           </div>
 
           <p className="demo-line">
-            Just curious?{" "}
             <button className="link-button" onClick={onSimulator} disabled={!!connecting}>
               {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
-            </button>{" "}
-            first, no cable needed.
-          </p>
-          <p className="trust">
-            Openhood only reads, so nothing in your car changes. The one exception is clearing fault codes, and only
-            when you choose to. Nothing is sent anywhere unless you share it.
+            </button>
+            <span>Only reads. Nothing in your car changes.</span>
           </p>
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}

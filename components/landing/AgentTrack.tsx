@@ -44,47 +44,30 @@ function Copyable({ text, label, collapsed }: { text: string; label: string; col
 export function AgentTrack({ car }: { car: string }) {
   return (
     <div className="agent">
-      <p className="agent-lede">
-        Let an AI agent do it for you. It sets Openhood up, reads your car and explains what it finds. No coding, no
-        terminal: you copy one message into a new chat. You need a computer for this (Windows, Mac or Linux), not a
-        phone.
-      </p>
       <ol className="agent-steps">
         <li>
           <div>
-            <h3>Open the Claude or Codex desktop app</h3>
-            <p>
-              On the computer you&rsquo;ll plug into the car, and start a new coding task. Get it from{" "}
-              <a href="https://claude.com/download">Claude</a> or <a href="https://openai.com/codex">Codex</a>. The
-              versions in a web browser can&rsquo;t reach the adapter, so use the app.
-            </p>
+            <h3>
+              Open the <a href="https://claude.com/download">Claude</a> or <a href="https://openai.com/codex">Codex</a>{" "}
+              desktop app on your computer
+            </h3>
+            <p>Not the web version: it can&rsquo;t reach the adapter.</p>
           </div>
         </li>
         <li>
           <div>
-            <h3>Plug in and turn the key</h3>
-            <p>
-              Adapter in the car and in your computer, ignition on. <a href="#socket">Where is the socket?</a>
-            </p>
+            <h3>Plug in, ignition on</h3>
           </div>
         </li>
         <li>
           <div>
-            <h3>Copy this into a new chat to start analysing your car</h3>
-            <p>
-              {car ? "Your car is already in it. " : "Pick your car in the other tab first and it\u2019s filled in, or tell the agent when it asks. "}
-              Afterwards the agent offers to add your car to Openhood&rsquo;s shared list of what works, so the next person
-              with the same car knows.
-            </p>
+            <h3>Paste this into a new chat</h3>
             <Copyable text={readCarPrompt(car)} label="Message for your AI agent" collapsed />
           </div>
         </li>
       </ol>
       <p className="agent-foot">
-        The agent asks before installing anything, and Openhood only reads: clearing codes needs your yes. Use it at
-        your own risk, with the car parked. Comfortable
-        with a terminal? Start Claude Code in a clone of the repo and it gets the openhood tools directly.{" "}
-        <a href={CLI_DOCS}>How it works</a>
+        Only reads. Asks before installing anything. <a href={CLI_DOCS}>How it works</a>
       </p>
     </div>
   );

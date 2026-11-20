@@ -407,14 +407,13 @@ export default function Dashboard() {
               Send a test report
             </a>
           )}
-          {source && source !== "simulator" && " (opens a public GitHub issue you can read before posting)"}
+          {source && source !== "simulator" && " (public, on GitHub)"}
         </p>
       )}
 
       {demo && status === "live" && (
         <p className="demo-banner">
-          <strong>This is a demo car.</strong> The faults and readings are made up, to show what Openhood does. Nothing here
-          is about your car.{" "}
+          <strong>Demo car.</strong> Made-up faults, not yours.{" "}
           <button className="link-button" onClick={disconnect}>
             Back to start
           </button>
@@ -519,7 +518,7 @@ export default function Dashboard() {
 
       {live && source !== "simulator" && selection.make && selection.model && selection.year && (
         <p className="share-car">
-          Did it work? Help the next person with a {selection.make} {selection.model}.{" "}
+          Worked?{" "}
           <a href="#" target="_blank" rel="noreferrer" onClick={fillCarReport}>
             Add your car to the shared list
           </a>
@@ -533,7 +532,7 @@ export default function Dashboard() {
       </p>
 
       <p className="disclaimer">
-        Openhood is free software, provided as is, without any warranty. Use it at your own risk, with the car parked.{" "}
+        Provided as is. Use at your own risk, car parked.{" "}
         <Link href="/disclaimer">Disclaimer</Link>
       </p>
 

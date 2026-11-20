@@ -21,16 +21,13 @@ export function AdapterAdvice({ profile, year }: { profile: VehicleProfile; year
   if (adapters[0] === "kkl")
     return (
       <p className="advice">
-        <strong>You need a KKL cable.</strong> A USB cable sold as KKL 409.1 with an FTDI chip, about €20.
-        {!adapters.includes("elm327") && " Bluetooth ELM327 readers can\u2019t read this car\u2019s own codes."}{" "}
-        <Link href="/adapters">Which one to buy</Link>
+        <strong>Needs a KKL cable,</strong> about €20. <Link href="/adapters">Which one?</Link>
       </p>
     );
   return (
     <p className="advice">
-      <strong>You need an ELM327-type adapter,</strong> USB or Bluetooth, about €20 to €40.
-      {adapters.includes("kkl") && year < 2008 && " Already have a KKL cable? It works on this car too."}{" "}
-      <Link href="/adapters">Which one to buy</Link>
+      <strong>Needs an ELM327 adapter,</strong> about €20 to €40.
+      {adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">Which one?</Link>
     </p>
   );
 }
@@ -41,14 +38,14 @@ export function ReadSteps() {
     <ol className="read-steps">
       <li>
         <span>
-          Plug it into the socket under the dashboard. <a href="#socket">Where is it?</a>
+          Plug in under the dashboard. <a href="#socket">Where?</a>
         </span>
       </li>
       <li>
-        <span>Turn the ignition on. The engine can stay off.</span>
+        <span>Ignition on.</span>
       </li>
       <li>
-        <span>Press the button below and choose your adapter in the list that pops up.</span>
+        <span>Press read and pick your adapter.</span>
       </li>
     </ol>
   );
@@ -77,11 +74,11 @@ function CopyPrompt({ car }: { car: CarDetails }) {
           {copied ? "Copied" : "Copy message"}
         </button>
         <span className="copy-hint" aria-live="polite">
-          {copied ? "Now paste it into your AI chat." : "Then paste it into ChatGPT, Claude or another AI."}
+          {copied ? "Now paste it into an AI chat." : ""}
         </span>
       </div>
       <details className="prompt" id="prompt-text">
-        <summary>Read the message first</summary>
+        <summary>Read it first</summary>
         <pre>{text}</pre>
       </details>
     </>
@@ -260,7 +257,7 @@ export function CarChooser({
         <div className="car-result" aria-live="polite">
           <p className="verdict">
             <i className="tick" aria-hidden />
-            Yes, Openhood knows the {carName(car)}.
+            Yes, Openhood knows it.
           </p>
           {found.length > 1 && (
             <div className="engines">
@@ -281,7 +278,7 @@ export function CarChooser({
           <p className="car-sub">
             {found.length === 1 && `${found[0].engine}. `}
             {profile?.status === "experimental" &&
-              "It\u2019s new and not tested on a real car yet. Read yours and tell us how it went: that\u2019s how it gets better."}
+              "Not tested on a real car yet."}
           </p>
           {(found.length === 1 || engineChosen) && profile && (
             <>
@@ -297,7 +294,6 @@ export function CarChooser({
         <div className="car-result" aria-live="polite">
           <p className="verdict">{car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.</p>
           {others && <p className="car-others">{others}</p>}
-          <p className="car-sub">Openhood doesn&rsquo;t know the {carName(car)} in detail yet, but you can read it today.</p>
 
           {brief ? (
             <>
@@ -307,33 +303,19 @@ export function CarChooser({
           ) : (
             <div className="paths">
               <section className="path">
-                <h3>Read the standard codes</h3>
-                <p>
-                  Cars share a set of standard fault codes: in Europe petrol cars from about 2001 and diesels from about
-                  2004, in the US from 1996. Often that&rsquo;s enough to see why the light is on.
-                </p>
-                {car.year < 2001 && (
-                  <p className="path-note">Your car may be a bit early for this. Trying can&rsquo;t hurt anything.</p>
-                )}
+                {car.year < 2001 && <p className="path-note">A bit early for standard codes. Trying can&rsquo;t hurt.</p>}
                 {generic && <AdapterAdvice profile={generic} year={car.year} />}
                 <ReadSteps />
                 {generic && actions(generic, false)}
               </section>
 
               <details className="path more">
-                <summary>
-                  <span>Want more than the standard codes?</span> Help teach Openhood this car
-                </summary>
-                <p>
-                  With its own profile, Openhood can read the maker&rsquo;s own codes and live values for the{" "}
-                  {carName(car)}. No coding needed: copy this message into an AI chat. It already says which car you
-                  have, and the AI walks you through the rest, one small step at a time.
-                </p>
+                <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
+                <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
                 <CopyPrompt car={car} />
                 <p className="path-foot">
-                  Expect an evening, with your laptop in the car for the last step. Rather not?{" "}
-                  <a href={requestCarUrl(car)}>Just tell us about your car</a> (needs a free GitHub account), or{" "}
-                  <a href={GUIDE_URL}>read the guide</a>.
+                  Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
+                  <a href={GUIDE_URL}>Guide</a>
                 </p>
               </details>
             </div>

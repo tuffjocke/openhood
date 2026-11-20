@@ -1473,7 +1473,7 @@ pre {
 }
 
 .agent-steps {
-  margin: 18px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   counter-reset: agent;
@@ -1807,8 +1807,16 @@ pre {
 }
 
 .demo-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 20px;
   margin: 22px 0 0;
-  color: var(--ink-soft);
+}
+
+.demo-line span {
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .demo-line .link-button {
@@ -1930,6 +1938,10 @@ details.path.more summary {
 
 details.path.more summary::-webkit-details-marker {
   display: none;
+}
+
+details.path.more p:first-of-type {
+  margin-top: 12px;
 }
 
 details.path.more summary span {

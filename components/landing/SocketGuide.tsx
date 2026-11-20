@@ -35,17 +35,9 @@ export function SocketGuide() {
     <section className="band" id="socket" aria-labelledby="socket-title">
       <div className="band-text">
         <h2 id="socket-title">Find the socket</h2>
-        <p>
-          Every car since the late 1990s has the same 16-pin socket. Look under the dashboard on the driver&rsquo;s side,
-          near your knee. On some cars it hides behind a small cover or in the centre console.
-        </p>
-        <h3>What to plug in</h3>
-        <p>
-          Pick your car above and Openhood tells you. Most cars need an ELM327-type adapter, USB or Bluetooth, about €20
-          to €40. Some cars with their own profile need a KKL cable instead.
-        </p>
+        <p>Under the dashboard, driver&rsquo;s side, near your knee.</p>
         <Link className="text-button" href="/adapters">
-          What to buy, and what to avoid
+          Which adapter to buy
         </Link>
       </div>
       <figure className="panel">
@@ -53,22 +45,21 @@ export function SocketGuide() {
         <dl className="pin-legend">
           <div>
             <dt><i className="swatch data" />Pin 7</dt>
-            <dd>Data on older cars, to about 2008.</dd>
+            <dd>Data, older cars</dd>
           </div>
           <div>
             <dt><i className="swatch can" />Pins 6 and 14</dt>
-            <dd>Data on newer cars. Many cars have both.</dd>
+            <dd>Data, newer cars</dd>
           </div>
           <div>
             <dt><i className="swatch power" />Pin 16</dt>
-            <dd>Battery power for the adapter.</dd>
+            <dd>Power</dd>
           </div>
           <div>
             <dt><i className="swatch ground" />Pins 4 and 5</dt>
-            <dd>Ground.</dd>
+            <dd>Ground</dd>
           </div>
         </dl>
-        <figcaption>The socket as you see it when you face it. You don&rsquo;t need to check the pins: just plug in.</figcaption>
       </figure>
     </section>
   );

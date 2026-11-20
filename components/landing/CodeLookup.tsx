@@ -38,7 +38,7 @@ export function CodeLookup() {
     <section className="band" id="lookup" aria-labelledby="lookup-title">
       <div className="band-text">
         <h2 id="lookup-title">Already have a code?</h2>
-        <p>From a garage, a cheap code reader or a forum post. Type it in to see what it means. No cable needed.</p>
+        <p>Type it. No adapter needed.</p>
       </div>
       <div className="panel">
         <label className="lookup-field">
@@ -56,13 +56,7 @@ export function CodeLookup() {
         </label>
 
         <div className="lookup-result" aria-live="polite">
-          {!result && (
-            <p className="lookup-hint">
-              {input && typedEnough
-                ? "That doesn\u2019t look like a fault code. They start with P, C, B or U, then four digits."
-                : "A letter and four digits, like P0420."}
-            </p>
-          )}
+          {!result && input && typedEnough && <p className="lookup-hint">Not a fault code. They look like P0420.</p>}
           {result?.info && (
             <div className="lookup-answer">
               <p className="lookup-code">
