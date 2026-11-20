@@ -166,7 +166,7 @@ export function FirstRun({
   const showcaseCharts = layout.groups.map((g) => layout.charts.find((c) => c.group === g)!).slice(0, 3);
   if (showcaseCharts.length === 0) showcaseCharts.push(...layout.charts.slice(0, 3));
 
-  // One step on screen at a time. Step 1 is the car fields; these are steps 2 and 3.
+  // Has the person said they have the cable? Remembered, so step 1 stays done next time.
   const [hasAdapter, setHasAdapter] = useState(false);
   // "your phone" or "your computer": known only in the browser, after the static page loads.
   const [device, setDevice] = useState("computer");
@@ -188,65 +188,98 @@ export function FirstRun({
   }
 
   const buy = useFirstPick((profile.adapters ?? ["kkl"])[0]);
-  const nextStep = (p: VehicleProfile, supported: boolean) => {
-    const kinds = p.adapters ?? ["kkl"];
-    const thing = kinds[0] === "kkl" ? "a KKL cable" : "an ELM327 adapter";
-    if (!hasAdapter)
-      return (
-        <div className="step">
-          <p className="step-ask">
-            {/* Sure for a car Openhood knows; a good guess for any other car. */}
-            {supported ? "You" : "We think you"} need {thing} to connect your {selection.make || "car"} to your {device}.
-          </p>
-          <div className="chooser-actions">
-            <button className="primary big" onClick={() => gotAdapter(true)}>
-              I have one
-            </button>
-            {buy && (
-              <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
-                {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
-              </a>
-            )}
-          </div>
-          {buy && (
-            <p className="step-foot">
-              Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+  const kinds = profile.adapters ?? ["kkl"];
+  const thing = kinds[0] === "kkl" ? "KKL cable" : "ELM327 adapter";
+  const ble = bluetoothOk && kinds.includes("elm327");
+  const canRead = serialOk || ble;
+  // Steps for the chosen car: 1 get the cable, 2 read it here or with an AI agent.
+  const steps = (
+    <ol className="steps">
+      <li className={hasAdapter ? "is-done" : "is-now"}>
+        <span className="step-num" aria-hidden="true">
+          {hasAdapter ? "✓" : "1"}
+        </span>
+        <div className="step-body">
+          {hasAdapter ? (
+            <p className="step-title">
+              Got the {thing}
+              <button className="link-button" onClick={() => gotAdapter(false)}>
+                Change
+              </button>
             </p>
+          ) : (
+            <>
+              <h2 className="step-title">Get the cable</h2>
+              <p className="step-line">
+                {/* Sure for a car Openhood knows; a good guess for any other car. */}
+                {profile.generic ? "We think you" : "You"} need an {thing} to connect your {selection.make || "car"} to your{" "}
+                {device}.
+              </p>
+              <div className="chooser-actions">
+                <button className="primary big" onClick={() => gotAdapter(true)}>
+                  I have one
+                </button>
+                {buy && (
+                  <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
+                    {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+                  </a>
+                )}
+              </div>
+              {buy && (
+                <p className="step-foot">
+                  Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+                </p>
+              )}
+            </>
           )}
         </div>
-      );
-    const ble = bluetoothOk && kinds.includes("elm327");
-    const canRead = serialOk || ble;
-    return (
-      <div className="step">
-        <p className="step-ask">Plug it in under the dashboard, near your knee. Ignition on.</p>
-        {!canRead && (
-          <p className="hero-note" role="note">
-            <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
-          </p>
-        )}
-        <div className="chooser-actions">
-          {serialOk && (
-            <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-              {connecting === "serial" ? "Waking the car…" : "Read my car"}
-            </button>
+      </li>
+      <li className={hasAdapter ? "is-now" : "is-next"}>
+        <span className="step-num" aria-hidden="true">
+          2
+        </span>
+        <div className="step-body">
+          <h2 className="step-title">Plug in, ignition on</h2>
+          {hasAdapter && (
+            <>
+              <p className="step-line">The socket is under the dashboard, near your knee. Then pick one:</p>
+              <div className="ways">
+                <div className="way">
+                  <h3>Read the codes</h3>
+                  <p>See every fault here, in plain words.</p>
+                  {!canRead && (
+                    <p className="hero-note" role="note">
+                      <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
+                    </p>
+                  )}
+                  <div className="chooser-actions">
+                    {serialOk && (
+                      <button className="primary big" onClick={onConnect} disabled={!!connecting}>
+                        {connecting === "serial" ? "Waking the car…" : "Read my car"}
+                      </button>
+                    )}
+                    {ble && (
+                      <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
+                        {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="way">
+                  <h3>Ask an AI</h3>
+                  <p>An AI agent on your computer reads the car and tells you what to fix.</p>
+                  <div className="chooser-actions">
+                    <AgentButton car={carText} primary={!canRead} />
+                  </div>
+                </div>
+              </div>
+              <p className="step-foot">Only reads. Nothing in your car changes.</p>
+            </>
           )}
-          {ble && (
-            <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
-              {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
-            </button>
-          )}
-          <AgentButton car={carText} primary={!canRead} />
         </div>
-        <p className="step-foot">
-          Only reads. Nothing in your car changes.{" "}
-          <button className="link-button" onClick={() => gotAdapter(false)}>
-            No adapter yet?
-          </button>
-        </p>
-      </div>
-    );
-  };
+      </li>
+    </ol>
+  );
 
   if (page === "read")
     return (
@@ -268,7 +301,7 @@ export function FirstRun({
                   Change car
                 </Link>
               </p>
-              {nextStep(profile, !profile.generic)}
+              {steps}
             </div>
           </div>
         )}

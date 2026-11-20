@@ -9,7 +9,7 @@ const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
  * The other way to read: copy a ready-made message for a coding agent (the Claude or Codex
  * desktop app on the computer that's plugged into the car). The agent sets Openhood up and reads
  * the car, so it works in any browser. Web versions of those agents can't reach an adapter.
- * A quiet link by default; the main button where the browser can't read a car itself.
+ * A button on the steps page (the main one where the browser can't read a car itself).
  */
 export function AgentButton({ car, primary }: { car: string; primary?: boolean }) {
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
@@ -26,8 +26,8 @@ export function AgentButton({ car, primary }: { car: string; primary?: boolean }
 
   return (
     <>
-      <button className={primary ? "primary big" : "link-button"} onClick={copy}>
-        {state === "copied" ? "Copied" : primary ? "Let an AI agent read it" : "Or let an AI agent read it"}
+      <button className={primary ? "primary big" : "ghost big"} onClick={copy}>
+        {state === "copied" ? "Copied" : "Copy the message"}
       </button>
       {state !== "idle" && (
         <p className="actions-hint" aria-live="polite">

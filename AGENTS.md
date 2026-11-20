@@ -63,8 +63,9 @@ components/FirstRun       landing until the first connection, like a product pag
                           "Faults" (the demo's fault, opened) and "Any car". Black parts swap the colour tokens,
                           so components need no dark styles of their own. The start page only asks for the car,
                           then "Continue" goes to /read (app/read, same Dashboard with page="read"): the car line
-                          with "Change car", then one step at a time: 1 "You need an adapter" (I have one / Buy on
-                          Amazon, remembered), 2 plug in and "Read my car" (AI agent as a quiet link). /read
+                          with "Change car", then numbered steps, the current one open: 1 "Get the cable" (I have one /
+                          Buy on Amazon, remembered, then folds to a done line), 2 "Plug in, ignition on" with two
+                          ways side by side: read the codes here, or ask an AI (copies the agent message). /read
                           without a saved car goes back to the start page
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
