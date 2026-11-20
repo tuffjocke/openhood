@@ -11,18 +11,31 @@ const h2 = (b: number) => b.toString(16).toUpperCase().padStart(2, "0");
  * frame, CAN multi-frame answers as a byte count line then "0:", "1:" lines, then a ">" prompt.
  *
  * `can: true` pretends the car is on CAN: mode 03/07/0A answers get the count byte CAN uses and
- * are merged into one (multi-frame) answer, as ISO 15765-4 does.
+ * are merged into one (multi-frame) answer, as ISO 15765-4 does. After ATH1 it prints whole CAN
+ * frames with the sender's id (7E8), padded to 8 bytes, the way the datasheet shows them.
+ *
+ * The quirks are things real adapters are reported to do: `protocolNumber` overrides the ATDPN
+ * answer ("0" = won't say), `ignoresHeaders` is a clone that says OK to ATH1 and changes nothing,
+ * `junkAfterReset` prints rubbish in place of its name after ATZ.
  */
+export interface ElmQuirks {
+  can: boolean;
+  protocolNumber?: string;
+  ignoresHeaders?: boolean;
+  junkAfterReset?: boolean;
+}
+
 export class SimulatedElm implements ByteStream {
   private rx = new ByteQueue();
   private ecu: SimulatedEcu | null = null;
   private searched = false;
   private echo = true;
+  private headers = false;
   private line = "";
 
   constructor(
     private profile: VehicleProfile,
-    private opts: { can: boolean } = { can: true },
+    private opts: ElmQuirks = { can: true },
   ) {}
 
   async open() {}
@@ -56,14 +69,19 @@ export class SimulatedElm implements ByteStream {
       this.echo = true;
       this.searched = false;
       this.ecu = null;
-      return ["", "ELM327 v1.5"];
+      this.headers = false;
+      return ["", this.opts.junkAfterReset ? "\u00ff\u00fe?" : "ELM327 v1.5"];
+    }
+    if (cmd === "ATH1" || cmd === "ATH0") {
+      if (!this.opts.ignoresHeaders) this.headers = cmd === "ATH1";
+      return ["OK"];
     }
     if (cmd === "ATE0") {
       this.echo = false;
       return ["OK"];
     }
     if (cmd === "ATI") return ["ELM327 v1.5"];
-    if (cmd === "ATDPN") return [this.opts.can ? "A6" : "A5"];
+    if (cmd === "ATDPN") return [this.opts.protocolNumber ?? (this.opts.can ? "A6" : "A5")];
     if (cmd === "ATDP") return [this.opts.can ? "AUTO, ISO 15765-4 (CAN 11/500)" : "AUTO, ISO 14230-4 (KWP FAST)"];
     if (cmd.startsWith("AT")) return ["OK"];
     if (!/^([0-9A-F]{2})+$/.test(cmd)) return ["?"];
@@ -80,8 +98,29 @@ export class SimulatedElm implements ByteStream {
     if (!res) return [...prefix, "NO DATA"];
     let frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     if (this.opts.can && [0x43, 0x47, 0x4a].includes(frames[0]?.[0])) frames = [toCanDtcAnswer(frames)];
-    return [...prefix, ...frames.flatMap((f) => (this.opts.can && f.length > 7 ? multiFrame(f) : [f.map(h2).join("")]))];
+    return [...prefix, ...frames.flatMap((f) => this.print(f))];
   }
+
+  private print(f: number[]): string[] {
+    if (!this.opts.can) return [this.headers ? legacyFrame(f) : f.map(h2).join("")];
+    if (this.headers) return canFrames(f);
+    return f.length > 7 ? multiFrame(f) : [f.map(h2).join("")];
+  }
+}
+
+/** A K-line or J1850 answer with headers on: three header bytes, the data, a checksum byte. */
+const legacyFrame = (f: number[]) => [0x48, 0x6b, 0x10, ...f, 0x00].map(h2).join("");
+
+/** ISO 15765-2 frames from the engine ECU (7E8) with headers on, each padded to 8 bytes. */
+function canFrames(f: number[]): string[] {
+  const line = (bytes: number[]) => {
+    while (bytes.length < 8) bytes.push(0);
+    return "7E8" + bytes.map(h2).join("");
+  };
+  if (f.length <= 7) return [line([f.length, ...f])];
+  const out = [line([0x10 | (f.length >> 8), f.length & 0xff, ...f.slice(0, 6)])];
+  for (let i = 6, n = 1; i < f.length; i += 7, n++) out.push(line([0x20 | (n % 16), ...f.slice(i, i + 7)]));
+  return out;
 }
 
 /** K-line trouble code frames (three codes each, zero padded) to one CAN answer: SID, count, codes. */

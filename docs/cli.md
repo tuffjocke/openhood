@@ -21,6 +21,8 @@ On the website, pick your car and press **Or let an AI agent read it** to copy t
 
 ## Commands
 
+First time on a real car? Follow [first-read.md](first-read.md).
+
 ```
 npm run openhood -- profiles                 # vehicle profiles and which adapters they run on
 npm run openhood -- ports                    # USB adapters, KKL cables, paired Bluetooth adapters

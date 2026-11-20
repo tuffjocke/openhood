@@ -78,13 +78,14 @@ tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
 tests/add-car.test.ts     the prompt matches the docs and fills in the car
-tests/elm.test.ts         ELM327 answer parsing, CAN detection, CAN trouble code format
+tests/elm.test.ts         ELM327 answer parsing (datasheet examples), CAN frames with headers, adapter quirks
 tests/mcp.test.ts         MCP server: initialize, tools, faults over simulated ELM327, refusals
 tests/safety.test.ts      read-only allowlist for raw requests
 tests/car-reports.test.ts every car report is valid and has nothing personal
 tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidying typed car names
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
-docs/                     adding-a-vehicle.md, hardware.md, cli.md, architecture.md, k-line-primer.md
+docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
+                          car), architecture.md, k-line-primer.md
 ```
 
 ## Most common task: add or extend a vehicle
@@ -164,8 +165,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo.
 - `EcuLink.init` says how the link was set up. On an ELM327 it is `{ kind: "adapter", can }`; on CAN some
   OBD answers differ (mode 03/07 start with a count byte). Profiles handle that, not the link.
-- The ELM327 link uses headers off: several ECUs answering come back as separate payloads, and CAN
-  multi-frame answers are joined for you. Its timeouts carry a plain message for people.
+- The ELM327 link starts with headers off. On CAN it turns headers on (ATH1) and puts long answers back
+  together per ECU (`parseElmCanFrames`), engine first, because two ECUs answering at once can't be told
+  apart otherwise. Older protocols stay headers off. Profiles just get payloads. Its timeouts carry a plain
+  message for people.
 - Fast init is timed with JS timers (BREAK for 25 ms). Jitter of a few ms is normal.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
