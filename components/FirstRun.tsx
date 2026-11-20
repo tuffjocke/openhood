@@ -159,7 +159,7 @@ export function FirstRun({
     } catch {}
   }
 
-  const nextStep = (p: VehicleProfile, supported: boolean) => {
+  const nextStep = (p: VehicleProfile) => {
     const kinds = p.adapters ?? ["kkl"];
     const thing = kinds[0] === "kkl" ? "a KKL cable" : "an ELM327 adapter";
     if (!hasAdapter)
@@ -189,7 +189,7 @@ export function FirstRun({
         <div className="chooser-actions">
           {serialOk && (
             <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-              {connecting === "serial" ? "Waking the car…" : supported ? "Read my car" : "Read the standard codes"}
+              {connecting === "serial" ? "Waking the car…" : "Read my car"}
             </button>
           )}
           {ble && (
