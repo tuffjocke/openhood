@@ -3106,3 +3106,13 @@ main > details.more {
   background: var(--surface);
   color: var(--ink);
 }
+
+/* Running: live data first, faults under it. */
+.top + .section-head,
+.notice + .section-head {
+  margin-top: 28px;
+}
+
+.grid + .lower {
+  margin-top: 28px;
+}

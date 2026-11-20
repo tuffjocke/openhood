@@ -155,7 +155,7 @@ export default function Dashboard() {
       setStatus("live");
       setEverLive(true);
       setAsked(null);
-      window.scrollTo(0, 0); // the faults are at the top
+      window.scrollTo(0, 0);
       void refreshFaults(s);
       void s.poll(onValues, (e) => {
         setStatus("error");
@@ -439,6 +439,43 @@ export default function Dashboard() {
 
       {!showFirstRun && (
         <>
+      <div className="section-head">
+        <h2 className="section-title">Live data</h2>
+        <span className="section-tools">
+          {recording && (
+            <span className="rec-time">
+              {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+            </span>
+          )}
+          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
+            {recording ? "Stop and save" : "Log a drive"}
+          </button>
+        </span>
+      </div>
+          <section className="grid cluster">
+            {profile.channels.map((c) => {
+              const v = latest.current[c.key];
+              const warn = isWarn(c, v);
+              return (
+                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
+                  <div className="cell-head">{c.label}</div>
+                  <div className="value-row">
+                    {unavailable.has(c.key) ? (
+                      <span className="value na" title="This car doesn't report this value">
+                        n/a
+                      </span>
+                    ) : (
+                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
+                    )}
+                    <span className="unit">{c.unit}</span>
+                  </div>
+                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
+                </div>
+              );
+            })}
+          </section>
+
+
       <section className="lower">
         <FaultPanel
           profile={profile}
@@ -478,43 +515,7 @@ export default function Dashboard() {
       )}
 
       <details className="more-data">
-        <summary>Live data and more</summary>
-      <div className="section-head">
-        <h2 className="section-title">Live data</h2>
-        <span className="section-tools">
-          {recording && (
-            <span className="rec-time">
-              {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
-            </span>
-          )}
-          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
-            {recording ? "Stop and save" : "Log a drive"}
-          </button>
-        </span>
-      </div>
-          <section className="grid cluster">
-            {profile.channels.map((c) => {
-              const v = latest.current[c.key];
-              const warn = isWarn(c, v);
-              return (
-                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
-                  <div className="cell-head">{c.label}</div>
-                  <div className="value-row">
-                    {unavailable.has(c.key) ? (
-                      <span className="value na" title="This car doesn't report this value">
-                        n/a
-                      </span>
-                    ) : (
-                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
-                    )}
-                    <span className="unit">{c.unit}</span>
-                  </div>
-                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
-                </div>
-              );
-            })}
-          </section>
-
+        <summary>More</summary>
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
         <summary>Traffic with the car</summary>
         {logOpen && (

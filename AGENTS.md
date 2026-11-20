@@ -43,9 +43,10 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
 core/safety.ts            which raw requests tools may send: read services only
-components/Dashboard.tsx  the whole UI, driven by the selected profile. Result screen: the faults panel, one ask after
-                          a real read ("Did this match your car?" Yes = car report, No = test report), "Help add this
-                          car" only for unlisted cars, and everything else behind "Live data and more"
+components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: live data at the top (with
+                          "Log a drive"), the faults panel below, one ask after a real read ("Did this match your
+                          car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
+                          traffic and profile details behind "More"
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
