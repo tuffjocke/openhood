@@ -37,7 +37,7 @@ export function ReadSteps({ profile }: { profile: VehicleProfile }) {
       </li>
       <li>
         <span>
-          Plug it in under the dashboard. <a href="#socket">Where?</a>
+          Plug it in under the dashboard, near your knee.
         </span>
       </li>
       <li>

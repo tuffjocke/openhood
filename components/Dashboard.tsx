@@ -174,7 +174,7 @@ export default function Dashboard() {
     if (wasDemo) goHome(); // the demo isn't their car: nothing to keep on screen
   }
 
-  /** Back to the start page (car chooser, socket guide, code lookup). */
+  /** Back to the start page. */
   function goHome() {
     setEverLive(false);
     setError(null);

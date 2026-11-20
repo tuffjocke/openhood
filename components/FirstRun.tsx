@@ -7,10 +7,8 @@ import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { Gauge } from "./Gauge";
-import { CodeLookup } from "./landing/CodeLookup";
 import { AgentButton } from "./landing/AgentButton";
 import { EngineLight } from "./landing/EngineLight";
-import { SocketGuide } from "./landing/SocketGuide";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
 
@@ -203,8 +201,6 @@ export function FirstRun({
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </section>
 
-      <SocketGuide />
-      <CodeLookup />
     </section>
   );
 }

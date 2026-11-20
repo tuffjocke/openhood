@@ -50,10 +50,8 @@ components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: the summary is the panel heading, grouped rows, explanations, urgency, freeze frames, pending, history
 components/FirstRun       landing until the first connection, in one fixed order: headline and one sentence, the car
                           fields (the one thing to do), the answer panel (verdict; get the adapter, plug in, ignition
-                          on; then "Read my car" or "let an AI agent read it"), then three same-shaped sections: What you get (demo), Find the
-                          socket, Already have a code?
-components/landing/       AgentButton (copies the ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
-                          SocketGuide, EngineLight
+                          on; then "Read my car" or "let an AI agent read it"), then one section: What you get (the demo)
+components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
@@ -78,7 +76,7 @@ tests/elm.test.ts         ELM327 answer parsing, CAN detection, CAN trouble code
 tests/mcp.test.ts         MCP server: initialize, tools, faults over simulated ELM327, refusals
 tests/safety.test.ts      read-only allowlist for raw requests
 tests/car-reports.test.ts every car report is valid and has nothing personal
-tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
+tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidying typed car names
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, architecture.md, k-line-primer.md
 ```
