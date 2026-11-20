@@ -16,7 +16,12 @@ npm run dev         # http://localhost:3000, use "Simulator" when no car is conn
 npm run typecheck
 npm test            # contract tests: every profile against its own simulator
 npm run check       # typecheck + test + build. Run this before you say you are done.
+npm run openhood -- faults --profile generic-obd2   # CLI, simulator unless --port is given (docs/cli.md)
 ```
+
+**Testing on a real car:** this repo's `.mcp.json` starts Openhood's MCP server. If you have its tools
+(`connect`, `read_faults`, `read_live`, `request`, `traffic`), use them to read the car yourself instead
+of asking the person to copy traffic. They are read-only; `clear_faults` needs the person's yes.
 
 ## Layout
 
@@ -35,6 +40,9 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   generic-obd2/           standard OBD-II: functional addressing, supported PIDs, DTCs, pending, freeze frame, self-tests
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
+cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
+                          runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
+core/safety.ts            which raw requests tools may send: read services only
 components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/CarChooser     make, model, year (any car in names.ts, model typed if unknown), then next steps:
                           read it if a profile fits, else standard codes or the add-your-car AI prompt
@@ -58,9 +66,11 @@ tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
 tests/add-car.test.ts     the prompt matches the docs and fills in the car
 tests/elm.test.ts         ELM327 answer parsing, CAN detection, CAN trouble code format
+tests/mcp.test.ts         MCP server: initialize, tools, faults over simulated ELM327, refusals
+tests/safety.test.ts      read-only allowlist for raw requests
 tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
-docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
+docs/                     adding-a-vehicle.md, hardware.md, cli.md, architecture.md, k-line-primer.md
 ```
 
 ## Most common task: add or extend a vehicle
@@ -94,6 +104,8 @@ Follow docs/adding-a-vehicle.md. In short:
   profile that lists `"elm327"` through a simulated ELM327 on CAN and K-line.
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
+- **Tools stay read-only.** The CLI and MCP server only send raw requests that `core/safety.ts` allows.
+  Don't widen that list to include anything that writes, unlocks or programs.
 - **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens
   only when the user chooses to (export file, GitHub issue). Discuss in an issue before changing that.
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.

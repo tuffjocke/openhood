@@ -1,7 +1,7 @@
 import type { AdapterKind, VehicleProfile } from "../profile";
 import { BluetoothTransport } from "../transport/bluetooth";
 import { SimulatedTransport } from "../transport/simulated";
-import { sleep } from "../transport/types";
+import { sleep, type ByteStream } from "../transport/types";
 import { WebSerialTransport } from "../transport/webserial";
 import { ElmLink } from "./elm327";
 import { KlineLink } from "./kline";
@@ -24,12 +24,13 @@ const dec = new TextDecoder();
  *  - silence is most likely a KKL cable whose car is off, or a cable not plugged in.
  */
 export async function detectAdapter(
-  port: SerialPort,
+  /** Open the same device at a baud rate, without echo stripping. Web Serial or Node. */
+  at: (baudRate: number) => ByteStream,
   onTraffic: Traffic,
 ): Promise<{ kind: AdapterKind; baudRate: number } | null> {
   const probe = enc.encode("ATI\r");
   for (const baudRate of ELM_BAUDS) {
-    const t = new WebSerialTransport({ baudRate, echo: false, port });
+    const t = at(baudRate);
     await t.open();
     try {
       await sleep(100);
@@ -64,7 +65,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   }
 
   const port = await WebSerialTransport.choosePort();
-  const found = await detectAdapter(port, onTraffic);
+  const found = await detectAdapter((baudRate) => new WebSerialTransport({ baudRate, echo: false, port }), onTraffic);
   if (found?.kind === "elm327") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
     return new ElmLink(new WebSerialTransport({ baudRate: found.baudRate, echo: false, port }), onTraffic);

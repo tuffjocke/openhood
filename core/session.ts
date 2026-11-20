@@ -112,6 +112,16 @@ export class Session {
     this.polling = false;
   }
 
+  /**
+   * Send one raw request through the queue, for tools (the CLI and MCP server). Check it with
+   * core/safety.ts first: profiles are reviewed, raw requests are not.
+   */
+  rawRequest(payload: number[], many = false): Promise<Uint8Array[]> {
+    return this.exclusive(async () =>
+      many ? this.link.requestMany(payload, { note: "raw request" }) : [await this.link.request(payload, { note: "raw request" })],
+    );
+  }
+
   readReadiness(): Promise<Readiness | null> {
     const r = this.profile.faults?.readiness;
     if (!r) return Promise.resolve(null);
