@@ -257,25 +257,23 @@ export function CarChooser({
 
       {car && (
         <div className="car-result">
-          <div className="result-head">
-            <div className="result-title" aria-live="polite">
-              {car && (
+          {/* Only said when it changes what the person does next. An unlisted car that should just work gets no line. */}
+          {(supported || car.year < 2001) && (
+            <div className="result-head">
+              <div className="result-title" aria-live="polite">
                 <p className="verdict">
-                  {supported
-                    ? "Yes, someone has already added this car to Openhood."
-                    : car.year < 2001
-                      ? "Nobody has added this car yet. It\u2019s an older car, so it may not answer, but trying can\u2019t hurt."
-                      : `Nobody has added this car yet, but Openhood can ${car.year >= 2004 ? "very likely" : "probably"} still read its faults.`}
+                  {supported ? "Yes, someone has already added this car to Openhood." : "An older car, so it may not answer. Trying can\u2019t hurt."}
                   {supported && <i className="tick" role="img" aria-label="Added" />}
                 </p>
-              )}
-              {car && (sub || others) && (
-                <p className="car-sub">
-                  {sub} {others}
-                </p>
-              )}
+                {(sub || others) && (
+                  <p className="car-sub">
+                    {sub} {others}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+          {!supported && car.year >= 2001 && others && <p className="car-sub">{others}</p>}
 
           {
             <>
