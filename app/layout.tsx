@@ -7,9 +7,9 @@ import "./globals.css";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const SITE = "https://tuffjocke.github.io/openhood";
-const TITLE = "Openhood: engine light on? Find out why";
+const TITLE = "Openhood: the free car fault reader";
 const DESCRIPTION =
-  "Read your car\u2019s fault codes in plain words with a cheap adapter and your browser. Free and open source.";
+  "Engine light on? Find out why. Read your car\u2019s fault codes in plain words with a cheap adapter and your browser. Free and open source.";
 
 /**
  * The site only ever loads its own files. Inline scripts and styles are allowed because the

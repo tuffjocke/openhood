@@ -2862,3 +2862,21 @@ details.more p {
 .result-go button.ghost:hover:not(:disabled) {
   background: var(--surface-2);
 }
+
+.actions-note {
+  margin: 0 0 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.result-go .actions-hint {
+  order: 1;
+}
+
+@media (max-width: 760px) {
+  .actions-note {
+    flex-basis: 100%;
+    margin: 0;
+    text-align: center;
+  }
+}

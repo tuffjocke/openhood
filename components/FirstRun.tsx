@@ -159,6 +159,7 @@ export function FirstRun({
           </button>
         )}
         <AgentButton car={carText} primary={!serialOk && !ble} />
+        <p className="actions-note">Only reads. Nothing in your car changes.</p>
       </div>
     );
   };
@@ -169,7 +170,7 @@ export function FirstRun({
         <div className="hero-text">
           <h1>Engine light on? Find out why.</h1>
           <p className="lede">
-            Plug in a cheap adapter. See what&rsquo;s wrong, in plain words. Only reads: nothing in your car changes.
+            A free fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
           </p>
 
           <div className="start">
