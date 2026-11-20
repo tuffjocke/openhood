@@ -146,6 +146,12 @@ export function FirstRun({
 
   // One step on screen at a time. Step 1 is the car fields; these are steps 2 and 3.
   const [hasAdapter, setHasAdapter] = useState(false);
+  // "your phone" or "your computer": known only in the browser, after the static page loads.
+  const [device, setDevice] = useState("computer");
+  useEffect(() => {
+    if (/Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)) setDevice("phone");
+    else if (/iPad|Tablet/i.test(navigator.userAgent)) setDevice("tablet");
+  }, []);
   useEffect(() => {
     try {
       setHasAdapter(localStorage.getItem(ADAPTER_KEY) === "1");
@@ -168,7 +174,7 @@ export function FirstRun({
         <div className="step">
           <p className="step-ask">
             {/* Sure for a car Openhood knows; a good guess for any other car. */}
-            You {supported ? "" : "probably "}need {thing} to connect your {selection.make || "car"} to your computer.
+            You {supported ? "" : "probably "}need {thing} to connect your {selection.make || "car"} to your {device}.
           </p>
           <div className="chooser-actions">
             <button className="primary big" onClick={() => gotAdapter(true)}>
