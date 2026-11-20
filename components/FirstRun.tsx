@@ -189,17 +189,15 @@ export function FirstRun({
       if (v === "usb" || v === "bluetooth") setVia(v);
     } catch {}
   }, []);
-  function chooseVia(v: AdapterLink) {
-    setVia(v);
-    try {
-      localStorage.setItem(LINK_KEY, v);
-    } catch {}
-  }
-  function gotAdapter(yes: boolean) {
+  /** "I have one" (with how it connects, for an ELM327), or "Change" to answer again. */
+  function gotAdapter(yes: boolean, how?: AdapterLink) {
     setHasAdapter(yes);
+    setVia(how ?? null);
     try {
       if (yes) localStorage.setItem(ADAPTER_KEY, "1");
       else localStorage.removeItem(ADAPTER_KEY);
+      if (how) localStorage.setItem(LINK_KEY, how);
+      else localStorage.removeItem(LINK_KEY);
     } catch {}
   }
 
@@ -208,12 +206,10 @@ export function FirstRun({
   const thing = kinds[0] === "kkl" ? "KKL cable" : "ELM327 adapter";
   const ble = bluetoothOk && kinds.includes("elm327");
   const canRead = serialOk || ble;
-  // KKL cables are always USB. An ELM327 can be either; without an answer yet, guess from the
-  // adapter we suggest, and a phone means Bluetooth.
+  // KKL cables are always USB. An ELM327 can be either, so step 1 asks which one they have.
   const elm = kinds.includes("elm327");
-  const link: AdapterLink = !elm
-    ? "usb"
-    : (via ?? (device !== "computer" || buy?.pick.connects === "Bluetooth" ? "bluetooth" : "usb"));
+  const link: AdapterLink = elm && via === "bluetooth" ? "bluetooth" : "usb";
+  const done = hasAdapter && (!elm || via !== null);
   // Bluetooth Low Energy adapters connect straight from the browser. Older ones are paired in the
   // computer's settings first and then read like a cable.
   const readBle = link === "bluetooth" && ble;
@@ -221,52 +217,77 @@ export function FirstRun({
   // Steps for the chosen car: 1 get the cable, 2 read it here or with an AI agent.
   const steps = (
     <ol className="steps">
-      <li className={hasAdapter ? "is-done" : "is-now"}>
+      <li className={done ? "is-done" : "is-now"}>
         <span className="step-num" aria-hidden="true">
-          {hasAdapter ? "✓" : "1"}
+          {done ? "✓" : "1"}
         </span>
         <div className="step-body">
-          {hasAdapter ? (
+          {done ? (
             <p className="step-title">
-              Got the {thing}
+              {elm ? `Got a ${link === "usb" ? "USB" : "Bluetooth"} ELM327` : `Got the ${thing}`}
               <button className="link-button" onClick={() => gotAdapter(false)}>
                 Change
               </button>
             </p>
           ) : (
             <>
-              <h2 className="step-title">Get the cable</h2>
+              <h2 className="step-title">{elm ? "Get the adapter" : "Get the cable"}</h2>
               <p className="step-line">
                 {/* Sure for a car Openhood knows; a good guess for any other car. */}
                 {profile.generic ? "We think you" : "You"} need an {thing} to connect your {selection.make || "car"} to your{" "}
                 {device}.
               </p>
-              <div className="chooser-actions">
-                <button className="primary big" onClick={() => gotAdapter(true)}>
-                  I have one
-                </button>
-                {buy && (
-                  <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
-                    {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
-                  </a>
-                )}
-              </div>
-              {buy && (
-                <p className="step-foot">
-                  Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
-                </p>
+              {elm ? (
+                // How it connects decides how step 2 reads it: people know cable or Bluetooth.
+                <>
+                  <div className="chooser-actions">
+                    <button className="primary big" onClick={() => gotAdapter(true, "usb")}>
+                      I have a USB one
+                    </button>
+                    <button className="primary big" onClick={() => gotAdapter(true, "bluetooth")}>
+                      I have a Bluetooth one
+                    </button>
+                  </div>
+                  {buy && (
+                    <p className="step-foot">
+                      None yet?{" "}
+                      <a href={buy.link.url} target="_blank" rel="noreferrer">
+                        {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+                      </a>
+                      . Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="chooser-actions">
+                    <button className="primary big" onClick={() => gotAdapter(true)}>
+                      I have one
+                    </button>
+                    {buy && (
+                      <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
+                        {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+                      </a>
+                    )}
+                  </div>
+                  {buy && (
+                    <p className="step-foot">
+                      Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}
         </div>
       </li>
-      <li className={hasAdapter ? "is-now" : "is-next"}>
+      <li className={done ? "is-now" : "is-next"}>
         <span className="step-num" aria-hidden="true">
           2
         </span>
         <div className="step-body">
           <h2 className="step-title">Plug in, ignition on</h2>
-          {hasAdapter && (
+          {done && (
             <>
               <p className="step-line">The socket is under the dashboard, near your knee. Then pick one:</p>
               <div className="ways">
@@ -277,15 +298,6 @@ export function FirstRun({
                     <p className="hero-note" role="note">
                       <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
                     </p>
-                  )}
-                  {canRead && elm && (
-                    <div className="link-choice" role="group" aria-label="How does your adapter connect?">
-                      {(["usb", "bluetooth"] as const).map((v) => (
-                        <button key={v} aria-pressed={link === v} onClick={() => chooseVia(v)}>
-                          {v === "usb" ? "USB cable" : "Bluetooth"}
-                        </button>
-                      ))}
-                    </div>
                   )}
                   {canRead && !readBle && !serialOk && (
                     <p className="link-hint">This browser only reaches Bluetooth adapters.</p>

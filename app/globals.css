@@ -286,7 +286,8 @@ button.rec {
   font-size: inherit;
 }
 
-.step-foot .link-button {
+.step-foot .link-button,
+.step-foot a {
   font-size: inherit;
   color: inherit;
 }
@@ -1242,36 +1243,6 @@ main > details.more {
 .way .chooser-actions {
   margin-top: auto;
   padding-top: 18px;
-}
-
-/* Cable or Bluetooth: two halves of one pill, the chosen one filled. */
-.link-choice {
-  display: inline-flex;
-  align-self: flex-start;
-  margin-top: 16px;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--surface);
-}
-
-.link-choice button {
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--muted);
-  font: 500 14px/1.2 var(--sans);
-}
-
-.link-choice button:hover:not(:disabled) {
-  background: none;
-  color: var(--ink);
-}
-
-.link-choice button[aria-pressed="true"],
-.link-choice button[aria-pressed="true"]:hover {
-  background: var(--surface-2);
-  color: var(--ink);
 }
 
 .link-hint {
