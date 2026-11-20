@@ -1679,6 +1679,19 @@ pre {
   color: var(--muted);
 }
 
+.actions-hint a,
+.disclaimer a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+.disclaimer {
+  margin: 40px 0 0;
+  max-width: 70ch;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .advice {
   margin: 18px 0 0;
   padding: 14px 16px;

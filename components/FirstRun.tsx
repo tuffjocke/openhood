@@ -169,6 +169,10 @@ export function FirstRun({
           </button>
         )}
         {serialOk && ble && <p className="actions-hint">USB adapters and paired Bluetooth adapters use the first button.</p>}
+        <p className="actions-hint">
+          Free software, provided as is. Use it at your own risk, with the car parked.{" "}
+          <a href="https://github.com/tuffjocke/openhood#disclaimer">Disclaimer</a>
+        </p>
       </div>
     ) : (
       <p className="hero-note" role="note">

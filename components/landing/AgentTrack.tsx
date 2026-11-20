@@ -80,7 +80,8 @@ export function AgentTrack({ car }: { car: string }) {
         </li>
       </ol>
       <p className="agent-foot">
-        The agent asks before installing anything, and Openhood only reads: clearing codes needs your yes. Comfortable
+        The agent asks before installing anything, and Openhood only reads: clearing codes needs your yes. Use it at
+        your own risk, with the car parked. Comfortable
         with a terminal? Start Claude Code in a clone of the repo and it gets the openhood tools directly.{" "}
         <a href={CLI_DOCS}>How it works</a>
       </p>

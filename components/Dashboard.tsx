@@ -500,6 +500,11 @@ export default function Dashboard() {
         <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
       </p>
 
+      <p className="disclaimer">
+        Openhood is free software, provided as is, without any warranty. Use it at your own risk, with the car parked.{" "}
+        <a href="https://github.com/tuffjocke/openhood#disclaimer">Disclaimer</a>
+      </p>
+
       <footer className="foot">
         <a href="https://github.com/tuffjocke/openhood">Open source on GitHub</a>
         <span className="foot-links">

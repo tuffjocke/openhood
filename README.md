@@ -58,8 +58,23 @@ In Claude Code, `/add-vehicle <make engine>` scaffolds a new profile.
 ## Safety
 
 Openhood is read-only apart from clearing fault codes. Don't use it while driving unless someone
-else is driving. Use at your own risk: see the [license](LICENSE).
-Immobiliser, key programming and odometer functions are out of scope.
+else is driving. Immobiliser, key programming and odometer functions are out of scope.
+
+## Disclaimer
+
+Openhood is a free, community-made hobby project, not a dealer or workshop tool. In plain words:
+
+- **Use it at your own risk, with the car parked.** It is provided as is, without any warranty.
+- **Profiles are made by volunteers**, often with AI help, and many have not been tested on a real car
+  yet. Each profile's README says how sure it is.
+- **Explanations are guidance, not a diagnosis.** They tell you what a code usually means and what to
+  check first. Before you spend money or rely on the car being safe, ask a mechanic.
+- **Clearing fault codes** only erases them. It doesn't fix anything, and it can reset the checks an
+  emissions test looks at. Openhood asks before it clears.
+- **Nothing personal is collected.** Everything stays in your browser. Test reports and car reports are
+  only sent if you choose to, as public GitHub issues or pull requests.
+- The [GPL-3.0 license](LICENSE) applies, including its sections 15 (no warranty) and 16 (limitation of
+  liability).
 
 ## License
 
