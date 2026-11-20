@@ -825,25 +825,11 @@ button.mark-name:hover:not(:disabled) {
    Start page: headline, the start box and its steps
    ========================================================================== */
 
-.hero {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: clamp(28px, 5vw, 72px);
-  align-items: start;
-  display: block;
-}
-
 .hero h1 {
   margin: 0;
-  font: 600 clamp(44px, 6.6vw, 86px) / 0.98 var(--sans);
-  letter-spacing: -0.045em;
-}
-
-.hero h1 {
-  max-width: none;
-}
-
-.hero h1 {
-  font-size: clamp(42px, 6.2vw, 80px);
+  font: 600 clamp(42px, 4.6vw, 64px) / 1 var(--sans);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 .lede {
@@ -968,7 +954,12 @@ main > details.more {
   margin: 18px 4px 0;
 }
 
+/* Desktop: what to do on the left, what you get on the right. One column below 900px. */
 .first-run {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(40px, 6vw, 96px);
+  align-items: start;
   margin-top: clamp(48px, 7vw, 88px);
 }
 
@@ -1110,9 +1101,9 @@ main > details.more {
 }
 
 @media (max-width: 900px) {
-  .hero {
+  .first-run {
     grid-template-columns: 1fr;
-    align-items: start;
+    gap: 56px;
   }
 
   .start {
@@ -1158,29 +1149,16 @@ main > details.more {
 }
 
 /* The demo, full width under the start box. */
-.first-run > .preview {
-  position: static;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.4fr);
-  gap: 0 clamp(24px, 4vw, 56px);
-  align-items: center;
-  margin-top: clamp(36px, 5vw, 64px);
-  padding: 26px 32px 20px;
-}
 
-.first-run > .preview figcaption {
-  grid-column: 1 / -1;
-  margin-top: 16px;
-}
 
 .band-wide > .preview {
   position: static;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.4fr);
-  gap: 0 clamp(24px, 4vw, 56px);
+  grid-template-columns: 1fr 1fr;
+  gap: 0 clamp(20px, 3vw, 40px);
   align-items: center;
   margin: 0;
-  padding: 30px 34px;
+  padding: 28px 30px;
 }
 
 .preview-main {
@@ -1189,10 +1167,6 @@ main > details.more {
   gap: 12px;
 }
 
-.first-run > .preview .preview-main {
-  grid-column: 1;
-  grid-row: 1;
-}
 
 .band-wide > .preview .preview-main {
   grid-column: 1;
@@ -1206,9 +1180,6 @@ main > details.more {
   letter-spacing: -0.02em;
 }
 
-.first-run > .preview .preview-value {
-  font-size: clamp(64px, 7vw, 96px);
-}
 
 .band-wide > .preview .preview-value {
   font-size: clamp(64px, 7vw, 96px);
@@ -1244,13 +1215,6 @@ main > details.more {
   color: var(--cl-muted);
 }
 
-.first-run > .preview .preview-side {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  grid-template-columns: 1fr;
-  padding: 0;
-  border: 0;
-}
 
 .band-wide > .preview .preview-side {
   grid-column: 2;
@@ -1275,20 +1239,10 @@ main > details.more {
   margin: 0;
 }
 
-.first-run > .preview .preview-fault {
-  grid-column: 3;
-  grid-row: 1 / 3;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
 
 .band-wide > .preview .preview-fault {
-  grid-column: 3;
-  grid-row: 1 / 3;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  grid-column: 1 / -1;
+  grid-row: 3;
 }
 
 .preview-fault-head {
@@ -1369,6 +1323,7 @@ main > details.more {
 
 .band-wide {
   display: block;
+  margin-top: 0;
 }
 
 .band-head {
@@ -1380,43 +1335,19 @@ main > details.more {
 }
 
 @media (max-width: 900px) {
-  .hero .preview {
-    position: static;
-  }
 
-  .first-run > .preview {
-    grid-template-columns: 1fr 1fr;
-    padding: 22px 20px 18px;
-  }
-
-  .first-run > .preview figcaption {
-    grid-row: 4;
-  }
 
   .band-wide > .preview {
-    grid-template-columns: 1fr 1fr;
     padding: 22px 20px;
   }
 
-  .first-run > .preview .preview-side {
-    grid-column: 2;
+  /* Once a car is picked, a small screen only shows the next step. */
+  .band-wide.after-pick {
+    display: none;
   }
 
-  .first-run > .preview .preview-fault {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--cl-line);
-  }
 
-  .band-wide > .preview .preview-fault {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--cl-line);
-  }
+
 
   .band {
     grid-template-columns: 1fr;
@@ -1452,12 +1383,6 @@ main > details.more {
   transition: background-color 0.12s linear;
 }
 
-.first-run > .preview .gauge {
-  grid-column: 1;
-  grid-row: 2;
-  margin: 14px 0 0;
-  height: 16px;
-}
 
 .band-wide > .preview .gauge {
   grid-column: 1;

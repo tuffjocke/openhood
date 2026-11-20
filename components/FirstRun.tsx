@@ -228,8 +228,7 @@ export function FirstRun({
         </div>
       </div>
 
-      {!carText && (
-      <section className="band band-wide" aria-labelledby="demo-title">
+      <section className={`band band-wide${carText ? " after-pick" : ""}`} aria-labelledby="demo-title">
         <div className="band-head">
           <h2 id="demo-title">What you get</h2>
           <button className="quiet" onClick={onSimulator} disabled={!!connecting}>
@@ -238,7 +237,6 @@ export function FirstRun({
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </section>
-      )}
 
     </section>
   );

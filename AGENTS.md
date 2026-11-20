@@ -54,9 +54,11 @@ components/FaultPanel     faults: one card per fault in a single centred column,
                           the explanation, freeze frame, AI question), pending, history. The dashboard's tool row
                           under it has More on the left and "Clear all" / "Read again" at the end. Clearing is all
                           or nothing: cars can't clear one code (OBD-II mode 04 and the Td5 clear erase everything)
-components/FirstRun       landing until the first connection, one step on screen at a time: 1 the car fields (with the
-                          demo section below, only until a car is picked), 2 "Got an adapter?" (I have one / What to
-                          buy, remembered), 3 plug in and "Read my car" (AI agent as a quiet link)
+components/FirstRun       landing until the first connection. Desktop is two columns: the steps on the left, the
+                          live demo ("What you get") on the right. Below 900px it is one column and the demo
+                          goes away once a car is picked. One step at a time: 1 the car fields, 2 "Got an
+                          adapter?" (I have one / What to buy, remembered), 3 plug in and "Read my car" (AI
+                          agent as a quiet link)
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero
