@@ -1,85 +1,83 @@
 "use client";
 
 import { useState } from "react";
+import { readCarPrompt } from "@/core/add-car";
 
-const REPO = "https://github.com/tuffjocke/openhood";
-const CLI_DOCS = `${REPO}/blob/main/docs/cli.md`;
-const SETUP = "git clone https://github.com/tuffjocke/openhood\ncd openhood\nnpm install";
+const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
 
 /** A block of text with a copy button. Falls back to selecting the text if the clipboard is blocked. */
-function Copyable({ text, label }: { text: string; label: string }) {
+function Copyable({ text, label, collapsed }: { text: string; label: string; collapsed?: boolean }) {
   const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(!collapsed);
   async function copy(e: React.MouseEvent<HTMLButtonElement>) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      const pre = e.currentTarget.parentElement?.querySelector("pre");
-      if (pre) window.getSelection()?.selectAllChildren(pre);
+      // Clipboard blocked: show the text and select it, so it can be copied by hand.
+      setOpen(true);
+      const pre = e.currentTarget.closest(".copyable")?.querySelector("pre");
+      if (pre) setTimeout(() => window.getSelection()?.selectAllChildren(pre), 0);
     }
   }
   return (
-    <div className="copyable">
+    <div className={`copyable${open ? "" : " folded"}`}>
+      <div className="copyable-head">
+        <button onClick={copy}>{copied ? "Copied" : "Copy message"}</button>
+        {collapsed && (
+          <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
+            {open ? "Hide it" : "Read it first"}
+          </button>
+        )}
+      </div>
       <pre aria-label={label}>{text}</pre>
-      <button className="quiet" onClick={copy}>
-        {copied ? "Copied" : "Copy"}
-      </button>
     </div>
   );
 }
 
 /**
- * The second way in: let a coding agent (Claude Code, Codex, Cursor) read the car through
- * Openhood's MCP server, from a clone of the repo on the person's own computer.
+ * The second way in: a coding agent in a desktop app (Claude or Codex) on the person's own computer
+ * sets Openhood up and reads the car. One message to paste, no terminal. Web versions of these
+ * agents run in the cloud and can't reach a USB or Bluetooth adapter, so we say so.
  */
 export function AgentTrack({ car }: { car: string }) {
-  const ask = `Use the openhood tools to read the fault codes on my car and explain them in plain words: what's wrong, how urgent it is and what to check first. ${
-    car ? `My car is a ${car}.` : "Ask me which car it is."
-  } Read only, don't clear anything without asking me.`;
-
   return (
     <div className="agent">
       <p className="agent-lede">
-        Already use Claude Code, Codex or Cursor? Let it read your car and explain what it finds. It can also add your
-        car to Openhood while it&rsquo;s at it.
+        Let an AI agent do it for you. It sets Openhood up, reads your car and explains what it finds. No coding, no
+        terminal: you paste one message.
       </p>
       <ol className="agent-steps">
         <li>
           <div>
-            <h3>Get Openhood on your computer</h3>
+            <h3>Open the Claude or Codex desktop app</h3>
             <p>
-              In a terminal. You need <a href="https://nodejs.org">Node.js</a> and Git.
+              On the computer you&rsquo;ll plug into the car, and start a new coding task. Get it from{" "}
+              <a href="https://claude.com/download">Claude</a> or <a href="https://openai.com/codex">Codex</a>. The
+              versions in a web browser can&rsquo;t reach the adapter, so use the app.
             </p>
-            <Copyable text={SETUP} label="Setup commands" />
           </div>
         </li>
         <li>
           <div>
             <h3>Plug in and turn the key</h3>
             <p>
-              Adapter or cable in the socket and in your computer, ignition on. <a href="#socket">Where is the socket?</a>
+              Adapter in the car and in your computer, ignition on. <a href="#socket">Where is the socket?</a>
             </p>
           </div>
         </li>
         <li>
           <div>
-            <h3>Start your agent in that folder</h3>
-            <p>
-              Type <code>claude</code> in the openhood folder and allow the &ldquo;openhood&rdquo; tools when asked. Codex,
-              Cursor and others: <a href={CLI_DOCS}>add it in one line</a>.
-            </p>
-          </div>
-        </li>
-        <li>
-          <div>
-            <h3>Ask it</h3>
-            <Copyable text={ask} label="Message for your agent" />
+            <h3>Paste this message</h3>
+            <p>{car ? "Your car is already filled in." : "Pick your car in the other tab first and it\u2019s filled in, or tell the agent when it asks."}</p>
+            <Copyable text={readCarPrompt(car)} label="Message for your AI agent" collapsed />
           </div>
         </li>
       </ol>
       <p className="agent-foot">
-        The tools only read. Clearing codes needs your yes, and nothing that writes to the car is allowed.{" "}
+        The agent asks before installing anything, and Openhood only reads: clearing codes needs your yes. Comfortable
+        with a terminal? Start Claude Code in a clone of the repo and it gets the openhood tools directly.{" "}
         <a href={CLI_DOCS}>How it works</a>
       </p>
     </div>

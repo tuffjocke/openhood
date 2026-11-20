@@ -9,6 +9,16 @@ The website does everything most people need. This is for two other jobs:
 It runs the same code as the website (`core/` and `profiles/`), with Node's serial port library instead
 of Web Serial. Run it from a clone of the repository, after `npm install`.
 
+## No terminal: let an agent do it
+
+On the website, open the **With an AI agent** tab and copy the message. Then:
+
+1. Open the **Claude** or **Codex desktop app** on the computer you'll plug into the car, and start a
+   new coding task. The web versions run in the cloud and can't reach your adapter.
+2. Plug the adapter into the car and the computer, ignition on.
+3. Paste the message. The agent downloads Openhood, installs it (asking you first), finds the adapter,
+   reads the faults and explains them. It uses the commands below.
+
 ## Commands
 
 ```

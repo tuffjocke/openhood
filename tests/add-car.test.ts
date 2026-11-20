@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { ADD_CAR_PROMPT, addCarPrompt, requestCarUrl } from "@/core/add-car";
+import { ADD_CAR_PROMPT, addCarPrompt, readCarPrompt, requestCarUrl } from "@/core/add-car";
 
 describe("add your car prompt", () => {
   it("matches the copy in docs/adding-a-vehicle.md", () => {
@@ -18,5 +18,13 @@ describe("add your car prompt", () => {
     const u = new URL(requestCarUrl({ make: "Škoda", model: "Octavia", year: 2004 }));
     assert.equal(u.searchParams.get("title"), "Add Škoda Octavia 2004");
     assert.equal(u.searchParams.get("template"), "new-vehicle.md");
+  });
+
+  it("gives the agent working commands and the car", () => {
+    const p = readCarPrompt("1999 Land Rover Defender");
+    for (const cmd of ["npm run openhood -- ports", "npm run openhood -- profiles", "npm run openhood -- faults --profile"])
+      assert.ok(p.includes(cmd), cmd);
+    assert.ok(p.endsWith("My car is 1999 Land Rover Defender."));
+    assert.ok(readCarPrompt("").includes("ask me which car"));
   });
 });

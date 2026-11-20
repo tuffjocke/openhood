@@ -58,3 +58,24 @@ export function requestCarUrl(c: CarDetails): string {
   const q = new URLSearchParams({ template: "new-vehicle.md", title: `Add ${carName(c)}` });
   return `${REPO}/issues/new?${q}`;
 }
+
+/**
+ * The message for the "With an AI agent" track: a coding agent on the person's own computer
+ * (Claude or Codex desktop app) sets Openhood up and reads the car, so the person never needs
+ * a terminal. Uses the CLI, which works without registering the MCP server.
+ */
+export function readCarPrompt(car: string): string {
+  return `Help me read my car's fault codes with Openhood, an open-source car diagnostics tool:
+https://github.com/tuffjocke/openhood
+
+I am not a programmer. Do the technical steps yourself, one at a time, and tell me in plain words what you're doing. Ask me before installing anything.
+
+1. Get Openhood onto this computer: clone the repository (or download it as a ZIP if Git is missing) into a folder, then run npm install. If Node.js is missing, help me install the LTS version.
+2. My adapter is plugged into the car and this computer, and the ignition is on. Find it with: npm run openhood -- ports
+3. Pick the profile for my car from: npm run openhood -- profiles (use generic-obd2 if my car isn't listed). Then read the faults with: npm run openhood -- faults --profile <id> --port <port>
+4. Explain each fault in plain words: what's wrong, how urgent it is, and what to check first. If it fails, look at the error, try again with --traffic, and help me fix it (ignition on, plug pushed in, right adapter).
+
+Rules: read only. Never clear codes or send anything that changes the car without asking me first. See docs/cli.md in the repository for the commands.
+
+My car is ${car || "(ask me which car it is)"}.`;
+}
