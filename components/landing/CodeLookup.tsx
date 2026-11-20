@@ -29,12 +29,12 @@ export function CodeLookup() {
   }
 
   return (
-    <section className="lookup" id="lookup" aria-labelledby="lookup-title">
-      <div className="lookup-ask">
+    <section className="band" id="lookup" aria-labelledby="lookup-title">
+      <div className="band-text">
         <h2 id="lookup-title">Already have a code?</h2>
-        <p>
-          From a garage, a cheap code reader or a forum post. Type it in and see what it means. No cable needed.
-        </p>
+        <p>From a garage, a cheap code reader or a forum post. Type it in to see what it means. No cable needed.</p>
+      </div>
+      <div className="panel">
         <label className="lookup-field">
           <span className="sr-only">Fault code</span>
           <input
@@ -48,55 +48,58 @@ export function CodeLookup() {
             maxLength={8}
           />
         </label>
-      </div>
 
-      <div className="lookup-result" aria-live="polite">
-        {!input && <p className="lookup-hint">Codes look like a letter and four digits, for example P0420.</p>}
-        {input && !result && typedEnough && (
-          <p className="lookup-hint">That doesn&rsquo;t look like a fault code. They start with P, C, B or U, then four digits.</p>
-        )}
-        {result?.info && (
-          <article className="lookup-card">
-            <p className="lookup-code">
-              {result.code}
-              <span className={`urgency urgency-${result.info.urgency}`}>{URGENCY[result.info.urgency]}</span>
+        <div className="lookup-result" aria-live="polite">
+          {!result && (
+            <p className="lookup-hint">
+              {input && typedEnough
+                ? "That doesn\u2019t look like a fault code. They start with P, C, B or U, then four digits."
+                : "A letter and four digits, like P0420."}
             </p>
-            <h3>{result.info.title}</h3>
-            <p>{result.info.plain}</p>
-            <p className="fault-label">Common causes</p>
-            <ul>
-              {result.info.causes.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-            {result.info.check && (
-              <p>
-                <span className="fault-label">Check first </span>
-                {result.info.check}
+          )}
+          {result?.info && (
+            <div className="lookup-answer">
+              <p className="lookup-code">
+                {result.code}
+                <span className={`urgency urgency-${result.info.urgency}`}>{URGENCY[result.info.urgency]}</span>
               </p>
-            )}
-          </article>
-        )}
-        {result && !result.info && (
-          <article className="lookup-card">
-            <p className="lookup-code">{result.code}</p>
-            <h3>{result.title ?? "Not in our list yet"}</h3>
-            <p>
-              {result.code.charAt(1) === "1" || result.code.charAt(1) === "3"
-                ? "This is a manufacturer code: its meaning depends on the make. "
-                : "We haven't written a plain explanation for this one yet. "}
-              Connect your car with Openhood to see it in context, or search for your make and the code.
-            </p>
-            <a
-              className="text-button"
-              href={`https://www.google.com/search?q=${encodeURIComponent(result.code + " fault code")}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Search the web for {result.code}
-            </a>
-          </article>
-        )}
+              <h3>{result.info.title}</h3>
+              <p>{result.info.plain}</p>
+              <p className="fault-label">Common causes</p>
+              <ul>
+                {result.info.causes.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+              {result.info.check && (
+                <p>
+                  <span className="fault-label">Check first </span>
+                  {result.info.check}
+                </p>
+              )}
+            </div>
+          )}
+          {result && !result.info && (
+            <div className="lookup-answer">
+              <p className="lookup-code">{result.code}</p>
+              <h3>{result.title ?? "Not in our list yet"}</h3>
+              <p>
+                {result.code.charAt(1) === "1" || result.code.charAt(1) === "3"
+                  ? "This is a manufacturer code: its meaning depends on the make. "
+                  : "We haven't written a plain explanation for this one yet. "}
+                Read your car with Openhood to see it in context, or search for your make and the code.
+              </p>
+              <a
+                className="text-button"
+                href={`https://www.google.com/search?q=${encodeURIComponent(result.code + " fault code")}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Search the web for {result.code}
+              </a>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

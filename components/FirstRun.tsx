@@ -124,7 +124,7 @@ export function FirstRun({
     <section className="first-run" aria-label="Getting started">
       <div className="hero">
         <div className="hero-text">
-          <h1>Does it work on your car?</h1>
+          <h1>Engine light on? Find out why.</h1>
           <p className="lede">
             Openhood reads the fault codes behind your engine light and tells you in plain words what&rsquo;s wrong and
             how urgent it is. A cheap USB cable and this browser is all it takes. Pick your car and see.
@@ -153,12 +153,12 @@ export function FirstRun({
       <SocketGuide />
       <CodeLookup />
 
-      <section className="curious" aria-labelledby="curious-title">
-        <div className="curious-text">
-          <h2 id="curious-title">Live data, for the curious</h2>
+      <section className="band" aria-labelledby="live-title">
+        <div className="band-text">
+          <h2 id="live-title">Live data too</h2>
           <p>
-            Once connected, the dash comes alive: revs, temperatures, boost and air flow as you drive, with logging to a
-            file. This is a demo car running right now.
+            Once connected, the dash comes alive: revs, temperatures, boost and air flow as you drive, and you can log a
+            drive to a file. This is a demo car running right now.
           </p>
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}

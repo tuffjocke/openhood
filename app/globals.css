@@ -1205,31 +1205,49 @@ pre {
   color: var(--cl-muted);
 }
 
-.socket,
-.lookup,
-.curious {
-  margin-top: clamp(72px, 10vw, 136px);
-}
-
-.first-run h2 {
-  margin: 0;
-  font: 600 clamp(30px, 3.6vw, 44px) / 1.05 var(--sans);
-  letter-spacing: -0.03em;
-}
-
-/* Where's the socket: drawn like a workshop manual figure. */
-.socket {
+/* The three bands below the hero share one grid: words on the left, the thing itself on the right. */
+.band {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* Same columns as the hero, so every panel lines up under the decoder. */
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: clamp(28px, 5vw, 72px);
   align-items: start;
+  margin-top: clamp(80px, 10vw, 128px);
+  padding-top: clamp(28px, 3vw, 40px);
+  border-top: 1px solid var(--rule);
 }
 
-.socket-art {
+.band h2 {
   margin: 0;
-  padding: clamp(24px, 3vw, 36px);
+  font: 600 clamp(26px, 2.6vw, 32px) / 1.1 var(--sans);
+  letter-spacing: -0.025em;
+}
+
+.band-text p {
+  margin: 14px 0 0;
+  max-width: 42ch;
+  color: var(--ink-soft);
+}
+
+.band-text h3 {
+  margin: 28px 0 0;
+  font: 600 16px/1.3 var(--sans);
+}
+
+.band-text .text-button {
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.panel {
+  margin: 0;
+  padding: clamp(22px, 3vw, 34px);
   border-radius: var(--r-lg);
   background: var(--surface);
+}
+
+.band .preview {
+  margin: 0;
 }
 
 .connector {
@@ -1344,78 +1362,21 @@ pre {
   box-shadow: inset 0 0 0 2px var(--paper);
 }
 
-.socket-art figcaption {
+.panel figcaption {
   margin-top: 20px;
   font-size: 13px;
   color: var(--muted);
 }
 
-.socket-text p {
-  margin: 16px 0 0;
-  max-width: 48ch;
-  color: var(--ink-soft);
-}
-
-.socket-text h3 {
-  margin: 30px 0 0;
-  font: 600 18px/1.25 var(--sans);
-}
-
-.look {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: look;
-  max-width: 48ch;
-}
-
-.look li {
-  counter-increment: look;
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  padding: 10px 0;
-  color: var(--ink-soft);
-}
-
-.look li + li {
-  border-top: 1px solid var(--rule);
-}
-
-.look li::before {
-  content: counter(look);
-  font: 600 18px/1.4 var(--num);
-  color: var(--muted);
-}
-
-.socket-text .text-button {
-  display: inline-block;
-  margin-top: 14px;
-}
-
-/* Look up a code */
-.lookup {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(28px, 5vw, 72px);
-  align-items: start;
-}
-
-.lookup-ask p {
-  margin: 16px 0 0;
-  max-width: 42ch;
-  color: var(--ink-soft);
-}
-
+/* Look up a code: the field and the answer live in one panel. */
 .lookup-field input {
   width: 100%;
-  max-width: 320px;
-  margin-top: 26px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border: 0;
   border-radius: var(--r-md);
-  background: var(--surface);
+  background: var(--paper);
   color: var(--ink);
-  font: 600 44px/1 var(--num);
+  font: 600 40px/1 var(--num);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1425,34 +1386,32 @@ pre {
 }
 
 .lookup-field input:focus-visible {
-  outline: 3px solid var(--sign);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+.lookup-result {
+  margin-top: 22px;
 }
 
 .lookup-hint {
   margin: 0;
-  padding: 24px 0;
+  font-size: 15px;
   color: var(--muted);
 }
 
-.lookup-card {
-  padding: 26px 28px;
-  border-radius: var(--r-lg);
-  background: var(--surface);
-}
-
-.lookup-card h3 {
-  margin: 12px 0 0;
-  font: 600 24px/1.2 var(--sans);
+.lookup-answer h3 {
+  margin: 14px 0 0;
+  font: 600 22px/1.2 var(--sans);
   letter-spacing: -0.02em;
 }
 
-.lookup-card p {
-  margin: 10px 0 0;
+.lookup-answer p {
+  margin: 8px 0 0;
   color: var(--ink-soft);
 }
 
-.lookup-card ul {
+.lookup-answer ul {
   margin: 6px 0 0;
   padding-left: 20px;
   color: var(--ink-soft);
@@ -1461,35 +1420,19 @@ pre {
 .lookup-code {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font: 600 28px/1 var(--num);
+  gap: 12px;
+  margin: 0;
+  font: 600 22px/1 var(--num);
   letter-spacing: 0.03em;
-  color: var(--ink);
 }
 
-.lookup-card .text-button {
+.lookup-answer .text-button {
   display: inline-block;
   margin-top: 14px;
 }
 
-/* For the curious */
-.curious {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: clamp(28px, 5vw, 72px);
-  align-items: center;
-}
-
-.curious-text p {
-  margin: 16px 0 0;
-  max-width: 42ch;
-  color: var(--ink-soft);
-}
-
 @media (max-width: 900px) {
-  .socket,
-  .lookup,
-  .curious {
+  .band {
     grid-template-columns: 1fr;
   }
   .decoder {
@@ -1500,9 +1443,6 @@ pre {
 @media (max-width: 760px) {
   .decoder {
     padding: 22px 20px 20px;
-  }
-  .socket-text {
-    order: -1;
   }
   .pin-legend div {
     grid-template-columns: 96px 1fr;

@@ -31,8 +31,23 @@ function Connector() {
 /** Where the diagnostic socket is, what it looks like, and which cable to buy. */
 export function SocketGuide() {
   return (
-    <section className="socket" id="socket" aria-labelledby="socket-title">
-      <figure className="socket-art">
+    <section className="band" id="socket" aria-labelledby="socket-title">
+      <div className="band-text">
+        <h2 id="socket-title">Find the socket</h2>
+        <p>
+          Every car since the late 1990s has the same 16-pin socket. Look under the dashboard on the driver&rsquo;s side,
+          near your knee. On some cars it hides behind a small cover or in the centre console.
+        </p>
+        <h3>The cable</h3>
+        <p>
+          A USB cable sold as KKL 409.1 with an FTDI chip, about €20 online. For a USB-C laptop or phone, add a small
+          adapter.
+        </p>
+        <a className="text-button" href={CABLE_URL}>
+          What to buy, and what to avoid
+        </a>
+      </div>
+      <figure className="panel">
         <Connector />
         <dl className="pin-legend">
           <div>
@@ -50,27 +65,6 @@ export function SocketGuide() {
         </dl>
         <figcaption>The socket as you see it when you face it.</figcaption>
       </figure>
-      <div className="socket-text">
-        <h2 id="socket-title">Find the socket</h2>
-        <p>
-          Every car since the late 1990s has the same 16-pin diagnostic socket. It&rsquo;s a wide, rounded trapezoid,
-          about the size of a matchbox.
-        </p>
-        <h3>Where to look</h3>
-        <ol className="look">
-          <li>Under the dashboard on the driver&rsquo;s side, near your knee. Most cars have it here.</li>
-          <li>Behind a small cover, often in the fuse box lid.</li>
-          <li>In the centre console, near the gear lever.</li>
-        </ol>
-        <h3>The cable</h3>
-        <p>
-          A USB diagnostic cable sold as <strong>KKL 409.1</strong> with an <strong>FTDI</strong> chip, about €20 online.
-          For a USB-C laptop or phone, add a small USB-A to USB-C adapter.
-        </p>
-        <a className="text-button" href={CABLE_URL}>
-          What to buy, and what to avoid
-        </a>
-      </div>
     </section>
   );
 }
