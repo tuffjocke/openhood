@@ -9,7 +9,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { VehicleProfile } from "@/core/profile";
 import { Session } from "@/core/session";
+import { ElmLink } from "@/core/link/elm327";
 import { SimulatedTransport } from "@/core/transport/simulated";
+import { SimulatedElm } from "@/core/transport/simulated-elm";
 import { templateProfile } from "@/profiles/_template";
 import { PROFILES } from "@/profiles";
 import { VEHICLE_NAMES } from "@/profiles/names";
@@ -70,6 +72,25 @@ for (const p of all) {
       }
       await s.disconnect();
     });
+
+    for (const can of [true, false]) {
+      it(`runs through an ELM327 adapter (${can ? "CAN" : "K-line"}) if it says it can`, async () => {
+        if (!(p.adapters ?? ["kkl"]).includes("elm327")) return;
+        const s = new Session(p, new ElmLink(new SimulatedElm(p, { can })));
+        await s.connect();
+        assert.equal(s.init.kind, "adapter");
+        for (const id of p.schedule) if (s.isActive(id)) await s.readGroup(id);
+        for (const c of p.channels) if (!s.unavailableChannels.has(c.key)) assert.ok(s.state[c.key] !== undefined, c.key);
+        if (p.faults) {
+          const ref = new Session(p, new SimulatedTransport(p));
+          await ref.connect();
+          const want = (await ref.readFaults()).map((f) => f.id);
+          await ref.disconnect();
+          assert.deepEqual((await s.readFaults()).map((f) => f.id), want, "same faults as over the K-line");
+        }
+        await s.disconnect();
+      });
+    }
   });
 }
 

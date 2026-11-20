@@ -12,9 +12,11 @@ import {
 } from "@/core/history";
 import { reportUrl } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
+import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
+import { AdapterError } from "@/core/link/elm327";
 import { Session, type TrafficEvent } from "@/core/session";
-import { SimulatedTransport } from "@/core/transport/simulated";
 import { TimeoutError } from "@/core/transport/types";
+import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Gauge } from "./Gauge";
@@ -24,11 +26,19 @@ import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
-type Source = "serial" | "simulator";
+type Source = ConnectVia;
 
 const HISTORY_MS = 60_000;
 const LOG_LINES = 300;
 const VEHICLE_KEY = "openhood.vehicle";
+
+/** One line for the report and the traffic log: what we connected through. */
+function describeAdapter(s: Session): string {
+  const i = s.init;
+  if (s.link.adapter === "simulator") return "simulator";
+  if (i.kind === "adapter") return `ELM327 adapter, ${i.protocol || "unknown protocol"}`;
+  return `KKL cable, ${i.kind === "fast" ? "fast init" : `5-baud init (${i.protocol})`}`;
+}
 
 /** toFixed without "-0.00". */
 function fmt(v: number, decimals: number) {
@@ -43,8 +53,11 @@ function isWarn(c: Channel, v: number | undefined) {
 
 function explain(e: unknown): string | null {
   if (e instanceof DOMException && e.name === "NotFoundError") return null; // picker cancelled
+  if (e instanceof WrongAdapterError || e instanceof AdapterError) return e.message;
+  // The ELM327 link words its own timeouts; the K-line one is raw.
+  if (e instanceof TimeoutError && !e.message.startsWith("K-line timeout")) return e.message;
   if (e instanceof TimeoutError)
-    return "The car didn't answer. Check that the ignition is on and the cable is pushed all the way in. It must be a KKL cable: Bluetooth readers (ELM327) don't work.";
+    return "The car didn't answer. Check that the ignition is on and the plug is pushed all the way into the socket.";
   if (e instanceof NegativeResponse) return e.message;
   return e instanceof Error ? e.message : String(e);
 }
@@ -63,9 +76,11 @@ export default function Dashboard() {
   const [recording, setRecording] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [serialOk, setSerialOk] = useState(true);
+  const [bluetoothOk, setBluetoothOk] = useState(false);
   const [now, setNow] = useState(0);
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [everLive, setEverLive] = useState(false);
+  const [adapter, setAdapter] = useState<string | undefined>(undefined);
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -81,6 +96,7 @@ export default function Dashboard() {
       if (saved && getProfile(saved.profileId)) setSelection({ ...saved, chosen: true });
     } catch {}
     setSerialOk(WebSerialTransport.supported());
+    setBluetoothOk(BluetoothTransport.supported());
   }, []);
 
   // Repaint at 10 Hz; also the recording clock.
@@ -126,12 +142,11 @@ export default function Dashboard() {
     latest.current = {};
     history.current = {};
     traffic.current = [];
-    const transport =
-      kind === "serial" ? new WebSerialTransport({ baudRate: profile.link.baudRate }) : new SimulatedTransport(profile);
-    const s = new Session(profile, transport, onTraffic);
-    session.current = s;
     try {
+      const s = new Session(profile, await openLink(profile, kind, onTraffic), onTraffic);
+      session.current = s;
       await s.connect();
+      setAdapter(describeAdapter(s));
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
       setEverLive(true);
@@ -221,6 +236,7 @@ export default function Dashboard() {
       vehicle: vehicleText,
       profile,
       source,
+      adapter,
       status,
       error,
       readsPerSecond: reads.current.length / 2,
@@ -317,7 +333,7 @@ export default function Dashboard() {
               <i />
               <span className="status-text">
                 {status === "idle" && "Not connected"}
-                {status === "connecting" && "Waking ECU…"}
+                {status === "connecting" && "Waking the car…"}
                 {status === "live" && `${source === "simulator" ? "Simulator" : "Live"} · ${rate.toFixed(0)} reads/s`}
                 {status === "error" && "Stopped"}
               </span>
@@ -327,8 +343,13 @@ export default function Dashboard() {
                 <button className="quiet" onClick={() => connect("simulator")}>
                   Simulator
                 </button>
-                <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Web Serial not available here"}>
-                  Connect cable
+                {bluetoothOk && (profile.adapters ?? ["kkl"]).includes("elm327") && (
+                  <button className="quiet" onClick={() => connect("bluetooth")}>
+                    Bluetooth
+                  </button>
+                )}
+                <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Not available in this browser"}>
+                  Connect
                 </button>
               </span>
             ) : (
@@ -343,7 +364,7 @@ export default function Dashboard() {
       {error && (
         <p className="notice" role="alert">
           {error}{" "}
-          {source === "serial" && (
+          {source && source !== "simulator" && (
             <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink}>
               Send a test report
             </a>
@@ -359,7 +380,9 @@ export default function Dashboard() {
           profile={profile}
           serialOk={serialOk}
           connecting={status === "connecting" ? source : null}
+          bluetoothOk={bluetoothOk}
           onConnect={() => connect("serial")}
+          onBluetooth={() => connect("bluetooth")}
           onSimulator={() => connect("simulator")}
         />
       ) : (
@@ -427,14 +450,14 @@ export default function Dashboard() {
       </section>
 
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
-        <summary>K-line traffic</summary>
+        <summary>Traffic with the car</summary>
         {logOpen && (
           <pre>
             {traffic.current
               .slice(-80)
               .map(
                 (e) =>
-                  `${(e.t / 1000).toFixed(3).padStart(9)}  ${e.dir === "tx" ? "→" : "←"}  ${hex(e.bytes)}${e.note ? `   ${e.note}` : ""}`,
+                  `${(e.t / 1000).toFixed(3).padStart(9)}  ${e.dir === "tx" ? "→" : "←"}  ${e.text ?? hex(e.bytes)}${e.note ? `   ${e.note}` : ""}`,
               )
               .join("\n") || "Nothing yet."}
           </pre>

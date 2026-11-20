@@ -13,7 +13,9 @@ const MAX_URL = 7500;
 export interface ReportInput {
   vehicle: string;
   profile: VehicleProfile;
-  source: "serial" | "simulator" | null;
+  source: "serial" | "bluetooth" | "simulator" | null;
+  /** What was found on the other end, and the protocol it used, once connected. */
+  adapter?: string;
   status: string;
   error: string | null;
   readsPerSecond: number;
@@ -25,7 +27,7 @@ export interface ReportInput {
 
 function trafficLines(traffic: TrafficEvent[]) {
   return traffic.map(
-    (e) => `${(e.t / 1000).toFixed(3).padStart(9)} ${e.dir === "tx" ? "->" : "<-"} ${hex(e.bytes)}${e.note ? `  ${e.note}` : ""}`,
+    (e) => `${(e.t / 1000).toFixed(3).padStart(9)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  ${e.note}` : ""}`,
   );
 }
 
@@ -43,7 +45,7 @@ export function buildReport(r: ReportInput, trafficLimit = 40): { title: string;
     "",
     `**Vehicle:** ${r.vehicle || "(not listed)"}`,
     `**Profile:** \`${p.id}\` (${p.status})`,
-    `**Connected with:** ${r.source === "serial" ? "cable" : r.source === "simulator" ? "simulator" : "nothing yet"}`,
+    `**Connected with:** ${r.adapter ?? (r.source === "serial" ? "USB or paired Bluetooth" : r.source === "bluetooth" ? "Bluetooth adapter" : r.source === "simulator" ? "simulator" : "nothing yet")}`,
     `**Result:** ${outcome}${r.error ? `: ${r.error}` : ""}${r.status === "live" ? `, ${r.readsPerSecond.toFixed(0)} reads/s` : ""}`,
     `**Cable:** (brand / chip, e.g. FT232RL)`,
     `**Browser:** ${r.userAgent}`,
@@ -52,7 +54,7 @@ export function buildReport(r: ReportInput, trafficLimit = 40): { title: string;
     "",
     r.faults ? `**Faults read:** ${r.faults.length ? r.faults.map((f) => f.code ?? f.name).join(", ") : "none"}` : "",
     "",
-    `**K-line traffic** (last ${lines.length} lines)`,
+    `**Traffic** (last ${lines.length} lines)`,
     "",
     "```",
     ...lines,

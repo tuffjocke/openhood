@@ -18,6 +18,8 @@ export const landRoverTd5: VehicleProfile = {
     { make: "Land Rover", model: "Discovery 2", from: 1998, to: 2004, engine: "2.5 Td5 diesel" },
   ],
   ecu: "Engine ECU (MSB / NNN)",
+  // Land Rover's own K-line session and security unlock: an ELM327 can't do these.
+  adapters: ["kkl"],
   hardware: "Into the diagnostic socket under the dashboard, below the steering wheel, then into your computer or phone.",
   status: "experimental",
 

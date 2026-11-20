@@ -48,7 +48,7 @@ The plan:
    message to paste into it.
 4. Help me start the app (`npm run dev`), open it in Chrome, pick my car and try the Simulator.
 5. Help me test on the real car with my KKL cable: ignition on, Connect cable, then I paste you
-   the "K-line traffic" and tell you what I see, and we fix it together. Only mark values as
+   the "Traffic with the car" and tell you what I see, and we fix it together. Only mark values as
    verified when they match my dashboard, and note my car in the profile README.
 6. Help me commit, push and open a pull request with GitHub Desktop, with a short summary of
    what was tested.
@@ -66,7 +66,7 @@ of "here's what I see" before it works. That's normal, it's how everyone does it
 
 Things that help:
 
-- **Copy the K-line traffic** from the bottom of the page and paste it to the AI along with what you
+- **Copy the traffic with the car** from the bottom of the page and paste it to the AI along with what you
   saw (*"rpm shows 3200 at idle, the dash says 800"*). That's how bugs get found.
 - **Say yes carefully.** The coding agent asks before running things. If you don't understand
   what it wants to do, ask it to explain first.
@@ -130,11 +130,11 @@ it's right for your car.
 2. Plug the cable into the OBD socket (usually under the dashboard, driver's side) and the laptop.
 3. Ignition **on**. The engine can be off or running.
 4. Pick your car, click **Connect cable**, choose the cable in the popup.
-5. Open **K-line traffic** at the bottom of the page. That's the raw conversation with the car.
+5. Open **Traffic with the car** at the bottom of the page. That's the raw conversation with the car.
 
 It probably won't be perfect the first time. That's normal and it's how everyone does it:
 
-- **Copy the K-line traffic** (select it, copy) and paste it to the AI with what you saw:
+- **Copy the traffic with the car** (select it, copy) and paste it to the AI with what you saw:
   > It says "No answer from the ECU". Here's the traffic: ...
   > The rpm shows 3200 at idle, the dash says about 800.
 - The AI changes the profile, you click **Disconnect** and **Connect cable** again, and repeat.
@@ -148,7 +148,7 @@ Safety: test parked. If you test while driving, someone else drives.
 1. Ask the AI: *"Run npm run check, then summarise the changes for a pull request."*
 2. In GitHub Desktop, write a short summary (bottom left), click **Commit to main**, then **Push origin**.
 3. Click **Create Pull Request**. GitHub opens in the browser. Paste the AI's summary, say which car
-   you tested on, include a few lines of K-line traffic, and submit.
+   you tested on, include a few lines of the traffic with the car, and submit.
 
 The maintainer reviews it, may ask a question or two, and merges it. A few minutes later your car
 is in the app for everyone.
@@ -160,7 +160,7 @@ is in the app for everyone.
 
 - Ask the AI first: paste the exact error message.
 - Still stuck? [Open an issue](https://github.com/tuffjocke/openhood/issues/new) and paste what you
-  asked, what happened and the K-line traffic. Nobody will mind beginner questions.
+  asked, what happened and the traffic with the car. Nobody will mind beginner questions.
 
 ---
 

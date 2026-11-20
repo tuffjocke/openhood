@@ -11,6 +11,7 @@ import { CodeLookup } from "./landing/CodeLookup";
 import { EngineLight } from "./landing/EngineLight";
 import { SocketGuide } from "./landing/SocketGuide";
 import type { Selection } from "./VehiclePicker";
+import type { ConnectVia } from "@/core/link/open";
 
 /** A live reading from the selected profile's simulator, shown in the hero. Stops when unmounted. */
 function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
@@ -124,8 +125,10 @@ export function FirstRun({
   onSelect,
   profile,
   serialOk,
+  bluetoothOk,
   connecting,
   onConnect,
+  onBluetooth,
   onSimulator,
 }: {
   vehicle: string;
@@ -133,17 +136,28 @@ export function FirstRun({
   onSelect: (s: Selection) => void;
   profile: VehicleProfile;
   serialOk: boolean;
+  bluetoothOk: boolean;
   /** Which connection is in progress, if any. */
-  connecting: "serial" | "simulator" | null;
+  connecting: ConnectVia | null;
   onConnect: () => void;
+  onBluetooth: () => void;
   onSimulator: () => void;
 }) {
-  const readButton = (supported: boolean) =>
-    serialOk ? (
+  const readButton = (p: VehicleProfile, supported: boolean) => {
+    const ble = bluetoothOk && (p.adapters ?? ["kkl"]).includes("elm327");
+    return serialOk || ble ? (
       <div className="chooser-actions">
-        <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-          {connecting === "serial" ? "Waking the car…" : supported ? "Read my car" : "Read the standard codes"}
-        </button>
+        {serialOk && (
+          <button className="primary big" onClick={onConnect} disabled={!!connecting}>
+            {connecting === "serial" ? "Waking the car…" : supported ? "Read my car" : "Read the standard codes"}
+          </button>
+        )}
+        {ble && (
+          <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
+            {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
+          </button>
+        )}
+        {serialOk && ble && <p className="actions-hint">USB adapters and paired Bluetooth adapters use the first button.</p>}
       </div>
     ) : (
       <p className="hero-note" role="note">
@@ -151,6 +165,7 @@ export function FirstRun({
         on Android. You can still try the demo and look up codes here.
       </p>
     );
+  };
 
   return (
     <section className="first-run" aria-label="Getting started">

@@ -1,29 +1,42 @@
-import { ByteQueue, sleep, type Transport } from "./types";
+import { ByteQueue, sleep, type ByteStream, type Transport } from "./types";
+
+/** Bluetooth classic serial (SPP), used by many ELM327 adapters once paired with the computer. */
+const SPP = "00001101-0000-1000-8000-00805f9b34fb";
 
 /**
- * Talks to a "dumb" KKL cable (FTDI FT232 or similar) through the Web Serial API.
+ * A serial port through the Web Serial API: a "dumb" KKL cable (FTDI FT232 or similar), or an
+ * ELM327 adapter over USB or paired Bluetooth (then use echo: false and the adapter's baud rate).
  * Works in Chrome/Edge on desktop and in Chrome 148+ on Android.
  *
  * Two quirks of K-line cables handled here:
  *  - Fast init is done by holding the TX line in BREAK (= K-line low).
  *  - K-line is a single wire, so every byte we send is echoed back. We strip it.
  */
-export class WebSerialTransport implements Transport {
+export class WebSerialTransport implements Transport, ByteStream {
   readonly kind = "serial" as const;
-  private port: SerialPort | null = null;
+  private port: SerialPort | null;
+  private opened = false;
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private rx = new ByteQueue();
   private reading = false;
 
-  constructor(private opts: { baudRate: number; echo?: boolean }) {}
+  /** Pass a port already chosen by the person, or let open() ask for one. */
+  constructor(private opts: { baudRate: number; echo?: boolean; port?: SerialPort }) {
+    this.port = opts.port ?? null;
+  }
 
   static supported() {
     return typeof navigator !== "undefined" && "serial" in navigator;
   }
 
+  /** Ask the person to pick a USB or paired Bluetooth serial device. Needs a click. */
+  static choosePort() {
+    return navigator.serial.requestPort({ allowedBluetoothServiceClassIds: [SPP] });
+  }
+
   async open() {
-    // Must be called from a user gesture (a click).
-    this.port = await navigator.serial.requestPort();
+    if (this.opened) return;
+    this.port ??= await WebSerialTransport.choosePort();
     await this.port.open({
       baudRate: this.opts.baudRate,
       dataBits: 8,
@@ -31,6 +44,7 @@ export class WebSerialTransport implements Transport {
       parity: "none",
       bufferSize: 4096,
     });
+    this.opened = true;
     this.reading = true;
     void this.pump();
   }
@@ -57,10 +71,12 @@ export class WebSerialTransport implements Transport {
     try {
       await this.reader?.cancel();
     } catch {}
+    // Wait for the read loop to let go of the stream before closing the port.
+    await sleep(20);
     try {
       await this.port?.close();
     } catch {}
-    this.port = null;
+    this.opened = false;
   }
 
   async fastInit() {
@@ -113,6 +129,10 @@ export class WebSerialTransport implements Transport {
       // ~1 ms per byte at 10400 baud, plus slack.
       await this.rx.take(bytes.length, 50 + bytes.length * 2);
     }
+  }
+
+  readUntil(byte: number, timeoutMs: number) {
+    return this.rx.takeUntil(byte, timeoutMs);
   }
 
   read(n: number, timeoutMs: number) {

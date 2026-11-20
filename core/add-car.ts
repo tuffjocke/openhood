@@ -26,7 +26,7 @@ The plan:
    message to paste into it.
 4. Help me start the app (\`npm run dev\`), open it in Chrome, pick my car and try the Simulator.
 5. Help me test on the real car with my KKL cable: ignition on, Connect cable, then I paste you
-   the "K-line traffic" and tell you what I see, and we fix it together. Only mark values as
+   the "Traffic with the car" and tell you what I see, and we fix it together. Only mark values as
    verified when they match my dashboard, and note my car in the profile README.
 6. Help me commit, push and open a pull request with GitHub Desktop, with a short summary of
    what was tested.

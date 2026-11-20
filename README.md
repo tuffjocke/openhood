@@ -1,7 +1,7 @@
 # Openhood
 
-Browser-based diagnostics for K-line era cars. Plug in a €20 cable, read live data and faults.
-No installs, no dealer tools.
+Read your car's fault codes in plain words, in the browser. Plug in a €20 to €40 adapter, read
+live data and faults. No installs, no dealer tools.
 
 **[Open the app](https://tuffjocke.github.io/openhood/)** · try the Simulator, no car needed
 
@@ -9,7 +9,9 @@ No installs, no dealer tools.
 - Fault codes in plain language, with urgency, freeze frames, pending codes and history
 - Fault history export and import (kept in your browser, no account)
 - Log a drive to CSV at 10 Hz
-- Raw K-line traffic view for reverse engineering
+- Works with ELM327-type adapters (USB or Bluetooth, any OBD-II car, CAN included) and KKL cables
+  (raw K-line, for manufacturer-specific profiles). Openhood detects which one you plugged in
+- Raw traffic view for reverse engineering
 - One-click test reports to GitHub, with the traffic log included
 - Works on laptops (Chrome, Edge) and Android phones (Chrome 148+)
 - Install it as an app and use it offline, handy in a garage with no signal
@@ -18,7 +20,7 @@ No installs, no dealer tools.
 
 | Vehicle | ECU | Status |
 | --- | --- | --- |
-| [Generic OBD-II](profiles/generic-obd2) (most K-line cars with OBD-II/EOBD, fast init) | Engine, standard values | experimental, not yet tested on a car |
+| [Standard codes](profiles/generic-obd2) (any car with OBD-II/EOBD; ELM327 adapter, or KKL on K-line cars) | Engine, standard values | experimental, not yet tested on a car |
 | [Land Rover Td5](profiles/land-rover-td5) (Defender, Discovery 2, 1998 to 2006) | Engine | experimental, not yet tested on a car |
 
 Your car isn't here? [Add it](docs/adding-a-vehicle.md), no coding experience needed if you can chat with an AI.

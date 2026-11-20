@@ -38,10 +38,10 @@ export function SocketGuide() {
           Every car since the late 1990s has the same 16-pin socket. Look under the dashboard on the driver&rsquo;s side,
           near your knee. On some cars it hides behind a small cover or in the centre console.
         </p>
-        <h3>The cable</h3>
+        <h3>What to plug in</h3>
         <p>
-          A USB cable sold as KKL 409.1 with an FTDI chip, about €20 online. For a USB-C laptop or phone, add a small
-          adapter.
+          Pick your car above and Openhood tells you. Most cars need an ELM327-type adapter, USB or Bluetooth, about €20
+          to €40. Some cars with their own profile need a KKL cable instead.
         </p>
         <a className="text-button" href={CABLE_URL}>
           What to buy, and what to avoid

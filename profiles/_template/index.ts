@@ -70,6 +70,8 @@ export const templateProfile: VehicleProfile = {
   vehicles: [{ make: "Make", model: "Model", from: 2000, to: 2005, engine: "2.0 petrol" }],
   ecu: "Which ECU",
   hardware: "Standard KKL cable. Where the OBD socket is, and any adapter needed.",
+  // KKL for manufacturer protocols. Add "elm327" only if every request is standard OBD-II.
+  adapters: ["kkl"],
   status: "experimental",
   link: { baudRate: 10400, init: "fast", addresses: { ecu: 0x10, tester: 0xf1 } },
   async connect(ecu) {

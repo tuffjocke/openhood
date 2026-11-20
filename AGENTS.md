@@ -4,8 +4,8 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, etc.) and humans 
 
 ## What this is
 
-Openhood is a browser app that talks to car ECUs over a K-line cable (KWP2000 / ISO 14230)
-using the Web Serial API. It shows live data, reads and clears fault codes and logs drives.
+Openhood is a browser app that talks to car ECUs through a KKL cable (raw K-line, KWP2000 / ISO 14230)
+or an ELM327-type adapter (standard OBD-II on any protocol, CAN included), using Web Serial and Web Bluetooth. It shows live data, reads and clears fault codes and logs drives.
 It is a static Next.js site hosted on GitHub Pages. There is no backend.
 
 ## Commands
@@ -23,9 +23,12 @@ npm run check       # typecheck + test + build. Run this before you say you are 
 ```
 core/                     vehicle independent, change rarely
   profile.ts              THE CONTRACT: VehicleProfile and friends. Read this first.
-  session.ts              wake-up, profile.connect, polling, faults, half-duplex queue
+  session.ts              profile.connect, polling, faults, one-at-a-time queue; talks through a Link
+  link/                   kline.ts (KKL/simulator: wake-up, framing), elm327.ts (adapter text commands),
+                          open.ts (pick the device, detect KKL or ELM327, check the profile allows it)
   kwp2000/frame.ts        framing, checksums, SIDs, NRCs, byte helpers (u16, be16, hex)
-  transport/              webserial.ts (real cable), simulated.ts (profile's fake ECU)
+  transport/              webserial.ts (USB/paired Bluetooth), bluetooth.ts (BLE adapters),
+                          simulated.ts (fake ECU on a K-line), simulated-elm.ts (fake ELM327, CAN or K-line)
 profiles/                 one folder per vehicle/ECU, all vehicle knowledge lives here
   index.ts                registry: add new profiles here
   land-rover-td5/         reference profile: index, data, faults, fault-map, fault-explanations, keygen, simulator, README
@@ -54,6 +57,7 @@ tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
 tests/add-car.test.ts     the prompt matches the docs and fills in the car
+tests/elm.test.ts         ELM327 answer parsing, CAN detection, CAN trouble code format
 tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md
@@ -85,6 +89,9 @@ Follow docs/adding-a-vehicle.md. In short:
   be ones the car was actually sold with that engine, from a source. Don't add a new make or model to
   `names.ts` unless you are sure it exists and is spelled the official way; if unsure, ask the person.
   The tests reject unknown names.
+- **Adapters.** A profile lists what it runs on in `adapters` (default `["kkl"]`). Add `"elm327"` only if
+  every request is standard OBD-II; manufacturer protocols need `["kkl"]`. Contract tests run every
+  profile that lists `"elm327"` through a simulated ELM327 on CAN and K-line.
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
 - **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens
@@ -117,6 +124,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - Response payloads include the positive SID: for request `[0x21, 0x09]` the response is
   `[0x61, 0x09, ...data]`, so data starts at index 2.
 - KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo.
+- `EcuLink.init` says how the link was set up. On an ELM327 it is `{ kind: "adapter", can }`; on CAN some
+  OBD answers differ (mode 03/07 start with a count byte). Profiles handle that, not the link.
+- The ELM327 link uses headers off: several ECUs answering come back as separate payloads, and CAN
+  multi-frame answers are joined for you. Its timeouts carry a plain message for people.
 - Fast init is timed with JS timers (BREAK for 25 ms). Jitter of a few ms is normal.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no

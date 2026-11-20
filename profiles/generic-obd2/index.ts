@@ -12,12 +12,14 @@ import { createObdSimulator } from "./simulator";
 export const genericObd2: VehicleProfile = {
   id: "generic-obd2",
   name: "Standard codes (any car)",
-  covers: "Most K-line cars with OBD-II or EOBD, roughly 2001 to 2008 in Europe",
+  covers: "Most cars with OBD-II or EOBD: petrol from about 2001 and diesel from about 2004 in Europe, 1996 in the US",
   vehicles: [],
   generic: true,
   ecu: "Engine (standard OBD values)",
   hardware:
-    "Into the diagnostic socket under the dashboard, then into your computer or phone. Some cars take a few seconds to answer; that's normal.",
+    "An ELM327-type adapter (USB or Bluetooth) works on any of these cars. A KKL cable also works on cars from before about 2008. Some cars take a few seconds to answer; that's normal.",
+  // Only standard OBD-II requests, so an ELM327 can run it, on CAN too. A KKL cable covers K-line cars.
+  adapters: ["elm327", "kkl"],
   status: "experimental",
 
   link: {

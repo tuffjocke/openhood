@@ -19,6 +19,7 @@
     "incremental": true,
     "types": [
       "w3c-web-serial",
+      "web-bluetooth",
       "node"
     ],
     "plugins": [

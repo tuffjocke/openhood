@@ -98,10 +98,26 @@ export interface Readiness {
   monitors: { name: string; complete: boolean }[];
 }
 
-/** How the ECU was woken. After slow init the key bytes tell which protocol it speaks. */
+/**
+ * How the link to the ECU was set up.
+ *  - "fast" / "slow": a KKL cable woke the ECU on the K-line. After slow init the key bytes tell
+ *    which protocol it speaks.
+ *  - "adapter": an ELM327-type adapter set up the link itself. `can` is true on CAN cars (most cars
+ *    from 2008 on), where some OBD answers differ slightly (mode 03 starts with a count byte).
+ *    `protocol` is the adapter's own description, for the traffic log.
+ */
 export type InitResult =
   | { kind: "fast" }
-  | { kind: "slow"; keyBytes: [number, number]; protocol: "iso9141" | "kwp2000" };
+  | { kind: "slow"; keyBytes: [number, number]; protocol: "iso9141" | "kwp2000" }
+  | { kind: "adapter"; can: boolean; protocol: string };
+
+/**
+ * The hardware between the browser and the car:
+ *  - "kkl": a plain USB K-line cable. Raw access, needed for manufacturer protocols. Pre-CAN cars only.
+ *  - "elm327": an ELM327-compatible adapter (USB or Bluetooth). Speaks standard OBD-II on every
+ *    protocol, CAN included, but can't do most manufacturer-specific K-line sessions.
+ */
+export type AdapterKind = "kkl" | "elm327";
 
 /** What a profile gets to talk to the ECU with. */
 export interface EcuLink {
@@ -117,6 +133,8 @@ export interface EcuLink {
    * Stops after `windowMs` of silence (default 80 ms).
    */
   requestMany(payload: number[], opts?: RequestOptions & { windowMs?: number }): Promise<Uint8Array[]>;
+  /** How the link was set up. Lets profile code handle CAN and K-line differences. */
+  readonly init: InitResult;
 }
 
 export interface RequestOptions {
@@ -173,6 +191,11 @@ export interface VehicleProfile {
    * Default if omitted: the standard KKL cable (docs/hardware.md).
    */
   hardware?: string;
+  /**
+   * Which adapters can run this profile, the recommended one first. Default ["kkl"].
+   * Only list "elm327" if the profile uses nothing but standard OBD-II requests.
+   */
+  adapters?: AdapterKind[];
   /** Overall maturity. Keep "experimental" until it has been used on a real car. */
   status: "experimental" | "tested";
 

@@ -5,6 +5,9 @@
  * padded with 00 00. Several frames come back when there are more than three codes or more
  * than one ECU answers, so we use requestMany.
  *
+ * On CAN (ISO 15765-4) one answer per ECU holds all codes, after a count byte:
+ * [0x43, count, code1hi, code1lo, ...].
+ *
  * Code bytes: top 2 bits = letter (P, C, B, U), next 2 bits = first digit, then 3 hex digits.
  * E.g. 01 71 -> P0171.
  */
@@ -30,10 +33,10 @@ export function encodeDtc(code: string): [number, number] {
   return [(letter << 6) | ((n >> 12) << 4) | ((n >> 8) & 0xf), n & 0xff];
 }
 
-export function decodeDtcFrames(frames: Uint8Array[]): string[] {
+export function decodeDtcFrames(frames: Uint8Array[], can = false): string[] {
   const codes: string[] = [];
   for (const f of frames) {
-    for (let i = 1; i + 1 < f.length; i += 2) {
+    for (let i = can ? 2 : 1; i + 1 < f.length; i += 2) {
       if (f[i] === 0 && f[i + 1] === 0) continue;
       const code = decodeDtc(f[i], f[i + 1]);
       if (!codes.includes(code)) codes.push(code);
@@ -42,14 +45,16 @@ export function decodeDtcFrames(frames: Uint8Array[]): string[] {
   return codes;
 }
 
+const isCan = (ecu: EcuLink) => ecu.init.kind === "adapter" && ecu.init.can;
+
 const toFault = (code: string): Fault => ({ id: code, code, name: OBD_TITLES[code] ?? "No description yet" });
 
 export const faults = {
   read: async (ecu: EcuLink): Promise<Fault[]> =>
-    decodeDtcFrames(await ecu.requestMany([0x03], { note: "read trouble codes" })).map(toFault),
+    decodeDtcFrames(await ecu.requestMany([0x03], { note: "read trouble codes" }), isCan(ecu)).map(toFault),
   /** Mode 07: same frame format as mode 03, with response SID 0x47. */
   readPending: async (ecu: EcuLink): Promise<Fault[]> =>
-    decodeDtcFrames(await ecu.requestMany([0x07], { note: "read pending codes" })).map(toFault),
+    decodeDtcFrames(await ecu.requestMany([0x07], { note: "read pending codes" }), isCan(ecu)).map(toFault),
   freezeFrame: readFreezeFrame,
   clear: async (ecu: EcuLink) => {
     await ecu.request([0x04], { note: "clear trouble codes" });

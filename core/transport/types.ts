@@ -34,6 +34,21 @@ export interface Transport {
   flush(): void;
 }
 
+/**
+ * A plain two-way byte pipe, for adapters that speak text (ELM327): a serial port with the
+ * adapter's own baud rate, a Bluetooth adapter, or the simulated adapter.
+ */
+export interface ByteStream {
+  open(): Promise<void>;
+  close(): Promise<void>;
+  write(bytes: Uint8Array): Promise<void>;
+  /** Resolve with everything up to and including `byte`, or reject after `timeoutMs`. */
+  readUntil(byte: number, timeoutMs: number): Promise<Uint8Array>;
+  /** Wait up to `timeoutMs` for anything, then collect until quiet for `idleMs`. */
+  readUntilIdle(idleMs: number, timeoutMs: number): Promise<Uint8Array>;
+  flush(): void;
+}
+
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
@@ -81,6 +96,17 @@ export class ByteQueue {
     return Uint8Array.from(this.buf.splice(0, this.buf.length));
   }
 
+  async takeUntil(byte: number, timeoutMs: number): Promise<Uint8Array> {
+    const deadline = performance.now() + timeoutMs;
+    for (;;) {
+      const i = this.buf.indexOf(byte);
+      if (i >= 0) return Uint8Array.from(this.buf.splice(0, i + 1));
+      const left = deadline - performance.now();
+      if (left <= 0) throw new TimeoutError(1, 0);
+      await this.wait(left);
+    }
+  }
+
   async take(n: number, timeoutMs: number): Promise<Uint8Array> {
     const deadline = performance.now() + timeoutMs;
     while (this.buf.length < n) {
@@ -99,7 +125,7 @@ export class ByteQueue {
 }
 
 export class TimeoutError extends Error {
-  constructor(wanted: number, got: number) {
-    super(`K-line timeout: wanted ${wanted} bytes, got ${got}`);
+  constructor(wanted: number, got: number, message?: string) {
+    super(message ?? `K-line timeout: wanted ${wanted} bytes, got ${got}`);
   }
 }
