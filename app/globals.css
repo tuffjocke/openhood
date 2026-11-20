@@ -1212,7 +1212,7 @@ main > details.more {
   --ink-soft: #c3cac6;
   --muted: #8f9893;
   --rule: #23292c;
-  --giant: #1b2124;
+  --giant: #5c6562;
   color: var(--ink);
 }
 
@@ -1226,7 +1226,7 @@ main > details.more {
   --ink-soft: #3c4347;
   --muted: #56605b;
   --rule: #cdd4cf;
-  --giant: #dde2de;
+  --giant: #8a938e;
   color: var(--ink);
 }
 
@@ -1308,7 +1308,7 @@ body:has(.shell.is-first-run) {
   text-underline-offset: 4px;
 }
 
-/* A full-width section with one giant word, and the thing itself laid over the word. */
+/* A full-width section with one giant word, and the thing itself under it. */
 .showcase {
   margin-inline: calc(50% - 50vw);
   padding: clamp(64px, 8vw, 120px) calc(50vw - 50%);
@@ -1319,24 +1319,24 @@ body:has(.shell.is-first-run) {
   margin-top: clamp(64px, 8vw, 112px);
 }
 
+/* The giant word sits above the thing, never behind it, so it can always be read. */
 .giant {
   margin: 0;
   overflow: hidden;
   text-align: center;
   white-space: nowrap;
-  font: 600 clamp(84px, 17vw, 250px) / 0.85 var(--num);
+  font: 600 clamp(72px, 12vw, 180px) / 0.9 var(--num);
   letter-spacing: -0.01em;
   color: var(--giant);
 }
 
 /* A long phrase, sized so it still fits the width. */
 .giant.long {
-  font-size: clamp(44px, 9.6vw, 150px);
+  font-size: clamp(44px, 9vw, 140px);
 }
 
 .giant + * {
-  position: relative;
-  margin-top: clamp(-90px, -6vw, -36px);
+  margin-top: clamp(20px, 3vw, 36px);
 }
 
 .showcase-charts {
@@ -1440,7 +1440,7 @@ body:has(.shell.is-first-run) {
     --ink-soft: #c3cac6;
     --muted: #8b9590;
     --rule: #2c3437;
-    --giant: #1d2427;
+    --giant: #6b7571;
   }
 }
 
