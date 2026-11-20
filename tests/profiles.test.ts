@@ -43,6 +43,11 @@ for (const p of all) {
       }
     });
 
+    it("only puts channels that exist on its dials", () => {
+      const keys = new Set(p.channels.map((c) => c.key));
+      for (const k of Object.values(p.dials ?? {})) assert.ok(keys.has(k), `dial shows unknown channel ${k}`);
+    });
+
     it("only schedules groups that exist", () => {
       const gids = new Set(p.groups.map((g) => g.id));
       for (const id of [...p.schedule, ...(p.slowGroups ?? [])]) assert.ok(gids.has(id), `unknown group "${id}"`);

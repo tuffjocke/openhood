@@ -28,17 +28,30 @@
   --rule: #cdd4cf;
   --sign: #ffcd00; /* Swedish road-sign yellow */
   --sign-ink: #1f2427;
-  --falu: #9b2d20; /* falu red */
+  --falu: #9b2d20; /* falu red, for buttons that stop something */
   --falu-ink: #fff6f2;
+  /* The same three status colours in the cluster and on the fault cards, with dark text on them. */
+  --alarm: #ff5a3c; /* fix now, past a limit */
+  --ok: #3fc46a; /* fine to drive, battery charging */
+  /* What a live reading is about: air going in, the engine itself, fuel. */
+  --air: #7cb8e4;
+  --engine: #e6c84a;
+  --fuel: #3fc46a;
   --sans: "Familjen Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --num: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
-  /* instrument cluster: dark in both themes */
-  --cl-bg: #1c2225;
-  --cl-ink: #f1f0e7;
-  --cl-muted: #8b958f;
-  --cl-line: #2b3336;
-  --cl-off: #2c3437;
+  /* instrument cluster: deep black in both themes, like an OLED dash */
+  --cl-bg: #101315;
+  --cl-face: #050607;
+  --cl-centre: #0b0e10;
+  --cl-rim: #2a3034;
+  --cl-ink: #f3f1e8;
+  --cl-value: #d8d6cd;
+  --cl-muted: #8f9893;
+  --cl-tick: #4a524f;
+  --cl-grid: #1f2427;
+  --cl-line: #1d2225;
+  --cl-off: #2a3034;
   --r-lg: 22px;
   --r-md: 16px;
   --r-sm: 10px;
@@ -55,9 +68,6 @@
     --muted: #8b9590;
     --rule: #2c3437;
     --falu: #c2452f;
-    --cl-bg: #1f2629;
-    --cl-line: #2f383b;
-    --cl-off: #303a3d;
     color-scheme: dark;
   }
 }
@@ -379,7 +389,7 @@ button.mark-name:hover:not(:disabled) {
 }
 
 .status-error i {
-  background: var(--falu);
+  background: var(--alarm);
 }
 
 .vp {
@@ -481,6 +491,11 @@ button.mark-name:hover:not(:disabled) {
 .rec-time {
   font: 600 20px/1 var(--num);
   font-variant-numeric: tabular-nums;
+}
+
+/* The pill is a flex box, which drops spaces at the edges of its parts: space the second part. */
+.demo-more {
+  margin-left: 0.28em;
 }
 
 .demo-name {
@@ -1353,9 +1368,346 @@ main > details.more {
 }
 
 /* ==========================================================================
-   Live data: the instrument cluster and its gauges
+   Live data: the binnacle, its three dials and the charts
    ========================================================================== */
 
+/* The housing: one deep-black squircle. Lamps and the connection sit in its upper corners. */
+.binnacle {
+  margin-top: 28px;
+  padding: clamp(18px, 2.6vw, 34px) clamp(18px, 3.4vw, 48px) clamp(24px, 3vw, 44px);
+  border-radius: 56px;
+  background: var(--cl-bg);
+  color: var(--cl-ink);
+}
+
+.binnacle-corners {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  min-height: 32px;
+  font: 500 15px/1.3 var(--num);
+}
+
+.binnacle-lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--sign);
+}
+
+.binnacle-lamp .engine-light {
+  width: 30px;
+  color: var(--sign);
+}
+
+.binnacle-link {
+  text-align: right;
+  color: var(--cl-muted);
+}
+
+.dials {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: clamp(10px, 3vw, 44px);
+  align-items: center;
+  margin-top: -8px;
+}
+
+/* A dial: the scale is SVG, the value and unit are text over its middle, sized to the dial. */
+.dial {
+  position: relative;
+  margin: 0;
+  container-type: inline-size;
+}
+
+.dial svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dial-rim {
+  fill: var(--cl-rim);
+}
+
+.dial-face {
+  fill: var(--cl-face);
+}
+
+.dial-centre {
+  fill: var(--cl-centre);
+}
+
+.dial-fine {
+  stroke: var(--sign);
+  stroke-width: 0.8;
+  opacity: 0.85;
+}
+
+.dial-zone {
+  fill: none;
+  stroke: var(--falu);
+  stroke-width: 4;
+}
+
+.dial-minor {
+  stroke: var(--cl-tick);
+  stroke-width: 0.8;
+}
+
+.dial-mid {
+  stroke: var(--cl-tick);
+  stroke-width: 1.4;
+}
+
+.dial-major {
+  stroke: var(--cl-ink);
+  stroke-width: 2;
+}
+
+.dial-zone-ticks {
+  stroke: var(--alarm);
+  stroke-width: 2;
+}
+
+.dial-num {
+  fill: var(--cl-ink);
+  font: 500 13px var(--num);
+}
+
+.dial.big .dial-num {
+  font-size: 14px;
+}
+
+.dial-needle {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform 0.2s linear;
+}
+
+.dial-needle line {
+  stroke: var(--sign);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+}
+
+.dial.big .dial-needle line {
+  stroke-width: 3.2;
+}
+
+.dial figcaption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5cqw;
+  pointer-events: none;
+}
+
+.dial-value {
+  font: 500 19cqw/0.9 var(--num);
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-value);
+}
+
+.dial.big .dial-value {
+  font-size: 22cqw;
+}
+
+.dial-unit {
+  font: 400 4.8cqw/1 var(--sans);
+  color: var(--cl-muted);
+}
+
+.dial.warn .dial-value {
+  color: var(--alarm);
+}
+
+.dial.na .dial-value {
+  color: var(--cl-off);
+}
+
+/* Battery voltage: a bar in the bottom gap of the big dial, with its icon above the reading. */
+.battery-track {
+  fill: none;
+  stroke: #1a1f22;
+  stroke-width: 6;
+}
+
+.battery-fill {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 6;
+}
+
+.battery-fill.warn {
+  stroke: var(--alarm);
+}
+
+.dial-battery {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2cqw;
+  font: 500 5.4cqw/1 var(--num);
+  color: var(--cl-muted);
+}
+
+.dial-battery.warn {
+  color: var(--alarm);
+}
+
+.dial-battery svg {
+  width: 5.6cqw;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* The charts: a key for the colours, then one card per reading. */
+.chart-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: clamp(24px, 3vw, 40px) 0 0;
+  font: 500 15px/1 var(--num);
+  color: var(--cl-muted);
+}
+
+.chart-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.chart-key .group-air i,
+.chart.group-air .chart-name {
+  color: var(--air);
+}
+
+.chart-key .group-engine i,
+.chart.group-engine .chart-name {
+  color: var(--engine);
+}
+
+.chart-key .group-fuel i,
+.chart.group-fuel .chart-name {
+  color: var(--fuel);
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(28px, 3vw, 40px) clamp(24px, 3vw, 44px);
+  margin-top: 20px;
+}
+
+.chart {
+  min-width: 0;
+  color: var(--cl-ink);
+}
+
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.chart-name {
+  font: 500 17px/1.2 var(--num);
+  letter-spacing: 0.03em;
+}
+
+.chart-unit {
+  color: var(--cl-muted);
+}
+
+.chart-value {
+  margin-left: auto;
+  font: 400 clamp(28px, 2.6vw, 36px)/1 var(--sans);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-value);
+}
+
+.chart.warn .chart-value {
+  color: var(--alarm);
+}
+
+.chart.na .chart-value {
+  color: var(--cl-off);
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 14px;
+}
+
+.chart-grid {
+  stroke: var(--cl-grid);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: var(--cl-muted);
+  stroke-width: 1.2;
+  fill: none;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--cl-ink);
+  stroke-width: 3.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart.group-air .chart-line {
+  stroke: var(--air);
+}
+
+.chart.group-engine .chart-line {
+  stroke: var(--engine);
+}
+
+.chart.group-fuel .chart-line {
+  stroke: var(--fuel);
+}
+
+.chart .chart-line.high {
+  stroke: var(--alarm);
+}
+
+.chart-time {
+  fill: var(--cl-muted);
+  font: 500 14px var(--num);
+}
+
+/* Only phones fold the charts away. */
+.show-all {
+  display: none;
+}
+
+/* The demo on the start page keeps its segmented bar gauge. */
 .preview .gauge {
   margin: 22px 0 6px;
   height: 22px;
@@ -1374,31 +1726,11 @@ main > details.more {
   transition: background-color 0.12s linear;
 }
 
-
 .band-wide > .preview .gauge {
   grid-column: 1;
   grid-row: 2;
   margin: 14px 0 0;
   height: 16px;
-}
-
-.preview .spark {
-  height: 40px;
-  margin: 8px 0 18px;
-  opacity: 0.45;
-}
-
-.cell .spark {
-  margin-top: 10px;
-  height: 26px;
-  opacity: 0.4;
-}
-
-.spark {
-  display: block;
-  width: 100%;
-  height: 34px;
-  overflow: visible;
 }
 
 .cluster {
@@ -1410,10 +1742,6 @@ main > details.more {
   background: var(--cl-ink);
 }
 
-.readiness summary strong.on {
-  color: var(--falu);
-}
-
 .gauge i.zone {
   box-shadow: inset 0 -2px 0 var(--sign);
 }
@@ -1423,90 +1751,14 @@ main > details.more {
   box-shadow: none;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  margin-top: 14px;
-  padding: 1px;
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  background: var(--cl-line);
-}
-
-.section-title + .grid {
-  margin-top: 0;
+.readiness summary strong.on {
+  color: var(--alarm);
 }
 
 /* The gauges are the first thing under the header while running. */
-.top + .grid,
-.notice + .grid {
+.top + .binnacle,
+.notice + .binnacle {
   margin-top: 28px;
-}
-
-/* Only phones fold the readings away. */
-.show-all {
-  display: none;
-}
-
-.cell {
-  min-width: 0;
-  padding: 18px 24px 20px;
-  background: var(--cl-bg);
-  color: var(--cl-ink);
-}
-
-.cell-head {
-  font-size: 14px;
-  color: var(--cl-muted);
-}
-
-.value-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 14px 0 10px;
-}
-
-.value {
-  font: 600 64px/0.9 var(--num);
-  font-variant-numeric: tabular-nums;
-}
-
-.value.na {
-  color: var(--cl-off);
-}
-
-/* A value past its limit lights up in road-sign yellow, like a warning lamp. */
-.cell.warn .value {
-  color: var(--sign);
-}
-
-.unit {
-  font-size: 15px;
-  color: var(--cl-muted);
-}
-
-.spark-line {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-/* Limit lines only appear once a value has crossed them. */
-.spark-warn {
-  display: none;
-}
-
-.cell.warn .spark-warn {
-  display: inline;
-  stroke: var(--sign);
-  stroke-width: 1;
-  stroke-dasharray: 2 4;
-  vector-effect: non-scaling-stroke;
 }
 
 @media (max-width: 760px) {
@@ -1515,30 +1767,23 @@ main > details.more {
     height: 10px;
   }
 
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
+  .binnacle {
+    border-radius: 32px;
   }
 
-  .cell {
-    padding: 14px 16px 14px;
+  .dials {
+    gap: 8px;
+    margin-top: 4px;
   }
 
-  .cell:last-child:nth-child(odd) {
-    grid-column: span 2;
-  }
-
-  /* A phone shows the first four readings, plus any past its limit, until asked for the rest. */
-  .grid:not(.all) .cell:nth-child(n + 5):not(.warn) {
+  /* A phone shows the first two charts, plus any past its limit, until asked for the rest. */
+  .charts:not(.all) .chart:nth-child(n + 3):not(.warn) {
     display: none;
   }
 
   .show-all {
     display: block;
-    margin: 12px auto 0;
-  }
-
-  .value {
-    font-size: 46px;
+    margin: 20px auto 0;
   }
 }
 
@@ -1550,10 +1795,6 @@ main > details.more {
   grid-template-columns: 1.4fr 1fr;
   gap: clamp(24px, 4vw, 56px);
   display: block;
-  margin-top: 28px;
-}
-
-.grid + .lower {
   margin-top: 28px;
 }
 
@@ -1651,8 +1892,13 @@ main > details.more {
 }
 
 .urgency-now {
-  background: var(--falu);
-  color: var(--falu-ink);
+  background: var(--alarm);
+  color: var(--sign-ink);
+}
+
+.urgency-ok {
+  background: var(--ok);
+  color: var(--sign-ink);
 }
 
 .fault-code {
@@ -1835,10 +2081,7 @@ span.fault-label {
   margin-top: 10px;
 }
 
-.preview .urgency-ok {
-  background: var(--cl-line);
-  color: var(--cl-ink);
-}
+
 
 .more-data {
   margin-top: 40px;
@@ -1942,7 +2185,7 @@ span.fault-label {
   padding: 14px 18px;
   border-radius: var(--r-md);
   background: var(--surface);
-  box-shadow: inset 4px 0 0 var(--falu);
+  box-shadow: inset 4px 0 0 var(--alarm);
   font-size: 15px;
 }
 

@@ -12,6 +12,7 @@ import type { Channel, Group, SimulatedEcu, VehicleProfile } from "@/core/profil
 
 // ---------------------------------------------------------------- channels (what the UI shows)
 
+// group sets a chart's colour: "air" going in, the "engine" itself, or "fuel". Leave it out otherwise.
 const channels: Channel[] = [
   { key: "rpm", label: "Engine speed", unit: "rpm", decimals: 0, min: 0, max: 7000, confidence: "guess" },
   { key: "coolant", label: "Coolant", unit: "°C", decimals: 0, min: 0, max: 120, warnAbove: 105, confidence: "guess" },
@@ -80,6 +81,8 @@ export const templateProfile: VehicleProfile = {
     // Security access goes here if the ECU needs it for reading data.
   },
   channels,
+  // The round dials on the live screen (channel keys). Leave out to use the first three channels.
+  dials: { main: "rpm", right: "coolant" },
   groups,
   schedule: ["rpm", "rpm", "coolant"],
   simulator: createSimulator,

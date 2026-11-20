@@ -12,7 +12,7 @@ import {
   type HistoryEntry,
 } from "@/core/history";
 import { carReportUrl, reportUrl } from "@/core/report";
-import type { Channel, Fault, Readiness, Values } from "@/core/profile";
+import type { Channel, ChannelGroup, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
 import { AdapterError } from "@/core/link/elm327";
 import { Session, type TrafficEvent } from "@/core/session";
@@ -20,8 +20,9 @@ import { TimeoutError } from "@/core/transport/types";
 import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
-import { Gauge } from "./Gauge";
-import type { Point } from "./Sparkline";
+import { Dial } from "./Dial";
+import { EngineLight } from "./landing/EngineLight";
+import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
 import { FaultPanel } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
@@ -30,7 +31,7 @@ import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 type Status = "idle" | "connecting" | "live" | "error";
 type Source = ConnectVia;
 
-const HISTORY_MS = 60_000;
+const HISTORY_MS = 35_000;
 const LOG_LINES = 300;
 const VEHICLE_KEY = "openhood.vehicle";
 
@@ -42,15 +43,14 @@ function describeAdapter(s: Session): string {
   return `KKL cable, ${i.kind === "fast" ? "fast init" : `5-baud init (${i.protocol})`}`;
 }
 
-/** toFixed without "-0.00". */
-function fmt(v: number, decimals: number) {
-  const s = v.toFixed(decimals);
-  return /^-0(\.0+)?$/.test(s) ? s.slice(1) : s;
-}
+const GROUP_NAMES: Record<ChannelGroup, string> = { air: "Air in", engine: "Engine", fuel: "Fuel" };
 
-function isWarn(c: Channel, v: number | undefined) {
-  if (v === undefined) return false;
-  return (c.warnAbove !== undefined && v > c.warnAbove) || (c.warnBelow !== undefined && v < c.warnBelow);
+/** The top-right corner of the cluster: how the car is connected, in a few words. */
+function linkLine(s: Session): string {
+  const i = s.init;
+  if (s.link.adapter === "simulator") return "Demo car";
+  if (i.kind === "adapter") return i.protocol || "ELM327 adapter";
+  return i.kind === "fast" ? "KKL cable, KWP2000" : `KKL cable, ${i.protocol}`;
 }
 
 function explain(e: unknown): string | null {
@@ -385,6 +385,21 @@ export default function Dashboard() {
   const rate = reads.current.length / 2;
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
+  // The profile picks its dials; the rest of its readings become charts, grouped by colour.
+  const dials = profile.dials ?? { main: profile.channels[0]?.key, left: profile.channels[1]?.key, right: profile.channels[2]?.key };
+  const byKey = (k?: string) => profile.channels.find((c) => c.key === k);
+  const dialChannels = [
+    { channel: byKey(dials.left), big: false },
+    { channel: byKey(dials.main), big: true },
+    { channel: byKey(dials.right), big: false },
+  ].filter((d): d is { channel: Channel; big: boolean } => !!d.channel);
+  const batteryChannel = byKey(profile.dials?.battery);
+  const onDials = new Set([dials.main, dials.left, dials.right, profile.dials?.battery]);
+  const GROUP_ORDER: ChannelGroup[] = ["air", "engine", "fuel"];
+  const rank = (c: Channel) => (c.group ? GROUP_ORDER.indexOf(c.group) : GROUP_ORDER.length);
+  const chartChannels = profile.channels.filter((c) => !onDials.has(c.key)).sort((a, b) => rank(a) - rank(b));
+  const chartGroups = GROUP_ORDER.filter((g) => chartChannels.some((c) => c.group === g));
+
   // Logging a drive sits with the other header actions, after Back to start or Disconnect.
   const logTools = (
     <span className="log-tools">
@@ -424,7 +439,7 @@ export default function Dashboard() {
         {!showFirstRun && demo && (
           <div className="actions">
             <span className="demo-name">
-              Demo<span className="demo-more"> car, made-up faults</span>
+              Demo<span className="demo-more">car, made-up faults</span>
             </span>
             <button onClick={disconnect} disabled={status === "connecting"}>
               Back to start
@@ -496,33 +511,62 @@ export default function Dashboard() {
 
       {!showFirstRun && (
         <>
-          <section className={`grid cluster${allReadings ? " all" : ""}`}>
-            {profile.channels.map((c) => {
-              const v = latest.current[c.key];
-              const warn = isWarn(c, v);
-              return (
-                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
-                  <div className="cell-head">{c.label}</div>
-                  <div className="value-row">
-                    {unavailable.has(c.key) ? (
-                      <span className="value na" title="This car doesn't report this value">
-                        n/a
+          <section className="binnacle" aria-label="Live data">
+            <div className="binnacle-corners">
+              <span className="binnacle-lamp">
+                {!!faults?.length && (
+                  <>
+                    <EngineLight lit />
+                    {faults.length} {faults.length === 1 ? "fault" : "faults"}
+                  </>
+                )}
+              </span>
+              <span className="binnacle-link">{session.current ? linkLine(session.current) : ""}</span>
+            </div>
+            <div className="dials">
+              {dialChannels.map(({ channel, big }) => (
+                <Dial
+                  key={channel.key}
+                  channel={channel}
+                  big={big}
+                  value={latest.current[channel.key]}
+                  unavailable={unavailable.has(channel.key)}
+                  battery={big && batteryChannel ? { channel: batteryChannel, value: latest.current[batteryChannel.key] } : undefined}
+                />
+              ))}
+            </div>
+            {chartChannels.length > 0 && (
+              <>
+                {chartGroups.length > 0 && (
+                  <p className="chart-key">
+                    {chartGroups.map((g) => (
+                      <span key={g} className={`group-${g}`}>
+                        <i />
+                        {GROUP_NAMES[g]}
                       </span>
-                    ) : (
-                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
-                    )}
-                    <span className="unit">{c.unit}</span>
-                  </div>
-                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
+                    ))}
+                  </p>
+                )}
+                <div className={`charts${allReadings ? " all" : ""}`}>
+                  {chartChannels.map((c) => (
+                    <LiveChart
+                      key={c.key}
+                      channel={c}
+                      points={history.current[c.key] ?? []}
+                      now={now}
+                      value={latest.current[c.key]}
+                      unavailable={unavailable.has(c.key)}
+                    />
+                  ))}
                 </div>
-              );
-            })}
+                {chartChannels.length > 2 && (
+                  <button className="quiet show-all" aria-expanded={allReadings} onClick={() => setAllReadings(!allReadings)}>
+                    {allReadings ? "Show fewer" : "Show all"}
+                  </button>
+                )}
+              </>
+            )}
           </section>
-          {profile.channels.length > 4 && (
-            <button className="quiet show-all" aria-expanded={allReadings} onClick={() => setAllReadings(!allReadings)}>
-              {allReadings ? "Show fewer" : "Show all"}
-            </button>
-          )}
 
       <section className="lower">
         <FaultPanel

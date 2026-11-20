@@ -47,6 +47,7 @@ export const landRoverTd5: VehicleProfile = {
   },
 
   channels,
+  dials: { main: "speed", left: "rpm", right: "coolant", battery: "battery" },
   groups,
   // rpm, boost and pedal three times as often as the slow stuff
   schedule: ["rpm", "manifold", "pedal", "speed", "rpm", "manifold", "pedal", "temperatures", "rpm", "manifold", "pedal", "battery"],

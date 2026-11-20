@@ -12,15 +12,15 @@ import type { SimSnapshot } from "./simulator";
 export const channels: Channel[] = [
   { key: "rpm", label: "Engine speed", unit: "rpm", decimals: 0, min: 0, max: 7000, confidence: "community" },
   { key: "speed", label: "Road speed", unit: "km/h", decimals: 0, min: 0, max: 200, confidence: "community" },
-  { key: "load", label: "Engine load", unit: "%", decimals: 0, min: 0, max: 100, confidence: "community" },
-  { key: "throttle", label: "Throttle", unit: "%", decimals: 0, min: 0, max: 100, confidence: "community" },
+  { key: "load", label: "Engine load", unit: "%", decimals: 0, min: 0, max: 100, group: "engine", confidence: "community" },
+  { key: "throttle", label: "Throttle", unit: "%", decimals: 0, min: 0, max: 100, group: "air", confidence: "community" },
   { key: "coolant", label: "Coolant", unit: "°C", decimals: 0, min: -20, max: 120, warnAbove: 108, confidence: "community" },
-  { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, confidence: "community" },
-  { key: "maf", label: "Air flow", unit: "g/s", decimals: 1, min: 0, max: 150, confidence: "community" },
-  { key: "map", label: "Manifold pressure", unit: "kPa", decimals: 0, min: 0, max: 250, confidence: "community" },
-  { key: "timing", label: "Timing advance", unit: "°", decimals: 1, min: -10, max: 50, confidence: "community" },
-  { key: "stft", label: "Short fuel trim", unit: "%", decimals: 1, min: -25, max: 25, confidence: "community" },
-  { key: "ltft", label: "Long fuel trim", unit: "%", decimals: 1, min: -25, max: 25, confidence: "community" },
+  { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, group: "air", confidence: "community" },
+  { key: "maf", label: "Air flow", unit: "g/s", decimals: 1, min: 0, max: 150, group: "air", confidence: "community" },
+  { key: "map", label: "Manifold pressure", unit: "kPa", decimals: 0, min: 0, max: 250, group: "air", confidence: "community" },
+  { key: "timing", label: "Timing advance", unit: "°", decimals: 1, min: -10, max: 50, group: "engine", confidence: "community" },
+  { key: "stft", label: "Short fuel trim", unit: "%", decimals: 1, min: -25, max: 25, group: "fuel", confidence: "community" },
+  { key: "ltft", label: "Long fuel trim", unit: "%", decimals: 1, min: -25, max: 25, group: "fuel", confidence: "community" },
   { key: "voltage", label: "Module voltage", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "community" },
 ];
 

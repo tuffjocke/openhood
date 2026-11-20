@@ -44,6 +44,7 @@ export const genericObd2: VehicleProfile = {
   },
 
   channels,
+  dials: { main: "speed", left: "rpm", right: "coolant", battery: "voltage" },
   groups,
   schedule: ["rpm", "speed", "throttle", "load", "rpm", "speed", "map", "maf", "rpm", "speed", "throttle", "load", "rpm", "stft", "coolant", "timing", "airTemp", "ltft", "voltage"],
   faults,

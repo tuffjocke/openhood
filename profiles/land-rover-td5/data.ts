@@ -16,13 +16,13 @@ import type { SimSnapshot } from "./simulator";
 
 export const channels: Channel[] = [
   { key: "rpm", label: "Engine speed", unit: "rpm", decimals: 0, min: 0, max: 4500, warnAbove: 4200, confidence: "community" },
-  { key: "boost", label: "Boost", unit: "bar", decimals: 2, min: -0.1, max: 1.6, warnAbove: 1.42, confidence: "community" },
+  { key: "boost", label: "Boost", unit: "bar", decimals: 2, min: -0.1, max: 1.6, warnAbove: 1.42, group: "air", confidence: "community" },
   { key: "speed", label: "Road speed", unit: "km/h", decimals: 0, min: 0, max: 140, confidence: "community" },
   { key: "coolant", label: "Coolant", unit: "°C", decimals: 0, min: 0, max: 120, warnAbove: 105, confidence: "community" },
-  { key: "fuelTemp", label: "Fuel", unit: "°C", decimals: 0, min: 0, max: 100, warnAbove: 80, confidence: "community" },
-  { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, confidence: "community" },
-  { key: "maf", label: "Air mass", unit: "kg/h", decimals: 0, min: 0, max: 600, confidence: "community" },
-  { key: "pedal", label: "Pedal sensor", unit: "V", decimals: 2, min: 0, max: 5, confidence: "community" },
+  { key: "fuelTemp", label: "Fuel", unit: "°C", decimals: 0, min: 0, max: 100, warnAbove: 80, group: "fuel", confidence: "community" },
+  { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, group: "air", confidence: "community" },
+  { key: "maf", label: "Air mass", unit: "kg/h", decimals: 0, min: 0, max: 600, group: "air", confidence: "community" },
+  { key: "pedal", label: "Pedal sensor", unit: "V", decimals: 2, min: 0, max: 5, group: "engine", confidence: "community" },
   { key: "battery", label: "Battery", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "community" },
 ];
 

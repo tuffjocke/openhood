@@ -30,7 +30,26 @@ export interface Channel {
   warnAbove?: number;
   /** Highlight when the value goes below this. */
   warnBelow?: number;
+  /**
+   * What the reading is about, which sets its colour in the live charts:
+   * "air" going in (blue), the "engine" itself (yellow), "fuel" (green). Leave out for anything else.
+   */
+  group?: ChannelGroup;
   confidence: Confidence;
+}
+
+export type ChannelGroup = "air" | "engine" | "fuel";
+
+/**
+ * Which readings get a round dial on the live screen. Everything else gets a chart below.
+ * `main` is the big one in the middle, `left` and `right` sit either side, `battery` is a bar
+ * inside the big dial. Each is a channel key. Default: the first three channels, no battery bar.
+ */
+export interface Dials {
+  main: string;
+  left?: string;
+  right?: string;
+  battery?: string;
 }
 
 export interface Group {
@@ -231,6 +250,8 @@ export interface VehicleProfile {
   connect(ecu: EcuLink, state: Values, init: InitResult): Promise<void>;
 
   channels: Channel[];
+  /** The round dials on the live screen. See Dials. */
+  dials?: Dials;
   groups: Group[];
   /** Order in which groups are polled, repeated forever. Repeat fast ones to poll them more often. */
   schedule: string[];

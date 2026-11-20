@@ -43,7 +43,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
 core/safety.ts            which raw requests tools may send: read services only
-components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: live data at the top ("Log a
+components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: the binnacle at the top (three
+                          dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
                           drive" sits in the header, and asks where to save the file), the faults panel below, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
                           traffic and profile details behind "More"
@@ -62,7 +63,10 @@ components/FirstRun       landing until the first connection. Desktop is two col
                           "Read my car" (AI agent as a quiet link)
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
-components/Gauge          segmented bar gauge used in the cluster and the hero
+components/Dial           round dial for the live screen: fine scale round the edge, short needle on the ring, value
+                          in the middle, optional battery bar in the big dial's bottom gap
+components/LiveChart      one reading as a card: name (coloured by group) and unit, value, last 30 s as a line
+components/Gauge          segmented bar gauge, now only in the start page demo
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/adapters.ts          adapters we recommend by name, with shop searches (no affiliate links); shown on /adapters
                           as tested only when a car report names them (adapterModel)
@@ -136,9 +140,12 @@ Follow docs/adding-a-vehicle.md. In short:
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.
 - UI style: for petrol heads, minimal and Scandinavian. A Nordic workshop with a digital dash on the bench.
   Plain CSS in `app/globals.css` using its tokens: birch paper, granite ink, tonal surfaces (no hairline
-  boxes, no shadows, no gradients), readouts in the dark instrument cluster with segmented bar gauges
-  (`components/Gauge.tsx`). Road-sign yellow (`--sign`) means "look at this", falu red (`--falu`) only
-  "fix now". Familjen Grotesk for text, Barlow Condensed for numbers, both self-hosted. Sentence-case labels,
+  boxes, no shadows, no gradients). Live readings sit in a deep-black binnacle: round dials with a yellow
+  needle (`components/Dial.tsx`) and line charts (`components/LiveChart.tsx`). Chart colour says what a
+  reading is about: `--air` blue, `--engine` yellow, `--fuel` green (a channel's `group`). Status colours
+  are the same in the binnacle and on the fault cards: `--alarm` red for "fix now" and past a limit,
+  `--sign` yellow for "fix soon" and "look at this", `--ok` green for "fine to drive" and a charging
+  battery. Falu red (`--falu`) is only for buttons that stop something. Familjen Grotesk for text, Barlow Condensed for numbers, both self-hosted. Sentence-case labels,
   no all-caps. Must work on a phone and in dark mode (follows the system setting).
 - One step at a time: each screen asks one thing and has one main button. Don't show what isn't
   needed for that step. Ask for contributions only at the moment they apply (after a read, after a
