@@ -667,6 +667,26 @@ button.mark-name:hover:not(:disabled) {
   opacity: 0.55;
 }
 
+/* The chosen car, once the fields have done their job. */
+.car-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 19px;
+  color: var(--ink-soft);
+}
+
+.car-chosen strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.car-chosen .link-button {
+  font-size: 15px;
+}
+
 .car-result {
   margin-top: 26px;
   border-top: 1px solid var(--rule);

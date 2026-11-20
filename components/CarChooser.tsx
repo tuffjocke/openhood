@@ -105,6 +105,8 @@ export function CarChooser({
   const [year, setYear] = useState(selection.year ? String(selection.year) : "");
   const [typeModel, setTypeModel] = useState(false);
   const [typeMake, setTypeMake] = useState(false);
+  /** Once the car is filled in, the fields fold into one line with "Change car". */
+  const [editing, setEditing] = useState(!(selection.make && selection.model && selection.year));
 
   const makeList = allMakes(profiles, VEHICLE_NAMES);
   // A typed make or model that matches a known one gets its official spelling; otherwise it's tidied.
@@ -121,6 +123,7 @@ export function CarChooser({
     setMake(selection.make);
     setModel(selection.model);
     setYear(String(selection.year));
+    setEditing(false);
   }, [selection.make, selection.model, selection.year]);
 
   const complete = !!makeName && !!typed && !!year;
@@ -146,8 +149,23 @@ export function CarChooser({
   const profile = engineChosen?.profile ?? found[0]?.profile;
   // The profile a read would use: the car's own (once the engine is known), else standard codes.
   const goWith = supported ? (found.length === 1 || engineChosen ? profile : undefined) : generic;
+  const folded = !brief && !!car && !editing;
   return (
     <div className="chooser">
+      {folded && (
+        <p className="car-chosen">
+          <span>
+            <strong>
+              {car.make} {car.model}
+            </strong>{" "}
+            {car.year}
+          </span>
+          <button className="link-button" onClick={() => setEditing(true)}>
+            Change car
+          </button>
+        </p>
+      )}
+      {!folded && (
       <div className="car-fields">
         <label>
           <span className="sr-only">Make</span>
@@ -170,6 +188,7 @@ export function CarChooser({
                 setTypeMake(other);
                 setMake(other ? "" : e.target.value);
                 setModel("");
+                setYear("");
                 setTypeModel(false);
               }}
             >
@@ -193,7 +212,10 @@ export function CarChooser({
                 if (e.target.value === OTHER) {
                   setModel("");
                   setTypeModel(true);
-                } else setModel(e.target.value);
+                } else {
+                  setModel(e.target.value);
+                  if (year) setEditing(false);
+                }
               }}
             >
               <option value="" disabled>
@@ -209,6 +231,8 @@ export function CarChooser({
               value={model}
               disabled={!make.trim()}
               onChange={(e) => setModel(e.target.value)}
+              onBlur={() => complete && setEditing(false)}
+              onKeyDown={(e) => e.key === "Enter" && complete && setEditing(false)}
               placeholder="Model"
               autoFocus={typeModel}
               autoComplete="off"
@@ -219,7 +243,14 @@ export function CarChooser({
         </label>
         <label>
           <span className="sr-only">Year</span>
-          <select value={year} disabled={!make.trim()} onChange={(e) => setYear(e.target.value)}>
+          <select
+            value={year}
+            disabled={!make.trim()}
+            onChange={(e) => {
+              setYear(e.target.value);
+              if (makeName && typed) setEditing(false);
+            }}
+          >
             <option value="" disabled>
               Year
             </option>
@@ -229,7 +260,8 @@ export function CarChooser({
           </select>
         </label>
       </div>
-      {makeTyped && (
+      )}
+      {makeTyped && !folded && (
         <p className="field-hint">
           <button
             className="link-button"

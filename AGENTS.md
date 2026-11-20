@@ -47,7 +47,8 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
                           "Log a drive"), the faults panel below, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
                           traffic and profile details behind "More"
-components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
+components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Once filled
+                          in, the fields fold into one line with "Change car" (not in the header picker). Then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: one card per fault in a single centred column, most urgent first (open a card for
