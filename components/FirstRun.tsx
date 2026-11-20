@@ -216,19 +216,14 @@ export function FirstRun({
           <p className="lede">
             A free, open source fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
           </p>
-
-          <div className="start">
-            <CarChooser
-              profiles={PROFILES}
-              selection={selection}
-              onSelect={onSelect}
-              actions={nextStep}
-            />
-          </div>
+        </div>
+        <div className="start">
+          <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={nextStep} />
         </div>
       </div>
 
-      <section className={`band band-wide${carText ? " after-pick" : ""}`} aria-labelledby="demo-title">
+      {!carText && (
+      <section className="band band-wide" aria-labelledby="demo-title">
         <div className="band-head">
           <h2 id="demo-title">What you get</h2>
           <button className="quiet" onClick={onSimulator} disabled={!!connecting}>
@@ -237,6 +232,7 @@ export function FirstRun({
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </section>
+      )}
 
     </section>
   );

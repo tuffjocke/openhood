@@ -845,6 +845,14 @@ button.mark-name:hover:not(:disabled) {
    Start page: headline, the start box and its steps
    ========================================================================== */
 
+/* Desktop: what it is on the left, what to do on the right. One column below 900px. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(40px, 6vw, 96px);
+  align-items: start;
+}
+
 .hero h1 {
   margin: 0;
   font: 600 clamp(42px, 4.6vw, 64px) / 1 var(--sans);
@@ -905,14 +913,8 @@ button.mark-name:hover:not(:disabled) {
 
 /* The start box: car fields first, then one step at a time. */
 .start {
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0 14px;
-  align-items: center;
-  display: block;
-  margin-top: 36px;
-  padding: 0;
-  background: none;
-  border-radius: 0;
+  /* Lines the car fields up with the headline's first line. */
+  margin-top: 6px;
 }
 
 .path-foot a {
@@ -974,12 +976,7 @@ main > details.more {
   margin: 18px 4px 0;
 }
 
-/* Desktop: what to do on the left, what you get on the right. One column below 900px. */
 .first-run {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: clamp(40px, 6vw, 96px);
-  align-items: start;
   margin-top: clamp(48px, 7vw, 88px);
 }
 
@@ -1121,9 +1118,9 @@ main > details.more {
 }
 
 @media (max-width: 900px) {
-  .first-run {
+  .hero {
     grid-template-columns: 1fr;
-    gap: 56px;
+    gap: 36px;
   }
 
   .start {
@@ -1174,11 +1171,11 @@ main > details.more {
 .band-wide > .preview {
   position: static;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 clamp(20px, 3vw, 40px);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.4fr);
+  gap: 0 clamp(24px, 4vw, 56px);
   align-items: center;
   margin: 0;
-  padding: 28px 30px;
+  padding: 30px 34px;
 }
 
 .preview-main {
@@ -1261,8 +1258,11 @@ main > details.more {
 
 
 .band-wide > .preview .preview-fault {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  grid-column: 3;
+  grid-row: 1 / 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .preview-fault-head {
@@ -1343,7 +1343,6 @@ main > details.more {
 
 .band-wide {
   display: block;
-  margin-top: 0;
 }
 
 .band-head {
@@ -1358,12 +1357,16 @@ main > details.more {
 
 
   .band-wide > .preview {
+    grid-template-columns: 1fr 1fr;
     padding: 22px 20px;
   }
 
-  /* Once a car is picked, a small screen only shows the next step. */
-  .band-wide.after-pick {
-    display: none;
+  .band-wide > .preview .preview-fault {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--cl-line);
   }
 
 
