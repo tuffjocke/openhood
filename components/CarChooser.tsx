@@ -5,7 +5,6 @@ import { addCarPrompt, carName, requestCarUrl, type CarDetails } from "@/core/ad
 import Link from "next/link";
 import { allMakes, allModels, genericProfile, matches, tidyName } from "@/core/catalog";
 import type { VehicleProfile } from "@/core/profile";
-import { reportsFor, summarise } from "@/profiles/car-reports";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 
@@ -144,17 +143,9 @@ export function CarChooser({
   }, [car?.make, car?.model, car?.year, found.length]);
 
   const supported = found.length > 0;
-  // What others with this car found, from profiles/car-reports.json.
-  const others = car ? summarise(reportsFor(car.make, car.model, car.year)) : null;
   const profile = engineChosen?.profile ?? found[0]?.profile;
   // The profile a read would use: the car's own (once the engine is known), else standard codes.
   const goWith = supported ? (found.length === 1 || engineChosen ? profile : undefined) : generic;
-  const sub = !car
-    ? ""
-    : supported
-      ? `${found.length === 1 ? `${found[0].engine}. ` : ""}${profile?.status === "experimental" ? "Not tested on a real car yet." : ""}`
-      : "";
-
   return (
     <div className="chooser">
       <div className="car-fields">
@@ -257,24 +248,6 @@ export function CarChooser({
 
       {car && (
         <div className="car-result">
-          {/* Only said when it changes what the person does next. An unlisted car that should just work gets no line. */}
-          {(supported || car.year < 2001) && (
-            <div className="result-head">
-              <div className="result-title" aria-live="polite">
-                <p className="verdict">
-                  {supported ? "Yes, someone has already added this car to Openhood." : "An older car, so it may not answer. Trying can\u2019t hurt."}
-                  {supported && <i className="tick" role="img" aria-label="Added" />}
-                </p>
-                {(sub || others) && (
-                  <p className="car-sub">
-                    {sub} {others}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-          {!supported && car.year >= 2001 && others && <p className="car-sub">{others}</p>}
-
           {
             <>
                 {found.length > 1 && (
