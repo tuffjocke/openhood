@@ -35,6 +35,7 @@
   --alarm: #ff5a3c; /* fix now, past a limit */
   --ok: #3fc46a; /* fine to drive, battery charging */
   /* What a live reading is about: air going in, the engine itself, fuel. */
+  --needle: #ff7a1a; /* dial needles, and the top of each scale */
   --air: #7cb8e4;
   --engine: #e6c84a;
   --fuel: #3fc46a;
@@ -1119,69 +1120,219 @@ main > details.more {
 }
 
 /* ==========================================================================
-   Start page: what you get (the demo band)
+   Start page: the showcase under the start box
    ========================================================================== */
 
-/* The live screen in small: the binnacle's dials, and one fault explained beside them. */
-.preview {
-  display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
-  gap: clamp(20px, 3vw, 48px);
-  align-items: center;
-  margin: 0;
-  padding: clamp(18px, 2.6vw, 32px) clamp(18px, 3vw, 40px);
-  border-radius: 48px;
-  background: var(--cl-bg);
-  color: var(--cl-ink);
+/*
+ * The start page takes turns between black and light sections, full width, like a product page.
+ * The black parts reuse every component's own styles by swapping the colour tokens, so the car
+ * fields, step card and buttons need no styles of their own here.
+ */
+.shell.is-first-run,
+.showcase.dark {
+  --paper: #0a0c0d;
+  --surface: #15191b;
+  --surface-2: #1f2427;
+  --ink: #f3f1e8;
+  --ink-soft: #c3cac6;
+  --muted: #8f9893;
+  --rule: #23292c;
+  --giant: #1b2124;
+  color: var(--ink);
 }
 
-.preview .dials {
-  margin-top: 0;
+.showcase.light,
+.showcase-fault,
+.is-first-run .foot {
+  --paper: #eef1ee;
+  --surface: #e1e6e2;
+  --surface-2: #d5dcd7;
+  --ink: #1f2427;
+  --ink-soft: #3c4347;
+  --muted: #56605b;
+  --rule: #cdd4cf;
+  --giant: #dde2de;
+  color: var(--ink);
 }
 
-/* Beside the dials: one chart, and one fault under it. */
-.preview-side {
+body:has(.shell.is-first-run) {
+  background: #0a0c0d;
+  overflow-x: clip;
+}
+
+.shell.is-first-run {
+  padding-bottom: 0;
+}
+
+/* The binnacle as the product shot, with thin lines down to what each dial is. */
+.product {
+  margin-top: clamp(56px, 7vw, 96px);
+}
+
+.product .dials {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.callouts {
   display: flex;
-  flex-direction: column;
-  gap: 22px;
-  min-width: 0;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 44px);
+  max-width: 980px;
+  margin: 0 auto;
 }
 
-/* One fault from the demo car. */
-.preview-fault {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.preview-fault p {
+.callout {
+  flex: 1 1 0;
   margin: 0;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.3;
 }
 
-.preview-fault-head {
+.product .callout:nth-child(2) {
+  flex-grow: 1.55;
+}
+
+.callout::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 44px;
+  margin: 0 auto 12px;
+  background: var(--muted);
+}
+
+.callout strong {
+  display: block;
+  font-weight: 600;
+}
+
+.callout span {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.showcase-line {
+  max-width: 34em;
+  margin: clamp(40px, 5vw, 64px) auto 0;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.showcase-action {
+  margin: 22px 0 0;
+  text-align: center;
+}
+
+.showcase-action a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+/* A full-width section with one giant word, and the thing itself laid over the word. */
+.showcase {
+  margin-inline: calc(50% - 50vw);
+  padding: clamp(64px, 8vw, 120px) calc(50vw - 50%);
+  background: var(--paper);
+}
+
+.showcase:first-of-type {
+  margin-top: clamp(64px, 8vw, 112px);
+}
+
+.giant {
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  font: 600 clamp(84px, 17vw, 250px) / 0.85 var(--num);
+  letter-spacing: -0.01em;
+  color: var(--giant);
+}
+
+/* A long phrase, sized so it still fits the width. */
+.giant.long {
+  font-size: clamp(44px, 9.6vw, 150px);
+}
+
+.giant + * {
+  position: relative;
+  margin-top: clamp(-90px, -6vw, -36px);
+}
+
+.showcase-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(24px, 3vw, 40px);
+  max-width: 980px;
+  margin-inline: auto;
+  padding: clamp(20px, 3vw, 40px);
+  border-radius: 40px;
+  background: var(--cl-bg);
+}
+
+.showcase.light .callouts .callout::before {
+  background: var(--muted);
+}
+
+.showcase-fault {
+  max-width: 620px;
+  margin-inline: auto;
+  padding: 28px 30px;
+  border-radius: 26px;
+  background: var(--surface);
+}
+
+.showcase-fault-head {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin: 0;
 }
 
-.preview-fault-code {
-  font: 600 26px/1 var(--num);
-  letter-spacing: 0.03em;
+.showcase-fault h3 {
+  margin: 14px 0 0;
+  font: 600 22px/1.25 var(--sans);
+  letter-spacing: -0.01em;
 }
 
-.preview-fault-title {
-  margin-top: 8px !important;
-  font: 600 17px/1.3 var(--sans);
+.showcase-fault p {
+  margin: 10px 0 0;
+  line-height: 1.5;
+  color: var(--ink-soft);
 }
 
-
-.preview .engine-light {
-  width: 32px;
-  height: 22px;
-  margin-top: 0;
+.showcase-fault .fault-label {
+  margin-top: 18px;
 }
 
+.showcase-fault ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.showcase-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.showcase-chips span {
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 500;
+}
+
+/* The engine lamp, here and in the binnacle's corner. */
 .engine-light {
   width: 64px;
   height: 44px;
@@ -1195,27 +1346,6 @@ main > details.more {
   filter: drop-shadow(0 0 10px rgba(245, 163, 0, 0.45));
 }
 
-/* What you get: words on the left, the thing itself on the right. */
-.band {
-  display: grid;
-  /* Same columns as the hero, so every panel lines up under the live demo. */
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: clamp(28px, 5vw, 72px);
-  align-items: start;
-  margin-top: clamp(72px, 9vw, 112px);
-  padding-top: 0;
-  border-top: 0;
-}
-
-.band h2 {
-  margin: 0;
-}
-
-.band h2 {
-  font: 600 clamp(26px, 2.8vw, 32px) / 1.1 var(--sans);
-  letter-spacing: -0.025em;
-}
-
 .panel {
   margin: 0;
   padding: clamp(22px, 3vw, 34px);
@@ -1223,44 +1353,34 @@ main > details.more {
   background: var(--surface);
 }
 
-.panel figcaption {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.band-wide {
-  display: block;
-}
-
-.band-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 900px) {
-
-  .preview {
-    grid-template-columns: 1fr;
-    border-radius: 32px;
-  }
-
-  .band-wide.after-pick {
-    display: none;
-  }
-
-  .band {
-    grid-template-columns: 1fr;
+@media (prefers-color-scheme: dark) {
+  /* In dark mode the light sections turn to polar night, so the black still takes turns with something. */
+  .showcase.light,
+  .showcase-fault,
+  .is-first-run .foot {
+    --paper: #151a1c;
+    --surface: #1f2528;
+    --surface-2: #293033;
+    --ink: #e8ece9;
+    --ink-soft: #c3cac6;
+    --muted: #8b9590;
+    --rule: #2c3437;
+    --giant: #1d2427;
   }
 }
 
 @media (max-width: 760px) {
-  .engine-light {
-    width: 48px;
-    height: 33px;
+  .callout {
+    font-size: 13px;
+  }
+
+  .callout::before {
+    height: 28px;
+    margin-bottom: 8px;
+  }
+
+  .showcase-line {
+    font-size: 16px;
   }
 }
 
@@ -1386,6 +1506,14 @@ main > details.more {
   font-size: 14px;
 }
 
+.dial-num.low {
+  fill: var(--engine);
+}
+
+.dial-num.high {
+  fill: var(--needle);
+}
+
 .dial-needle {
   transform-box: view-box;
   transform-origin: 100px 100px;
@@ -1393,7 +1521,7 @@ main > details.more {
 }
 
 .dial-needle line {
-  stroke: var(--sign);
+  stroke: var(--needle);
   stroke-width: 2.8;
   stroke-linecap: round;
 }
@@ -2077,6 +2205,15 @@ span.fault-label {
 
 .foot a {
   text-underline-offset: 4px;
+}
+
+/* On the start page the footer closes the last light section, full width. */
+.is-first-run .foot {
+  margin-top: 0;
+  margin-inline: calc(50% - 50vw);
+  padding: 20px calc(50vw - 50%) calc(40px + env(safe-area-inset-bottom));
+  border-top: 0;
+  background: var(--paper);
 }
 
 .foot {

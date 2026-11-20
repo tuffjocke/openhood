@@ -12,7 +12,7 @@ const THIS_YEAR = new Date().getFullYear();
 // Any year a person might own. Not a claim about what was sold: that's checked against the profiles.
 const YEARS = Array.from({ length: THIS_YEAR - 1988 + 1 }, (_, i) => THIS_YEAR - i);
 const OTHER = "__other";
-const GUIDE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md";
+export const GUIDE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md";
 
 /** What to buy for this car, decided by what its profile can run on. */
 /** Which adapter, in a few words. The one link goes to what to buy. */

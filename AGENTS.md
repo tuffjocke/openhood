@@ -56,10 +56,12 @@ components/FaultPanel     faults: one card per fault in a single centred column,
                           the explanation, freeze frame, AI question), pending, history. The dashboard's tool row
                           under it has More on the left and "Clear all" / "Read again" at the end. Clearing is all
                           or nothing: cars can't clear one code (OBD-II mode 04 and the Td5 clear erase everything)
-components/FirstRun       landing until the first connection. Desktop is two columns: headline on the left, the
-                          start box on the right. Below 900px it is one column. The live demo ("What you get":
-                          the dials, one chart, one fault) sits full width underneath; below 900px it steps aside
-                          once a car is picked. One step at a time: 1 the car
+components/FirstRun       landing until the first connection, like a product page: black and light full-width
+                          sections take turns, each light or dark section with one giant word and the thing itself
+                          over it. Black hero: headline left, start box right (one column below 900px), then the
+                          demo car's live dials with callouts. Then "Last 30 seconds" (one chart per group),
+                          "Faults" (the demo's fault, opened) and "Any car". Black parts swap the colour tokens,
+                          so components need no dark styles of their own. One step at a time: 1 the car
                           fields, 2 "Got an adapter?" (I have one / What to buy, remembered), 3 plug in and
                           "Read my car" (AI agent as a quiet link)
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
@@ -142,8 +144,8 @@ Follow docs/adding-a-vehicle.md. In short:
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.
 - UI style: for petrol heads, minimal and Scandinavian. A Nordic workshop with a digital dash on the bench.
   Plain CSS in `app/globals.css` using its tokens: birch paper, granite ink, tonal surfaces (no hairline
-  boxes, no shadows, no gradients). Live readings sit in a deep-black binnacle: round dials with a yellow
-  needle (`components/Dial.tsx`) and line charts (`components/LiveChart.tsx`). Chart colour says what a
+  boxes, no shadows, no gradients). Live readings sit in a deep-black binnacle: round dials with an orange
+  needle (`--needle`) and numbers that run yellow, white, orange along the scale (`components/Dial.tsx`) and line charts (`components/LiveChart.tsx`). Chart colour says what a
   reading is about: `--air` blue, `--engine` yellow, `--fuel` green (a channel's `group`). Status colours
   are the same in the binnacle and on the fault cards: `--alarm` red for "fix now" and past a limit,
   `--sign` yellow for "fix soon" and "look at this", `--ok` green for "fine to drive" and a charging

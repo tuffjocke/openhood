@@ -1,40 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Fault, Urgency, VehicleProfile } from "@/core/profile";
+import type { ChannelGroup, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
 import { useFirstPick } from "./AdapterPicks";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
-import { dialLayout, DialRow } from "./Dials";
+import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { LiveChart, type Point } from "./LiveChart";
 import { AgentButton } from "./landing/AgentButton";
-import { EngineLight } from "./landing/EngineLight";
+import { GUIDE_URL } from "./CarChooser";
+import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
 
-/** The live screen in small, driven by the selected profile's simulator: its dials and one fault. Stops when unmounted. */
-function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
+/** The demo car, running in the page: live values, the last 30 s of each reading, and its most telling fault. */
+function useDemoCar(profile: VehicleProfile, running: boolean) {
   const [values, setValues] = useState<Record<string, number>>({});
+  const [history, setHistory] = useState<{ points: Record<string, Point[]>; now: number }>({ points: {}, now: 0 });
   const [fault, setFault] = useState<Fault | null>(null);
-  // One chart beside the dials: the profile's first chart reading, last 30 seconds.
-  const chart = dialLayout(profile).charts[0];
-  const [trace, setTrace] = useState<{ points: Point[]; now: number }>({ points: [], now: 0 });
 
   useEffect(() => {
+    if (!running) return;
     let alive = true;
     const s = new Session(profile, new SimulatedTransport(profile));
     setValues({});
+    setHistory({ points: {}, now: 0 });
     setFault(null);
-    setTrace({ points: [], now: 0 });
     const ids = [...new Set(profile.schedule)];
     (async () => {
       try {
         await s.connect();
         if (profile.faults) {
           const faults = await s.readFaults();
-          // Show the most telling one: explained, and the most urgent first.
+          // The most telling one: explained, and "fix soon" before the rest.
           const rank = (f: Fault) => {
             const u = profile.faults?.explanations?.[f.id]?.urgency;
             return u === "soon" ? 0 : u === "now" ? 1 : u === "ok" ? 2 : 3;
@@ -47,54 +47,73 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
             if (!s.isActive(id)) continue;
             const v = await s.readGroup(id);
             if (!alive) break;
-            setValues((prev) => ({ ...prev, ...v }));
             const t = performance.now();
-            const key = dialLayout(profile).charts[0]?.key;
-            setTrace((prev) => ({
-              now: t,
-              points: key && v[key] !== undefined ? [...prev.points.filter((p) => t - p.t < 31_000), { t, v: v[key] }] : prev.points,
-            }));
+            setValues((prev) => ({ ...prev, ...v }));
+            setHistory((prev) => {
+              const points = { ...prev.points };
+              for (const [k, val] of Object.entries(v)) points[k] = [...(points[k] ?? []).filter((p) => t - p.t < 31_000), { t, v: val }];
+              return { points, now: t };
+            });
           }
         }
       } catch {
-        // Preview only: if the simulator stops, the hero just stays still.
+        // Only a demo: if the simulator stops, the page just stays still.
       }
     })();
     return () => {
       alive = false;
       void s.disconnect();
     };
-  }, [profile]);
+  }, [profile, running]);
 
-  return (
-    <figure className="preview">
-      <DialRow profile={profile} values={values} />
-      <div className="preview-side">
-        {chart && <LiveChart channel={chart} points={trace.points} now={trace.now} value={values[chart.key]} />}
-        {fault && <PreviewFault fault={fault} profile={profile} />}
-      </div>
-    </figure>
-  );
+  return { values, history, fault };
 }
 
 const ADAPTER_KEY = "openhood.hasAdapter";
 
 const URGENCY: Record<Urgency, string> = { ok: "Fine to drive", soon: "Fix soon", now: "Fix now" };
+const GROUP_COLOUR_WORDS: Record<ChannelGroup, string> = { air: "blue", engine: "yellow", fuel: "green" };
+/** Makes to show under "Any car", kept to ones in the official names list. */
+const EXAMPLE_MAKES = ["Volvo", "Volkswagen", "Ford", "Toyota", "BMW", "Land Rover", "Saab", "Renault"].filter((m) => m in VEHICLE_NAMES);
 
-/** One fault from the demo car, explained the way Openhood explains a real one. */
-function PreviewFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }) {
+/** A name with a thin line above it, pointing up at the part it names. */
+function Callout({ name, role }: { name: string; role?: string }) {
+  return (
+    <p className="callout">
+      <strong>{name}</strong>
+      {role && <span>{role}</span>}
+    </p>
+  );
+}
+
+/** One fault from the demo car, opened, the way Openhood explains a real one. */
+function DemoFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }) {
   const info = profile.faults?.explanations?.[fault.id];
   return (
-    <div className="preview-fault">
-      <EngineLight lit />
-      <div>
-        <p className="preview-fault-head">
-          {fault.code && <span className="preview-fault-code">{fault.code}</span>}
-          {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
-        </p>
-        <p className="preview-fault-title">{info?.title ?? fault.name}</p>
-      </div>
-    </div>
+    <article className="showcase-fault">
+      <p className="showcase-fault-head">
+        {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
+        {fault.code && <span className="fault-code">{fault.code}</span>}
+      </p>
+      <h3>{info?.title ?? fault.name}</h3>
+      {info && (
+        <>
+          <p>{info.plain}</p>
+          <p className="fault-label">Common causes</p>
+          <ul>
+            {info.causes.slice(0, 3).map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          {info.check && (
+            <p>
+              <strong>Check first </strong>
+              {info.check}
+            </p>
+          )}
+        </>
+      )}
+    </article>
   );
 }
 
@@ -127,6 +146,12 @@ export function FirstRun({
   onSimulator: () => void;
 }) {
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
+  // The demo runs in the page while nothing else is connecting.
+  const demo = useDemoCar(profile, !connecting);
+  const layout = dialLayout(profile);
+  // One chart from each group (air, engine, fuel), up to three.
+  const showcaseCharts = layout.groups.map((g) => layout.charts.find((c) => c.group === g)!).slice(0, 3);
+  if (showcaseCharts.length === 0) showcaseCharts.push(...layout.charts.slice(0, 3));
 
   // One step on screen at a time. Step 1 is the car fields; these are steps 2 and 3.
   const [hasAdapter, setHasAdapter] = useState(false);
@@ -224,17 +249,67 @@ export function FirstRun({
         </div>
       </div>
 
-      {/* Always on a computer; on a phone it steps aside once a car is picked, to keep the next step close. */}
-      <section className={`band band-wide${carText ? " after-pick" : ""}`} aria-labelledby="demo-title">
-        <div className="band-head">
-          <h2 id="demo-title">What you get</h2>
-          <button className="quiet" onClick={onSimulator} disabled={!!connecting}>
+      <div className="product">
+        <DialRow profile={profile} values={demo.values} />
+        <div className="callouts">
+          {layout.dials.map(({ channel, big }) => (
+            <Callout key={channel.key} name={big && layout.battery ? `${channel.label} and battery` : channel.label} />
+          ))}
+        </div>
+        <p className="showcase-line">Your car&rsquo;s own readings, live, the way a good dash shows them.</p>
+        <p className="showcase-action">
+          <button className="quiet big" onClick={onSimulator} disabled={!!connecting}>
             {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
           </button>
-        </div>
-        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
-      </section>
+        </p>
+      </div>
 
+      {showcaseCharts.length > 0 && (
+        <section className="showcase light" aria-labelledby="trace-title">
+          <h2 id="trace-title" className="giant long">
+            Last 30 seconds
+          </h2>
+          <div className="showcase-charts">
+            {showcaseCharts.map((c) => (
+              <LiveChart key={c.key} channel={c} points={demo.history.points[c.key] ?? []} now={demo.history.now} value={demo.values[c.key]} />
+            ))}
+          </div>
+          <div className="callouts">
+            {showcaseCharts.map((c) =>
+              c.group ? <Callout key={c.key} name={GROUP_NAMES[c.group]} role={GROUP_COLOUR_WORDS[c.group]} /> : <Callout key={c.key} name={c.label} />,
+            )}
+          </div>
+          <p className="showcase-line">Every other reading as a line, coloured by what it&rsquo;s about.</p>
+        </section>
+      )}
+
+      {demo.fault && (
+        <section className="showcase dark" aria-labelledby="faults-title">
+          <h2 id="faults-title" className="giant">
+            Faults
+          </h2>
+          <DemoFault fault={demo.fault} profile={profile} />
+          <p className="showcase-line">Every code in plain words: what it means, what usually causes it, what to check first.</p>
+        </section>
+      )}
+
+      <section className="showcase light" aria-labelledby="cars-title">
+        <h2 id="cars-title" className="giant">
+          Any car
+        </h2>
+        <p className="showcase-chips">
+          {EXAMPLE_MAKES.map((m) => (
+            <span key={m}>{m}</span>
+          ))}
+        </p>
+        <p className="showcase-line">
+          Every petrol car from 2001 and diesel from 2004 speaks the standard. Cars with their own language get a profile, added
+          by people like you.
+        </p>
+        <p className="showcase-action">
+          <a href={GUIDE_URL}>Add your car with an AI agent</a>
+        </p>
+      </section>
     </section>
   );
 }

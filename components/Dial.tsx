@@ -38,7 +38,7 @@ export function Dial({
         <path className="dial-major" d={scale.major} />
         <path className="dial-zone-ticks" d={scale.zoneTicks} />
         {scale.numbers.map((n) => (
-          <text key={n.x + n.t} className="dial-num" x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central">
+          <text key={n.x + n.t} className={`dial-num ${n.band}`} x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central">
             {n.t}
           </text>
         ))}
@@ -123,7 +123,8 @@ function drawScale(c: Channel, big: boolean) {
   let midD = "";
   let minorD = "";
   let zoneTicks = "";
-  const numbers: { x: number; y: number; t: string }[] = [];
+  // Numbers shift colour along the scale: yellow at the low end, white, orange near the top.
+  const numbers: { x: number; y: number; t: string; band: "low" | "mid" | "high" }[] = [];
   for (let k = Math.ceil(c.min / minor - 1e-9); k * minor <= c.max + 1e-9; k++) {
     const x = k * minor;
     const deg = angleOf(c, x);
@@ -136,7 +137,9 @@ function drawScale(c: Channel, big: boolean) {
     else minorD += d;
     if (isMajor && on(x, labelEvery)) {
       const [nx, ny] = at(deg, R - 20);
-      numbers.push({ x: f2(nx), y: f2(ny), t: String(f2(c.max >= 2000 ? x / 1000 : x)) });
+      const frac = (x - c.min) / span;
+      const band = frac < 0.3 ? "low" : frac > 0.78 ? "high" : "mid";
+      numbers.push({ x: f2(nx), y: f2(ny), t: String(f2(c.max >= 2000 ? x / 1000 : x)), band });
     }
   }
   let fine = "";
