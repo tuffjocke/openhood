@@ -214,6 +214,7 @@ export function FirstRun({
               </div>
             ) : (
               <div role="tabpanel" id="panel-agent" aria-labelledby="tab-agent">
+                <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={() => null} fieldsOnly />
                 <AgentTrack car={selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : ""} />
               </div>
             )}
