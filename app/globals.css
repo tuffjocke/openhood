@@ -680,6 +680,35 @@ button.mark-name:hover:not(:disabled) {
   opacity: 0.55;
 }
 
+/* On the start page each field is as wide as what's in it, so the row stays small and centred. */
+.start.home .car-fields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.start.home .car-fields select,
+.start.home .car-fields input {
+  width: auto;
+  field-sizing: content;
+  min-width: 5.5em;
+  max-width: 16em;
+  height: 52px;
+  padding: 0 42px 0 18px;
+  font-size: 17px;
+}
+
+.start.home .car-fields input {
+  min-width: 6.5em;
+  padding-right: 18px;
+}
+
+.start.home .car-fields label:has(select)::after {
+  right: 18px;
+  bottom: 23px;
+}
+
 /* The chosen car, once the fields have done their job. */
 /* The chosen car, once the fields have done their job: a quiet first line inside the step card. */
 .car-chosen {
@@ -843,6 +872,20 @@ button.mark-name:hover:not(:disabled) {
 
   .start .car-fields label:has(select)::after {
     bottom: 24px;
+  }
+
+  .start.home .car-fields label:first-child {
+    grid-column: auto;
+  }
+
+  .start.home .car-fields select,
+  .start.home .car-fields input {
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .start.home .car-fields label:has(select)::after {
+    bottom: 21px;
   }
 
   .start .car-result {
