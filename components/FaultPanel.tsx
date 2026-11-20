@@ -246,14 +246,7 @@ function HistoryView({
   return (
     <details className="readiness history">
       <summary>
-        History ·{" "}
-        {history.length ? (
-          <>
-            <strong>{history.length}</strong> {history.length === 1 ? "fault" : "faults"} seen on this car
-          </>
-        ) : (
-          "nothing yet for this car"
-        )}
+        History · <strong>{history.length}</strong> {history.length === 1 ? "fault" : "faults"} seen on this car
       </summary>
       {history.length > 0 && (
         <ul>
@@ -445,7 +438,7 @@ export function FaultPanel({
         </>
       )}
 
-      {f && (
+      {f && history.length > 0 && (
         <HistoryView
           history={history}
           explanations={f.explanations}
