@@ -57,8 +57,9 @@ components/FaultPanel     faults: one card per fault in a single centred column,
                           under it has More on the left and "Clear all" / "Read again" at the end. Clearing is all
                           or nothing: cars can't clear one code (OBD-II mode 04 and the Td5 clear erase everything)
 components/FirstRun       landing until the first connection. Desktop is two columns: headline on the left, the
-                          start box on the right. Below 900px it is one column. The live demo ("What you get")
-                          sits full width underneath until a car is picked. One step at a time: 1 the car
+                          start box on the right. Below 900px it is one column. The live demo ("What you get":
+                          the dials, one chart, one fault) sits full width underneath; below 900px it steps aside
+                          once a car is picked. One step at a time: 1 the car
                           fields, 2 "Got an adapter?" (I have one / What to buy, remembered), 3 plug in and
                           "Read my car" (AI agent as a quiet link)
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight

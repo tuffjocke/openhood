@@ -1123,7 +1123,7 @@ main > details.more {
 /* The live screen in small: the binnacle's dials, and one fault explained beside them. */
 .preview {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
   gap: clamp(20px, 3vw, 48px);
   align-items: center;
   margin: 0;
@@ -1137,7 +1137,15 @@ main > details.more {
   margin-top: 0;
 }
 
-/* One fault from the demo car, beside the dials. */
+/* Beside the dials: one chart, and one fault under it. */
+.preview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+/* One fault from the demo car. */
 .preview-fault {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1165,17 +1173,11 @@ main > details.more {
   font: 600 17px/1.3 var(--sans);
 }
 
-.preview-fault-check {
-  margin-top: 6px !important;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--cl-muted);
-}
 
 .preview .engine-light {
-  width: 44px;
-  height: 30px;
-  margin-top: -2px;
+  width: 32px;
+  height: 22px;
+  margin-top: 0;
 }
 
 .engine-light {
@@ -1242,6 +1244,10 @@ main > details.more {
   .preview {
     grid-template-columns: 1fr;
     border-radius: 32px;
+  }
+
+  .band-wide.after-pick {
+    display: none;
   }
 
   .band {

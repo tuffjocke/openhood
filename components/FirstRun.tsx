@@ -7,7 +7,8 @@ import { useFirstPick } from "./AdapterPicks";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
-import { DialRow } from "./Dials";
+import { dialLayout, DialRow } from "./Dials";
+import { LiveChart, type Point } from "./LiveChart";
 import { AgentButton } from "./landing/AgentButton";
 import { EngineLight } from "./landing/EngineLight";
 import type { Selection } from "./VehiclePicker";
@@ -17,12 +18,16 @@ import type { ConnectVia } from "@/core/link/open";
 function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
   const [values, setValues] = useState<Record<string, number>>({});
   const [fault, setFault] = useState<Fault | null>(null);
+  // One chart beside the dials: the profile's first chart reading, last 30 seconds.
+  const chart = dialLayout(profile).charts[0];
+  const [trace, setTrace] = useState<{ points: Point[]; now: number }>({ points: [], now: 0 });
 
   useEffect(() => {
     let alive = true;
     const s = new Session(profile, new SimulatedTransport(profile));
     setValues({});
     setFault(null);
+    setTrace({ points: [], now: 0 });
     const ids = [...new Set(profile.schedule)];
     (async () => {
       try {
@@ -43,6 +48,12 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
             const v = await s.readGroup(id);
             if (!alive) break;
             setValues((prev) => ({ ...prev, ...v }));
+            const t = performance.now();
+            const key = dialLayout(profile).charts[0]?.key;
+            setTrace((prev) => ({
+              now: t,
+              points: key && v[key] !== undefined ? [...prev.points.filter((p) => t - p.t < 31_000), { t, v: v[key] }] : prev.points,
+            }));
           }
         }
       } catch {
@@ -58,7 +69,10 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
   return (
     <figure className="preview">
       <DialRow profile={profile} values={values} />
-      {fault && <PreviewFault fault={fault} profile={profile} />}
+      <div className="preview-side">
+        {chart && <LiveChart channel={chart} points={trace.points} now={trace.now} value={values[chart.key]} />}
+        {fault && <PreviewFault fault={fault} profile={profile} />}
+      </div>
     </figure>
   );
 }
@@ -79,7 +93,6 @@ function PreviewFault({ fault, profile }: { fault: Fault; profile: VehicleProfil
           {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
         </p>
         <p className="preview-fault-title">{info?.title ?? fault.name}</p>
-        {info?.check && <p className="preview-fault-check">Check first: {info.check}</p>}
       </div>
     </div>
   );
@@ -211,8 +224,8 @@ export function FirstRun({
         </div>
       </div>
 
-      {!carText && (
-      <section className="band band-wide" aria-labelledby="demo-title">
+      {/* Always on a computer; on a phone it steps aside once a car is picked, to keep the next step close. */}
+      <section className={`band band-wide${carText ? " after-pick" : ""}`} aria-labelledby="demo-title">
         <div className="band-head">
           <h2 id="demo-title">What you get</h2>
           <button className="quiet" onClick={onSimulator} disabled={!!connecting}>
@@ -221,7 +234,6 @@ export function FirstRun({
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </section>
-      )}
 
     </section>
   );
