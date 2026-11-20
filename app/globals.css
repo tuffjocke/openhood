@@ -3199,3 +3199,12 @@ main > details.more {
 #faults .faults + .history {
   margin-top: 18px;
 }
+
+/* Fault cards: one column, a comfortable reading width. */
+#faults.panel {
+  max-width: 640px;
+}
+
+.faults {
+  grid-template-columns: 1fr;
+}
