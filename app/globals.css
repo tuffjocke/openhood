@@ -2809,3 +2809,56 @@ details.more p {
   flex: none;
   font-weight: 500;
 }
+
+/* Answer panel: verdict, the three things everyone does, then the two ways to read. */
+.result-go {
+  display: block;
+}
+
+.result-go .read-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 28px;
+  margin: 0;
+}
+
+.result-go .read-steps li {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.result-go .read-steps li::before {
+  font-size: 16px;
+}
+
+.result-go .chooser-actions {
+  margin-top: 18px;
+}
+
+.result-go .actions-hint {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.result-go .advice {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+
+@media (max-width: 760px) {
+  .result-go .read-steps {
+    display: block;
+  }
+  .result-go .read-steps li {
+    padding: 3px 0;
+  }
+}
+
+.result-go button.ghost {
+  background: var(--paper);
+}
+
+.result-go button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}

@@ -49,10 +49,10 @@ components/CarChooser     make, model, year (any car: unknown makes and models a
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: the summary is the panel heading, grouped rows, explanations, urgency, freeze frames, pending, history
 components/FirstRun       landing until the first connection, in one fixed order: headline and one sentence, the car
-                          fields (the one thing to do), the answer panel (verdict, small browser / AI agent switch,
-                          steps and read button), then three same-shaped sections: What you get (demo), Find the
+                          fields (the one thing to do), the answer panel (verdict; get the adapter, plug in, ignition
+                          on; then "Read my car" or "let an AI agent read it"), then three same-shaped sections: What you get (demo), Find the
                           socket, Already have a code?
-components/landing/       AgentTrack (setup + ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
+components/landing/       AgentButton (copies the ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
                           SocketGuide, EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero

@@ -8,7 +8,7 @@ import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { Gauge } from "./Gauge";
 import { CodeLookup } from "./landing/CodeLookup";
-import { AgentTrack } from "./landing/AgentTrack";
+import { AgentButton } from "./landing/AgentButton";
 import { EngineLight } from "./landing/EngineLight";
 import { SocketGuide } from "./landing/SocketGuide";
 import type { Selection } from "./VehiclePicker";
@@ -141,19 +141,12 @@ export function FirstRun({
   onBluetooth: () => void;
   onSimulator: () => void;
 }) {
-  // Two ways in. #agent links straight to the second.
-  const [track, setTrack] = useState<"browser" | "agent">("browser");
-  useEffect(() => {
-    if (location.hash === "#agent") setTrack("agent");
-  }, []);
-  function chooseTrack(t: "browser" | "agent") {
-    setTrack(t);
-    history.replaceState(null, "", t === "agent" ? "#agent" : location.pathname + location.search);
-  }
+  const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
 
+  // Read here, or hand it to an AI agent. The agent works in any browser, so it's always offered.
   const readButton = (p: VehicleProfile, supported: boolean) => {
     const ble = bluetoothOk && (p.adapters ?? ["kkl"]).includes("elm327");
-    return serialOk || ble ? (
+    return (
       <div className="chooser-actions">
         {serialOk && (
           <button className="primary big" onClick={onConnect} disabled={!!connecting}>
@@ -165,8 +158,9 @@ export function FirstRun({
             {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
           </button>
         )}
+        <AgentButton car={carText} primary={!serialOk && !ble} />
       </div>
-    ) : null; // the browser warning is shown once, above the car fields
+    );
   };
 
   return (
@@ -185,31 +179,13 @@ export function FirstRun({
               onSelect={onSelect}
               actions={readButton}
               notice={
-                track === "browser" &&
                 !serialOk &&
                 !bluetoothOk && (
                   <p className="hero-note" role="note">
                     <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on
-                    Android.
+                    Android. An AI agent works from any browser.
                   </p>
                 )
-              }
-              switcher={
-                <div className="tracks" role="tablist" aria-label="How to read your car">
-                  <button role="tab" id="tab-browser" aria-selected={track === "browser"} onClick={() => chooseTrack("browser")}>
-                    In this browser
-                  </button>
-                  <button role="tab" id="tab-agent" aria-selected={track === "agent"} onClick={() => chooseTrack("agent")}>
-                    With an AI agent
-                  </button>
-                </div>
-              }
-              instead={
-                track === "agent" ? (
-                  <AgentTrack
-                    car={selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : ""}
-                  />
-                ) : undefined
               }
             />
           </div>

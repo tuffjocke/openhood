@@ -60,7 +60,7 @@ export function requestCarUrl(c: CarDetails): string {
 }
 
 /**
- * The message for the "With an AI agent" track: a coding agent on the person's own computer
+ * The message behind "Or let an AI agent read it": a coding agent on the person's own computer
  * (Claude or Codex desktop app) sets Openhood up and reads the car, so the person never needs
  * a terminal. Uses the CLI, which works without registering the MCP server.
  */

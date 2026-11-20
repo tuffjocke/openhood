@@ -11,7 +11,7 @@ of Web Serial. Run it from a clone of the repository, after `npm install`.
 
 ## No terminal: let an agent do it
 
-On the website, open the **With an AI agent** tab and copy the message. Then:
+On the website, pick your car and press **Or let an AI agent read it** to copy the message. Then:
 
 1. Open the **Claude** or **Codex desktop app** on the computer you'll plug into the car, and start a
    new coding task. The web versions run in the cloud and can't reach your adapter.

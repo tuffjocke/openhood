@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { firstPick } from "@/core/adapters";
 import { addCarPrompt, carName, requestCarUrl, type CarDetails } from "@/core/add-car";
 import Link from "next/link";
 import { allMakes, allModels, genericProfile, matches, tidyName } from "@/core/catalog";
@@ -17,31 +16,32 @@ const OTHER = "__other";
 const GUIDE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md";
 
 /** What to buy for this car, decided by what its profile can run on. */
-export function AdapterAdvice({ profile, year }: { profile: VehicleProfile; year: number }) {
-  const adapters = profile.adapters ?? ["kkl"];
-  const kkl = adapters[0] === "kkl";
+/** Which adapter, in a few words. The one link goes to what to buy. */
+export function AdapterAdvice({ profile }: { profile: VehicleProfile }) {
+  const kkl = (profile.adapters ?? ["kkl"])[0] === "kkl";
   return (
-    <p className="advice">
-      {kkl ? "Needs a KKL cable, about \u20ac20." : `Needs an ELM327 adapter, like the ${firstPick("elm327")?.name}.`}
-      {!kkl && adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">What to buy</Link>
-    </p>
+    <>
+      Get {kkl ? "a KKL cable" : "an ELM327 adapter"}. <Link href="/adapters">What to buy</Link>
+    </>
   );
 }
 
-/** The three things to do once the car is known. Shown where the read button is. */
-export function ReadSteps() {
+/** What everyone does once the car is known, whichever way they read it. */
+export function ReadSteps({ profile }: { profile: VehicleProfile }) {
   return (
     <ol className="read-steps">
       <li>
         <span>
-          Plug in under the dashboard. <a href="#socket">Where?</a>
+          <AdapterAdvice profile={profile} />
+        </span>
+      </li>
+      <li>
+        <span>
+          Plug it in under the dashboard. <a href="#socket">Where?</a>
         </span>
       </li>
       <li>
         <span>Ignition on.</span>
-      </li>
-      <li>
-        <span>Press read and pick your adapter.</span>
       </li>
     </ol>
   );
@@ -91,8 +91,6 @@ export function CarChooser({
   actions,
   autoFocus,
   brief,
-  switcher,
-  instead,
   notice,
 }: {
   profiles: VehicleProfile[];
@@ -103,10 +101,6 @@ export function CarChooser({
   autoFocus?: boolean;
   /** Just the car and the verdict, no steps or ways to add it (the header picker). */
   brief?: boolean;
-  /** Shown on the right of the answer line: the "in this browser / with an AI agent" switch. */
-  switcher?: ReactNode;
-  /** Shown under the answer in place of the steps and read button (the AI agent steps). */
-  instead?: ReactNode;
   /** Shown between the fields and the answer (the "this browser can't" warning). */
   notice?: ReactNode;
 }) {
@@ -266,7 +260,7 @@ export function CarChooser({
 
       {notice}
 
-      {(car || switcher) && (
+      {car && (
         <div className="car-result">
           <div className="result-head">
             <div className="result-title" aria-live="polite">
@@ -283,12 +277,10 @@ export function CarChooser({
                 </p>
               )}
             </div>
-            {switcher}
           </div>
 
-          {instead ??
-            (car && (
-              <>
+          {
+            <>
                 {found.length > 1 && (
                   <div className="engines">
                     <span>Which engine?</span>
@@ -306,10 +298,13 @@ export function CarChooser({
                 )}
                 {goWith && (
                   <div className="result-go">
-                    <div className="result-how">
-                      <AdapterAdvice profile={goWith} year={car.year} />
-                      {!brief && <ReadSteps />}
-                    </div>
+                    {brief ? (
+                      <p className="advice">
+                        <AdapterAdvice profile={goWith} />
+                      </p>
+                    ) : (
+                      <ReadSteps profile={goWith} />
+                    )}
                     {actions(goWith, supported)}
                   </div>
                 )}
@@ -325,7 +320,7 @@ export function CarChooser({
                   </details>
                 )}
               </>
-            ))}
+          }
         </div>
       )}
     </div>
