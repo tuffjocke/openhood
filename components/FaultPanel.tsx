@@ -348,14 +348,7 @@ export function FaultPanel({
         </h2>
         <div>
           <button className="quiet" disabled={!live || busy} onClick={onRead}>
-            Read
-          </button>
-          <button
-            className="quiet"
-            disabled={!live || busy || !faults?.length || !f?.clear}
-            onClick={() => setConfirming(true)}
-          >
-            Clear
+            Read again
           </button>
         </div>
       </div>
@@ -461,6 +454,12 @@ export function FaultPanel({
             ))}
           </ol>
         </>
+      )}
+
+      {live && !!faults?.length && f?.clear && !confirming && (
+        <button className="link-button clear-link" disabled={busy} onClick={() => setConfirming(true)}>
+          Clear the codes
+        </button>
       )}
 
       {f && (

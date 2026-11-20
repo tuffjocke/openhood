@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
@@ -91,6 +92,8 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
   );
 }
 
+const ADAPTER_KEY = "openhood.hasAdapter";
+
 const URGENCY: Record<Urgency, string> = { ok: "Fine to drive", soon: "Fix soon", now: "Fix now" };
 
 /** One fault from the demo car, explained the way Openhood explains a real one. */
@@ -141,23 +144,67 @@ export function FirstRun({
 }) {
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
 
-  // Read here, or hand it to an AI agent. The agent works in any browser, so it's always offered.
-  const readButton = (p: VehicleProfile, supported: boolean) => {
-    const ble = bluetoothOk && (p.adapters ?? ["kkl"]).includes("elm327");
+  // One step on screen at a time. Step 1 is the car fields; these are steps 2 and 3.
+  const [hasAdapter, setHasAdapter] = useState(false);
+  useEffect(() => {
+    try {
+      setHasAdapter(localStorage.getItem(ADAPTER_KEY) === "1");
+    } catch {}
+  }, []);
+  function gotAdapter(yes: boolean) {
+    setHasAdapter(yes);
+    try {
+      if (yes) localStorage.setItem(ADAPTER_KEY, "1");
+      else localStorage.removeItem(ADAPTER_KEY);
+    } catch {}
+  }
+
+  const nextStep = (p: VehicleProfile, supported: boolean) => {
+    const kinds = p.adapters ?? ["kkl"];
+    const thing = kinds[0] === "kkl" ? "a KKL cable" : "an ELM327 adapter";
+    if (!hasAdapter)
+      return (
+        <div className="step">
+          <p className="step-ask">Got {thing}?</p>
+          <div className="chooser-actions">
+            <button className="primary big" onClick={() => gotAdapter(true)}>
+              I have one
+            </button>
+            <Link className="button ghost big" href="/adapters">
+              What to buy
+            </Link>
+          </div>
+        </div>
+      );
+    const ble = bluetoothOk && kinds.includes("elm327");
+    const canRead = serialOk || ble;
     return (
-      <div className="chooser-actions">
-        {serialOk && (
-          <button className="primary big" onClick={onConnect} disabled={!!connecting}>
-            {connecting === "serial" ? "Waking the car…" : supported ? "Read my car" : "Read the standard codes"}
-          </button>
+      <div className="step">
+        <p className="step-ask">Plug it in under the dashboard, near your knee. Ignition on.</p>
+        {!canRead && (
+          <p className="hero-note" role="note">
+            <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
+          </p>
         )}
-        {ble && (
-          <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
-            {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
+        <div className="chooser-actions">
+          {serialOk && (
+            <button className="primary big" onClick={onConnect} disabled={!!connecting}>
+              {connecting === "serial" ? "Waking the car…" : supported ? "Read my car" : "Read the standard codes"}
+            </button>
+          )}
+          {ble && (
+            <button className={serialOk ? "ghost big" : "primary big"} onClick={onBluetooth} disabled={!!connecting}>
+              {connecting === "bluetooth" ? "Connecting…" : "Bluetooth adapter"}
+            </button>
+          )}
+          <AgentButton car={carText} primary={!canRead} />
+        </div>
+        <p className="step-foot">
+          Only reads. Nothing in your car changes.{" "}
+          <button className="link-button" onClick={() => gotAdapter(false)}>
+            No adapter yet?
           </button>
-        )}
-        <AgentButton car={carText} primary={!serialOk && !ble} />
-        <p className="actions-note">Only reads. Nothing in your car changes.</p>
+        </p>
       </div>
     );
   };
@@ -176,21 +223,13 @@ export function FirstRun({
               profiles={PROFILES}
               selection={selection}
               onSelect={onSelect}
-              actions={readButton}
-              notice={
-                !serialOk &&
-                !bluetoothOk && (
-                  <p className="hero-note" role="note">
-                    <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on
-                    Android. An AI agent works from any browser.
-                  </p>
-                )
-              }
+              actions={nextStep}
             />
           </div>
         </div>
       </div>
 
+      {!carText && (
       <section className="band band-wide" aria-labelledby="demo-title">
         <div className="band-head">
           <h2 id="demo-title">What you get</h2>
@@ -200,6 +239,7 @@ export function FirstRun({
         </div>
         {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </section>
+      )}
 
     </section>
   );

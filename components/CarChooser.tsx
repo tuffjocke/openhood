@@ -26,27 +26,6 @@ export function AdapterAdvice({ profile }: { profile: VehicleProfile }) {
   );
 }
 
-/** What everyone does once the car is known, whichever way they read it. */
-export function ReadSteps({ profile }: { profile: VehicleProfile }) {
-  return (
-    <ol className="read-steps">
-      <li>
-        <span>
-          <AdapterAdvice profile={profile} />
-        </span>
-      </li>
-      <li>
-        <span>
-          Plug it in under the dashboard, near your knee.
-        </span>
-      </li>
-      <li>
-        <span>Ignition on.</span>
-      </li>
-    </ol>
-  );
-}
-
 function CopyPrompt({ car }: { car: CarDetails }) {
   const [copied, setCopied] = useState(false);
   const [showText, setShowText] = useState(false);
@@ -79,6 +58,24 @@ function CopyPrompt({ car }: { car: CarDetails }) {
 }
 
 /**
+ * "Help add this car": shown after someone has read a car Openhood only knows by its standard
+ * codes. The one moment the request makes sense.
+ */
+export function HelpAddCar({ car }: { car: CarDetails }) {
+  return (
+    <details className="more">
+      <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
+      <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
+      <CopyPrompt car={car} />
+      <p className="path-foot">
+        Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
+        <a href={GUIDE_URL}>Guide</a>
+      </p>
+    </details>
+  );
+}
+
+/**
  * Make, model and year (any car: unknown makes and models are typed in), then what to do next:
  * read the car if Openhood knows it, otherwise read the standard codes, with a folded-away way
  * to help add the car.
@@ -96,7 +93,7 @@ export function CarChooser({
   profiles: VehicleProfile[];
   selection: Selection;
   onSelect: (s: Selection) => void;
-  /** The read buttons, given the profile that will be used. */
+  /** What comes after the verdict, given the profile that will be used (the next step, or Done). */
   actions: (profile: VehicleProfile, supported: boolean) => ReactNode;
   autoFocus?: boolean;
   /** Just the car and the verdict, no steps or ways to add it (the header picker). */
@@ -297,29 +294,17 @@ export function CarChooser({
                     ))}
                   </div>
                 )}
-                {goWith && (
-                  <div className="result-go">
-                    {brief ? (
+                {goWith &&
+                  (brief ? (
+                    <div className="result-go">
                       <p className="advice">
                         <AdapterAdvice profile={goWith} />
                       </p>
-                    ) : (
-                      <ReadSteps profile={goWith} />
-                    )}
-                    {actions(goWith, supported)}
-                  </div>
-                )}
-                {!supported && !brief && (
-                  <details className="more">
-                    <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
-                    <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
-                    <CopyPrompt car={car} />
-                    <p className="path-foot">
-                      Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
-                      <a href={GUIDE_URL}>Guide</a>
-                    </p>
-                  </details>
-                )}
+                      {actions(goWith, supported)}
+                    </div>
+                  ) : (
+                    actions(goWith, supported)
+                  ))}
               </>
           }
         </div>

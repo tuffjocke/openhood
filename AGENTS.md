@@ -43,14 +43,16 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
 core/safety.ts            which raw requests tools may send: read services only
-components/Dashboard.tsx  the whole UI, driven by the selected profile
+components/Dashboard.tsx  the whole UI, driven by the selected profile. Result screen: the faults panel, one ask after
+                          a real read ("Did this match your car?" Yes = car report, No = test report), "Help add this
+                          car" only for unlisted cars, and everything else behind "Live data and more"
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: the summary is the panel heading, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       landing until the first connection, in one fixed order: headline and one sentence, the car
-                          fields (the one thing to do), the answer panel (verdict; get the adapter, plug in, ignition
-                          on; then "Read my car" or "let an AI agent read it"), then one section: What you get (the demo)
+components/FirstRun       landing until the first connection, one step on screen at a time: 1 the car fields (with the
+                          demo section below, only until a car is picked), 2 "Got an adapter?" (I have one / What to
+                          buy, remembered), 3 plug in and "Read my car" (AI agent as a quiet link)
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero
@@ -130,6 +132,9 @@ Follow docs/adding-a-vehicle.md. In short:
   (`components/Gauge.tsx`). Road-sign yellow (`--sign`) means "look at this", falu red (`--falu`) only
   "fix now". Familjen Grotesk for text, Barlow Condensed for numbers, both self-hosted. Sentence-case labels,
   no all-caps. Must work on a phone and in dark mode (follows the system setting).
+- One step at a time: each screen asks one thing and has one main button. Don't show what isn't
+  needed for that step. Ask for contributions only at the moment they apply (after a read, after a
+  failure, after reading an unlisted car), never up front.
 - Hierarchy: one type scale (h1, section h2, verdict 22, body 16, small 14) and one primary action per
   screen. New things on the start page go into the existing order (see the "hierarchy" block at the end
   of globals.css) or behind a link, not in a new box of their own.

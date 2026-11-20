@@ -22,6 +22,7 @@ import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Gauge } from "./Gauge";
 import type { Point } from "./Sparkline";
+import { HelpAddCar } from "./CarChooser";
 import { FaultPanel } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
@@ -82,6 +83,8 @@ export default function Dashboard() {
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [everLive, setEverLive] = useState(false);
   const [adapter, setAdapter] = useState<string | undefined>(undefined);
+  /** The "did this match your car?" answer for this connection. */
+  const [asked, setAsked] = useState<"yes" | "no" | null>(null);
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -151,6 +154,7 @@ export default function Dashboard() {
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
       setEverLive(true);
+      setAsked(null);
       window.scrollTo(0, 0); // the faults are at the top
       void refreshFaults(s);
       void s.poll(onValues, (e) => {
@@ -408,7 +412,7 @@ export default function Dashboard() {
           {error}{" "}
           {source && source !== "simulator" && (
             <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink}>
-              Send a test report
+              Send us what happened
             </a>
           )}
           {source && source !== "simulator" && " (public, on GitHub)"}
@@ -453,9 +457,28 @@ export default function Dashboard() {
           onExportHistory={exportHistory}
           onImportHistory={importHistory}
         />
-
       </section>
 
+      {/* Asked once, right after a real read: the only moment the answer is known. */}
+      {!demo && live && faults !== null && asked === null && selection.make && selection.model && selection.year && (
+        <p className="ask">
+          <span>Did this match your car?</span>
+          <a className="button" href="#" target="_blank" rel="noreferrer" onClick={(e) => (fillCarReport(e), setAsked("yes"))}>
+            Yes
+          </a>
+          <a className="button quiet" href="#" target="_blank" rel="noreferrer" onClick={(e) => (fillReportLink(e), setAsked("no"))}>
+            No
+          </a>
+        </p>
+      )}
+      {asked && <p className="ask">Thanks. Post what opened on GitHub and it helps the next person.</p>}
+
+      {!demo && live && faults !== null && profile.generic && selection.make && selection.model && selection.year && (
+        <HelpAddCar car={{ make: selection.make, model: selection.model, year: selection.year }} />
+      )}
+
+      <details className="more-data">
+        <summary>Live data and more</summary>
       <div className="section-head">
         <h2 className="section-title">Live data</h2>
         <span className="section-tools">
@@ -506,24 +529,13 @@ export default function Dashboard() {
           </pre>
         )}
       </details>
-      </>
-      )}
-
-      {live && source !== "simulator" && selection.make && selection.model && selection.year && (
-        <p className="share-car">
-          Worked?{" "}
-          <a href="#" target="_blank" rel="noreferrer" onClick={fillCarReport}>
-            Add your car to the shared list
-          </a>
-        </p>
-      )}
-
-      {!showFirstRun && (
         <p className="profile-info">
           Reading as: {profile.name}, {profile.ecu}
           {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
           <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
         </p>
+      </details>
+      </>
       )}
 
       <footer className="foot">
@@ -531,12 +543,17 @@ export default function Dashboard() {
           Provided as is. Use at your own risk, car parked. <Link href="/disclaimer">Disclaimer</Link>
         </span>
         <span className="foot-links">
-          {!showFirstRun && (
+          {!showFirstRun && !demo && (
             <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title="Opens a pre-filled GitHub issue">
               Send test report
             </a>
           )}
-          <a href="https://github.com/tuffjocke/openhood/blob/main/docs/adding-a-vehicle.md">Add your car</a>
+          {showFirstRun && (
+            <button className="link-button" onClick={() => connect("simulator")}>
+              Demo car
+            </button>
+          )}
+          <a href="https://github.com/tuffjocke/openhood/blob/main/CONTRIBUTING.md">Contribute</a>
           <a href="https://github.com/tuffjocke/openhood">GitHub</a>
         </span>
       </footer>
