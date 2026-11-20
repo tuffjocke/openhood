@@ -159,37 +159,6 @@ h2 {
   letter-spacing: -0.02em;
 }
 
-.section-head .section-title {
-  margin: 0;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 56px 0 16px;
-}
-
-.more-data .section-head {
-  margin-top: 28px;
-}
-
-.top + .section-head,
-.notice + .section-head {
-  margin-top: 28px;
-}
-
-.section-tools {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.rec-time {
-  font: 600 20px/1 var(--num);
-  font-variant-numeric: tabular-nums;
-}
 
 /* ==========================================================================
    Buttons and links that look like buttons
@@ -502,6 +471,18 @@ button.mark-name:hover:not(:disabled) {
   letter-spacing: -0.015em;
 }
 
+/* Logging a drive: the timer, then the button, with the other header actions. */
+.log-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rec-time {
+  font: 600 20px/1 var(--num);
+  font-variant-numeric: tabular-nums;
+}
+
 .demo-name {
   display: inline-flex;
   align-items: center;
@@ -537,6 +518,29 @@ button.mark-name:hover:not(:disabled) {
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     background: var(--paper);
     box-shadow: 0 -1px 0 var(--rule);
+  }
+
+  /* Up to four things share the bar: keep each on one line and a little tighter. */
+  .top .actions {
+    gap: 8px;
+  }
+
+  .top .actions button {
+    padding: 12px 14px;
+    white-space: nowrap;
+  }
+
+  .demo-name {
+    padding: 0 14px;
+  }
+
+  .demo-more {
+    display: none;
+  }
+
+  /* While a drive is being logged, the timer takes the demo label's place. */
+  .top .actions:has(.rec) .demo-name {
+    display: none;
   }
 
   .mark .vp,
@@ -1434,8 +1438,10 @@ main > details.more {
   margin-top: 0;
 }
 
-.section-head + .grid {
-  margin-top: 0;
+/* The gauges are the first thing under the header while running. */
+.top + .grid,
+.notice + .grid {
+  margin-top: 28px;
 }
 
 /* Only phones fold the readings away. */

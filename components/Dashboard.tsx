@@ -385,6 +385,25 @@ export default function Dashboard() {
   const rate = reads.current.length / 2;
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
+  // Logging a drive sits with the other header actions, after Back to start or Disconnect.
+  const logTools = (
+    <span className="log-tools">
+      {recording && (
+        <span className="rec-time">
+          {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+        </span>
+      )}
+      {unsavedDrive && (
+        <button className="link-button" onClick={() => setUnsavedDrive(null)}>
+          Discard
+        </button>
+      )}
+      <button className={recording ? "rec" : "quiet"} disabled={!live && !recording && !unsavedDrive} onClick={toggleRecording}>
+        {recording ? "Stop and save" : unsavedDrive ? "Save the drive" : "Log a drive"}
+      </button>
+    </span>
+  );
+
   return (
     <main className={`shell${showFirstRun ? " is-first-run" : ""}`}>
       <header className="top">
@@ -404,10 +423,13 @@ export default function Dashboard() {
         </div>
         {!showFirstRun && demo && (
           <div className="actions">
-            <span className="demo-name">Demo car, made-up faults</span>
+            <span className="demo-name">
+              Demo<span className="demo-more"> car, made-up faults</span>
+            </span>
             <button onClick={disconnect} disabled={status === "connecting"}>
               Back to start
             </button>
+            {logTools}
           </div>
         )}
         {!showFirstRun && !demo && (
@@ -437,6 +459,7 @@ export default function Dashboard() {
                 Disconnect
               </button>
             )}
+            {(live || recording || unsavedDrive) && logTools}
           </div>
         )}
       </header>
@@ -473,24 +496,6 @@ export default function Dashboard() {
 
       {!showFirstRun && (
         <>
-      <div className="section-head">
-        <h2 className="section-title">Live data</h2>
-        <span className="section-tools">
-          {recording && (
-            <span className="rec-time">
-              {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
-            </span>
-          )}
-          {unsavedDrive && (
-            <button className="link-button" onClick={() => setUnsavedDrive(null)}>
-              Discard
-            </button>
-          )}
-          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording && !unsavedDrive} onClick={toggleRecording}>
-            {recording ? "Stop and save" : unsavedDrive ? "Save the drive" : "Log a drive"}
-          </button>
-        </span>
-      </div>
           <section className={`grid cluster${allReadings ? " all" : ""}`}>
             {profile.channels.map((c) => {
               const v = latest.current[c.key];
