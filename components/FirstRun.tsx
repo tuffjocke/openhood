@@ -1,24 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
+import type { Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
 import { useFirstPick } from "./AdapterPicks";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
-import { Gauge } from "./Gauge";
+import { DialRow } from "./Dials";
 import { AgentButton } from "./landing/AgentButton";
 import { EngineLight } from "./landing/EngineLight";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
 
-/** A live reading from the selected profile's simulator, shown in the hero. Stops when unmounted. */
+/** The live screen in small, driven by the selected profile's simulator: its dials and one fault. Stops when unmounted. */
 function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
   const [values, setValues] = useState<Record<string, number>>({});
   const [fault, setFault] = useState<Fault | null>(null);
-  const main = profile.channels[0];
-  const side = profile.channels.slice(1, 3);
 
   useEffect(() => {
     let alive = true;
@@ -57,36 +55,9 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
     };
   }, [profile]);
 
-  const show = (c: Channel) => (values[c.key] === undefined ? "" : values[c.key].toFixed(c.decimals));
-
   return (
-    <figure className="preview cluster">
-      {main && (
-        <div className="preview-main">
-          <span className="preview-value">{show(main)}</span>
-          <span className="preview-unit">{main.unit}</span>
-        </div>
-      )}
-      {main && (
-        <Gauge
-          value={values[main.key]}
-          min={main.min}
-          max={main.max}
-          warnAbove={main.warnAbove}
-          warnBelow={main.warnBelow}
-          segments={32}
-        />
-      )}
-      <dl className="preview-side">
-        {side.map((c) => (
-          <div key={c.key}>
-            <dt>{c.label}</dt>
-            <dd>
-              {show(c)} <span>{c.unit}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
+    <figure className="preview">
+      <DialRow profile={profile} values={values} />
       {fault && <PreviewFault fault={fault} profile={profile} />}
     </figure>
   );

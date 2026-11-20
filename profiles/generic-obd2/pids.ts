@@ -11,7 +11,7 @@ import type { SimSnapshot } from "./simulator";
 
 export const channels: Channel[] = [
   { key: "rpm", label: "Engine speed", unit: "rpm", decimals: 0, min: 0, max: 7000, confidence: "community" },
-  { key: "speed", label: "Road speed", unit: "km/h", decimals: 0, min: 0, max: 200, confidence: "community" },
+  { key: "speed", label: "Road speed", unit: "km/h", decimals: 0, min: 0, max: 240, confidence: "community" },
   { key: "load", label: "Engine load", unit: "%", decimals: 0, min: 0, max: 100, group: "engine", confidence: "community" },
   { key: "throttle", label: "Throttle", unit: "%", decimals: 0, min: 0, max: 100, group: "air", confidence: "community" },
   { key: "coolant", label: "Coolant", unit: "°C", decimals: 0, min: -20, max: 120, warnAbove: 108, confidence: "community" },

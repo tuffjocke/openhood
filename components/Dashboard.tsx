@@ -12,7 +12,7 @@ import {
   type HistoryEntry,
 } from "@/core/history";
 import { carReportUrl, reportUrl } from "@/core/report";
-import type { Channel, ChannelGroup, Fault, Readiness, Values } from "@/core/profile";
+import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
 import { AdapterError } from "@/core/link/elm327";
 import { Session, type TrafficEvent } from "@/core/session";
@@ -20,11 +20,11 @@ import { TimeoutError } from "@/core/transport/types";
 import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
-import { Dial } from "./Dial";
+import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
-import { FaultPanel } from "./FaultPanel";
+import { FaultPanel, HistoryFile } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
@@ -42,8 +42,6 @@ function describeAdapter(s: Session): string {
   if (i.kind === "adapter") return `ELM327 adapter, ${i.protocol || "unknown protocol"}`;
   return `KKL cable, ${i.kind === "fast" ? "fast init" : `5-baud init (${i.protocol})`}`;
 }
-
-const GROUP_NAMES: Record<ChannelGroup, string> = { air: "Air in", engine: "Engine", fuel: "Fuel" };
 
 /** The top-right corner of the cluster: how the car is connected, in a few words. */
 function linkLine(s: Session): string {
@@ -386,19 +384,7 @@ export default function Dashboard() {
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
   // The profile picks its dials; the rest of its readings become charts, grouped by colour.
-  const dials = profile.dials ?? { main: profile.channels[0]?.key, left: profile.channels[1]?.key, right: profile.channels[2]?.key };
-  const byKey = (k?: string) => profile.channels.find((c) => c.key === k);
-  const dialChannels = [
-    { channel: byKey(dials.left), big: false },
-    { channel: byKey(dials.main), big: true },
-    { channel: byKey(dials.right), big: false },
-  ].filter((d): d is { channel: Channel; big: boolean } => !!d.channel);
-  const batteryChannel = byKey(profile.dials?.battery);
-  const onDials = new Set([dials.main, dials.left, dials.right, profile.dials?.battery]);
-  const GROUP_ORDER: ChannelGroup[] = ["air", "engine", "fuel"];
-  const rank = (c: Channel) => (c.group ? GROUP_ORDER.indexOf(c.group) : GROUP_ORDER.length);
-  const chartChannels = profile.channels.filter((c) => !onDials.has(c.key)).sort((a, b) => rank(a) - rank(b));
-  const chartGroups = GROUP_ORDER.filter((g) => chartChannels.some((c) => c.group === g));
+  const { charts: chartChannels, groups: chartGroups } = dialLayout(profile);
 
   // Logging a drive sits with the other header actions, after Back to start or Disconnect.
   const logTools = (
@@ -523,18 +509,7 @@ export default function Dashboard() {
               </span>
               <span className="binnacle-link">{session.current ? linkLine(session.current) : ""}</span>
             </div>
-            <div className="dials">
-              {dialChannels.map(({ channel, big }) => (
-                <Dial
-                  key={channel.key}
-                  channel={channel}
-                  big={big}
-                  value={latest.current[channel.key]}
-                  unavailable={unavailable.has(channel.key)}
-                  battery={big && batteryChannel ? { channel: batteryChannel, value: latest.current[batteryChannel.key] } : undefined}
-                />
-              ))}
-            </div>
+            <DialRow profile={profile} values={latest.current} unavailable={unavailable} />
             {chartChannels.length > 0 && (
               <>
                 {chartGroups.length > 0 && (
@@ -584,8 +559,6 @@ export default function Dashboard() {
           onClear={() => faultAction(true)}
           onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
           onForgetHistory={forgetHistory}
-          onExportHistory={exportHistory}
-          onImportHistory={importHistory}
         />
       </section>
 
@@ -627,6 +600,7 @@ export default function Dashboard() {
         </span>
       <details className="more-data">
         <summary>More</summary>
+      {!demo && <HistoryFile onExport={exportHistory} onImport={importHistory} />}
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
         <summary>Traffic with the car</summary>
         {logOpen && (

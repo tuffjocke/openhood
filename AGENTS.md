@@ -47,7 +47,7 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
                           dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
                           drive" sits in the header, and asks where to save the file), the faults panel below, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
-                          traffic and profile details behind "More"
+                          fault history export/import, traffic and profile details behind "More"
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Once filled
                           in, the fields fold into one line with "Change car" (not in the header picker). Then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
@@ -66,7 +66,8 @@ components/InfoPage       shell for the plain help pages: app/adapters (short do
 components/Dial           round dial for the live screen: fine scale round the edge, short needle on the ring, value
                           in the middle, optional battery bar in the big dial's bottom gap
 components/LiveChart      one reading as a card: name (coloured by group) and unit, value, last 30 s as a line
-components/Gauge          segmented bar gauge, now only in the start page demo
+components/Dials          which readings get dials and which charts (dialLayout), and the row of dials, shared by
+                          the live screen and the start page demo
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/adapters.ts          adapters we recommend by name, with shop searches (no affiliate links); shown on /adapters
                           as tested only when a car report names them (adapterModel)

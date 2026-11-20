@@ -229,20 +229,47 @@ function SnapshotView({ snapshot, profile }: { snapshot: Snapshot; profile: Vehi
 
 const fmtDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
+/**
+ * Save the fault history of every car to a file, or load one (moving to a new computer).
+ * Lives behind More, so it's there even for a car with no history yet.
+ */
+export function HistoryFile({ onExport, onImport }: { onExport: () => void; onImport: (file: File) => Promise<string> }) {
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <div className="history-file">
+      <p className="history-actions">
+        Fault history:
+        <button className="link-button" onClick={onExport}>
+          Export all cars
+        </button>
+        <label className="link-button">
+          Import
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) setMessage(await onImport(file));
+            }}
+          />
+        </label>
+      </p>
+      {message && <p className="small">{message}</p>}
+    </div>
+  );
+}
+
 function HistoryView({
   history,
   explanations,
   onForget,
-  onExport,
-  onImport,
 }: {
   history: HistoryEntry[];
   explanations?: Record<string, FaultInfo>;
   onForget: () => void;
-  onExport: () => void;
-  onImport: (file: File) => Promise<string>;
 }) {
-  const [message, setMessage] = useState<string | null>(null);
   return (
     <details className="readiness history">
       <summary>
@@ -268,29 +295,10 @@ function HistoryView({
         Kept in this browser only. Faults that keep coming back are worth fixing even if they clear themselves.
       </p>
       <div className="history-actions">
-        <button className="link-button" onClick={onExport}>
-          Export all cars
+        <button className="link-button" onClick={onForget}>
+          Forget this car
         </button>
-        <label className="link-button">
-          Import
-          <input
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) setMessage(await onImport(file));
-            }}
-          />
-        </label>
-        {history.length > 0 && (
-          <button className="link-button" onClick={onForget}>
-            Forget this car
-          </button>
-        )}
       </div>
-      {message && <p className="small">{message}</p>}
     </details>
   );
 }
@@ -310,8 +318,6 @@ export function FaultPanel({
   onClear,
   onFreezeFrame,
   onForgetHistory,
-  onExportHistory,
-  onImportHistory,
 }: {
   profile: VehicleProfile;
   vehicle: string;
@@ -328,8 +334,6 @@ export function FaultPanel({
   onClear: () => void;
   onFreezeFrame: (f: Fault) => Promise<Values | null>;
   onForgetHistory: () => void;
-  onExportHistory: () => void;
-  onImportHistory: (file: File) => Promise<string>;
 }) {
   const f = profile.faults;
   const done = readiness?.monitors.filter((m) => m.complete).length ?? 0;
@@ -443,8 +447,6 @@ export function FaultPanel({
           history={history}
           explanations={f.explanations}
           onForget={onForgetHistory}
-          onExport={onExportHistory}
-          onImport={onImportHistory}
         />
       )}
     </div>
