@@ -64,6 +64,14 @@ function explain(e: unknown): string | null {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** The save dialog of the File System Access API, where the browser has it. */
+type SavePickerWindow = Window & {
+  showSaveFilePicker?: (options: {
+    suggestedName: string;
+    types: { description: string; accept: Record<string, string[]> }[];
+  }) => Promise<{ createWritable(): Promise<{ write(data: string): Promise<void>; close(): Promise<void> }> }>;
+};
+
 export default function Dashboard() {
   const [selection, setSelection] = useState<Selection>({ profileId: PROFILES[0].id });
   const profile = getProfile(selection.profileId) ?? PROFILES[0];
@@ -78,6 +86,8 @@ export default function Dashboard() {
   /** Phones show the first four readings (and any past its limit) until asked for the rest. */
   const [allReadings, setAllReadings] = useState(false);
   const [recording, setRecording] = useState(false);
+  /** A logged drive whose save was cancelled: kept until it is saved or discarded. */
+  const [unsavedDrive, setUnsavedDrive] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [serialOk, setSerialOk] = useState(true);
   const [bluetoothOk, setBluetoothOk] = useState(false);
@@ -314,7 +324,33 @@ export default function Dashboard() {
     }
   }
 
+  /** Ask where to put the file (Chrome and Edge on a computer). Elsewhere it goes to Downloads. */
+  async function saveDrive(csv: string) {
+    const name = `${profile.id}-${new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "")}.csv`;
+    const w = window as SavePickerWindow;
+    if (w.showSaveFilePicker) {
+      try {
+        const handle = await w.showSaveFilePicker({ suggestedName: name, types: [{ description: "CSV file", accept: { "text/csv": [".csv"] } }] });
+        const file = await handle.createWritable();
+        await file.write(csv);
+        await file.close();
+        setUnsavedDrive(null);
+        return;
+      } catch (e) {
+        // Cancelled: keep the drive so it isn't lost, and offer to save it again.
+        if (e instanceof DOMException && e.name === "AbortError") return setUnsavedDrive(csv);
+      }
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setUnsavedDrive(null);
+  }
+
   function toggleRecording() {
+    if (unsavedDrive) return void saveDrive(unsavedDrive);
     if (!recording) {
       rows.current = [];
       recStart.current = performance.now();
@@ -323,12 +359,7 @@ export default function Dashboard() {
     }
     setRecording(false);
     const header = ["time_s", ...profile.channels.map((c) => `${c.key}_${c.unit.replace(/[^a-z%]/gi, "")}`)].join(",");
-    const blob = new Blob([header + "\n" + rows.current.join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${profile.id}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    void saveDrive(header + "\n" + rows.current.join("\n"));
   }
 
   function pickVehicle(sel: Selection) {
@@ -450,8 +481,13 @@ export default function Dashboard() {
               {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
             </span>
           )}
-          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
-            {recording ? "Stop and save" : "Log a drive"}
+          {unsavedDrive && (
+            <button className="link-button" onClick={() => setUnsavedDrive(null)}>
+              Discard
+            </button>
+          )}
+          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording && !unsavedDrive} onClick={toggleRecording}>
+            {recording ? "Stop and save" : unsavedDrive ? "Save the drive" : "Log a drive"}
           </button>
         </span>
       </div>
