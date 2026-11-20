@@ -70,40 +70,29 @@ export function groupFaults(faults: Fault[], explanations?: Record<string, Fault
   return groups;
 }
 
-/** "Engine light on · 3 problems, 1 to fix now" strip shown under the header. */
-export function FaultSummary({
-  faults,
-  pending,
-  readiness,
-  explanations,
-}: {
-  faults: Fault[] | null;
-  pending: Fault[] | null;
-  readiness: Readiness | null;
-  explanations?: Record<string, FaultInfo>;
-}) {
-  if (faults === null) return null;
+/** One line that sums up the faults, and how serious the worst one is. Used as the panel's heading. */
+export function faultSummary(
+  faults: Fault[] | null,
+  pending: Fault[] | null,
+  readiness: Readiness | null,
+  explanations?: Record<string, FaultInfo>,
+): { text: string; level: "now" | "soon" | "ok" | "none" } {
+  if (faults === null) return { text: "Faults", level: "none" };
   const groups = groupFaults(faults, explanations);
   const count = (u: Urgency) => groups.filter((g) => g.info?.urgency === u).length;
   const now = count("now");
   const soon = count("soon");
   const level = now || readiness?.milOn ? "now" : soon ? "soon" : groups.length ? "ok" : "none";
   const parts: string[] = [];
-  if (readiness?.milOn) parts.push("Engine light on");
-  if (!groups.length) parts.push("No stored faults");
+  if (!groups.length) parts.push("No faults");
   else {
-    parts.push(`${groups.length} ${groups.length === 1 ? "problem" : "problems"}`);
+    parts.push(`${groups.length} ${groups.length === 1 ? "fault" : "faults"}`);
     if (now) parts.push(`${now} to fix now`);
     else if (soon) parts.push(`${soon} to fix soon`);
     else parts.push("fine to drive");
   }
   if (pending?.length) parts.push(`${pending.length} pending`);
-  return (
-    <a className={`summary summary-${level}`} href="#faults">
-      <span>{parts.join(". ")}.</span>
-      {groups.length > 0 && <span className="summary-go">See faults</span>}
-    </a>
-  );
+  return { text: `${parts.join(", ")}.`, level };
 }
 
 function FaultRow({
@@ -348,10 +337,15 @@ export function FaultPanel({
   const f = profile.faults;
   const done = readiness?.monitors.filter((m) => m.complete).length ?? 0;
 
+  const summary = faultSummary(faults, pending, readiness, f?.explanations);
+
   return (
     <div className="panel" id="faults">
       <div className="panel-head">
-        <h2>Faults</h2>
+        <h2 className={`faults-title level-${summary.level}`}>
+          {summary.level !== "none" && <i aria-hidden />}
+          {summary.text}
+        </h2>
         <div>
           <button className="quiet" disabled={!live || busy} onClick={onRead}>
             Read

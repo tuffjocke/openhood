@@ -15,6 +15,7 @@ describe("car reports", () => {
       assert.ok(["kkl", "elm327"].includes(r.adapter), `${where}: adapter`);
       assert.ok(["worked", "partly", "failed"].includes(r.result), `${where}: result`);
       assert.match(r.date, /^\d{4}-\d{2}-\d{2}$/, `${where}: date`);
+      if (r.adapterModel !== undefined) assert.match(r.adapterModel, /^[\p{L}\p{N} .+-]{2,60}$/u, `${where}: adapterModel`);
       // Notes are read by people and by AI agents working in the repo: keep them short and plain.
       if (r.notes !== undefined) {
         assert.ok(r.notes.length <= 160, `${where}: notes longer than 160 characters`);
@@ -34,5 +35,15 @@ describe("car reports", () => {
     assert.equal(found.length, 3);
     assert.equal(summarise(found), "Read by 2 people (2002 to 2004), with an ELM327 adapter. 1 more had trouble.");
     assert.equal(summarise([]), null);
+  });
+
+  it("searches the shop for the person's country, by product name", async () => {
+    const { ADAPTER_PICKS, amazonSearch, amazonSite } = await import("@/core/adapters");
+    assert.equal(amazonSite("sv-SE"), "amazon.se");
+    assert.equal(amazonSite("en"), "amazon.com");
+    const url = new URL(amazonSearch(ADAPTER_PICKS[0], "de-DE"));
+    assert.equal(url.host, "www.amazon.de");
+    assert.equal(url.searchParams.get("k"), ADAPTER_PICKS[0].name);
+    assert.equal(url.searchParams.has("tag"), false, "no affiliate tag");
   });
 });

@@ -99,6 +99,8 @@ export function carReportUrl(entry: Record<string, unknown>): string {
     JSON.stringify(entry, null, 2),
     "```",
     "",
+    "Which adapter did you use (brand and model)?",
+    "",
     "Anything to add (engine, what didn't work)?",
     "",
   ].join("\n");

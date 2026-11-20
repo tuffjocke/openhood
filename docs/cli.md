@@ -31,7 +31,8 @@ npm run openhood -- live   --profile generic-obd2 --port COM3 --seconds 5
 npm run openhood -- request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
 
 # read the car and add what worked to profiles/car-reports.json
-npm run openhood -- record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003
+npm run openhood -- record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
+  --adapter-model "Vgate iCar Pro 2S"
 ```
 
 ## The shared list of cars

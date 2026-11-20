@@ -217,6 +217,8 @@ export interface RecordOptions extends ConnectOptions {
   model: string;
   year: number;
   engine?: string;
+  /** What the adapter is sold as, e.g. "Vgate iCar Pro 2S". */
+  adapterModel?: string;
   notes?: string;
 }
 
@@ -251,7 +253,8 @@ export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarRepor
     } catch {
       result = "partly";
     }
-    report = { ...base, adapter, protocol, result, values, ...(o.notes ? { notes: plain(o.notes) } : {}) };
+    const model = o.adapterModel?.replace(/[^\p{L}\p{N} .+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+    report = { ...base, adapter, ...(model ? { adapterModel: model } : {}), protocol, result, values, ...(o.notes ? { notes: plain(o.notes) } : {}) };
   } catch (e) {
     if (e instanceof UserError) throw e;
     // A port that won't open says nothing about the car: don't record it.

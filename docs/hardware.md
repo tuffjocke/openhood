@@ -26,6 +26,13 @@ firmware, with very mixed quality. Common advice from the OBD community:
   Many "v2.1" clones leave out commands and drop answers.
 - If an adapter connects but readings stop or come back garbled, the adapter is the first suspect.
 
+**The ones we name** (in the app under "What to buy", from `core/adapters.ts`): Vgate iCar Pro 2S and
+Veepeak OBDCheck BLE as budget Bluetooth picks, OBDLink EX for USB, OBDLink MX+ as the best. They come
+from independent reviews ([iamcarhacker.com](https://iamcarhacker.com/best-elm327-obd2-adapters/),
+[OBDLink's own comparison](https://support.obdsol.com/support/solutions/articles/43000713351)), not from
+our testing. The app says "not tested with Openhood yet" for each until a car report names it. The
+links are shop searches by product name, never affiliate links.
+
 How to connect it:
 
 - **USB adapter:** plug it in, press **Read my car**, choose it in the list.

@@ -47,7 +47,7 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
-components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
+components/FaultPanel     faults: the summary is the panel heading, grouped rows, explanations, urgency, freeze frames, pending, history
 components/FirstRun       landing until the first connection, in one fixed order: headline and one sentence, the car
                           fields (the one thing to do), the answer panel (verdict, small browser / AI agent switch,
                           steps and read button), then three same-shaped sections: What you get (demo), Find the
@@ -57,6 +57,8 @@ components/landing/       AgentTrack (setup + ready-made request for a coding ag
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
+core/adapters.ts          adapters we recommend by name, with shop searches (no affiliate links); shown on /adapters
+                          as tested only when a car report names them (adapterModel)
 core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a-vehicle.md, tested)
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles

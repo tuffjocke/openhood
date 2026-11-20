@@ -10,7 +10,8 @@
  *   faults  --profile <id> [car]     read fault codes
  *   live    --profile <id> [car] [--seconds 5]
  *   request --profile <id> [car] <hex>   one read-only raw request, e.g. "01 0C"
- *   record  --profile <id> --port <path> --make <make> --model <model> --year <year> [--engine ..] [--notes ..]
+ *   record  --profile <id> --port <path> --make <make> --model <model> --year <year>
+ *           [--adapter-model "Vgate iCar Pro 2S"] [--engine ..] [--notes ..]
  *                                    read the car and add what worked to profiles/car-reports.json
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio
  *
@@ -70,7 +71,7 @@ async function main() {
       case "record": {
         const str = (k: string) => (typeof flags[k] === "string" ? (flags[k] as string) : undefined);
         if (!str("make") || !str("model") || !str("year")) throw new UserError("record needs --make, --model and --year.");
-        const r = await recordCar(rt, { ...connectOpts(), make: str("make")!, model: str("model")!, year: Number(str("year")), engine: str("engine"), notes: str("notes") });
+        const r = await recordCar(rt, { ...connectOpts(), make: str("make")!, model: str("model")!, year: Number(str("year")), engine: str("engine"), adapterModel: str("adapter-model"), notes: str("notes") });
         print(r);
         console.error("Added to profiles/car-reports.json. Send it in with a pull request so others with this car know what works.");
         return;

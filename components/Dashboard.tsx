@@ -22,7 +22,7 @@ import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { Gauge } from "./Gauge";
 import type { Point } from "./Sparkline";
-import { FaultPanel, FaultSummary } from "./FaultPanel";
+import { FaultPanel } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
@@ -354,7 +354,6 @@ export default function Dashboard() {
           <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title="Back to start">
             Openhood
           </button>
-          {!showFirstRun && demo && <span className="demo-name">Demo car</span>}
           {!showFirstRun && !demo && (
             <VehiclePicker
               profiles={PROFILES}
@@ -365,22 +364,27 @@ export default function Dashboard() {
             />
           )}
         </div>
-        {!showFirstRun && (
+        {!showFirstRun && demo && (
+          <div className="actions">
+            <span className="demo-name">Demo car, made-up faults</span>
+            <button onClick={disconnect} disabled={status === "connecting"}>
+              Back to start
+            </button>
+          </div>
+        )}
+        {!showFirstRun && !demo && (
           <div className="actions">
             <span className={`status status-${status}`}>
               <i />
               <span className="status-text">
                 {status === "idle" && "Not connected"}
                 {status === "connecting" && "Waking the car…"}
-                {status === "live" && `${demo ? "Demo" : "Live"}, ${rate.toFixed(0)} reads a second`}
+                {status === "live" && "Connected"}
                 {status === "error" && "Stopped"}
               </span>
             </span>
             {status === "idle" || status === "error" ? (
               <span className="action-buttons">
-                <button className="quiet" onClick={() => connect("simulator")}>
-                  Demo car
-                </button>
                 {bluetoothOk && (profile.adapters ?? ["kkl"]).includes("elm327") && (
                   <button className="quiet" onClick={() => connect("bluetooth")}>
                     Bluetooth
@@ -411,15 +415,6 @@ export default function Dashboard() {
         </p>
       )}
 
-      {demo && status === "live" && (
-        <p className="demo-banner">
-          <strong>Demo car.</strong> Made-up faults, not yours.{" "}
-          <button className="link-button" onClick={disconnect}>
-            Back to start
-          </button>
-        </p>
-      )}
-
       {showFirstRun ? (
         <FirstRun
           vehicle={vehicleText}
@@ -435,7 +430,6 @@ export default function Dashboard() {
         />
       ) : (
         <>
-          <FaultSummary faults={faults} pending={pending} readiness={readiness} explanations={profile.faults?.explanations} />
         </>
       )}
 
@@ -460,22 +454,21 @@ export default function Dashboard() {
           onImportHistory={importHistory}
         />
 
-        <div className="panel">
-          <div className="panel-head">
-            <h2>Log a drive</h2>
-            <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
-              {recording ? "Stop and save CSV" : "Start"}
-            </button>
-          </div>
-          <p className="muted">
-            {recording
-              ? `Recording ${Math.floor(recSeconds / 60)}:${String(recSeconds % 60).padStart(2, "0")} · ${rows.current.length} rows at 10 Hz`
-              : "Every channel, ten times a second, saved as CSV when you stop."}
-          </p>
-        </div>
       </section>
 
-      <h2 className="section-title">Live data</h2>
+      <div className="section-head">
+        <h2 className="section-title">Live data</h2>
+        <span className="section-tools">
+          {recording && (
+            <span className="rec-time">
+              {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+            </span>
+          )}
+          <button className={recording ? "rec" : "quiet"} disabled={!live && !recording} onClick={toggleRecording}>
+            {recording ? "Stop and save" : "Log a drive"}
+          </button>
+        </span>
+      </div>
           <section className="grid cluster">
             {profile.channels.map((c) => {
               const v = latest.current[c.key];

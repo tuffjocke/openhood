@@ -2711,3 +2711,101 @@ details.more p {
   font: 12.5px/1.5 var(--mono);
   white-space: pre-wrap;
 }
+
+/* Dashboard: faults are the page, live data follows. Nothing is said twice. */
+.lower {
+  display: block;
+  margin-top: 28px;
+}
+
+.faults-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.faults-title i {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.faults-title.level-soon i {
+  background: var(--sign);
+}
+
+.faults-title.level-now i {
+  background: var(--falu);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 56px 0 16px;
+}
+
+.section-head .section-title {
+  margin: 0;
+}
+
+.section-head + .grid {
+  margin-top: 0;
+}
+
+.section-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rec-time {
+  font: 600 20px/1 var(--num);
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-name {
+  height: 40px;
+}
+
+/* Named adapters on the help page */
+.prose .picks {
+  list-style: none;
+  margin-top: 16px;
+  padding: 0;
+}
+
+.prose .picks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.prose .picks li + li {
+  margin-top: 8px;
+}
+
+.prose .picks p {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.pick-how {
+  margin-left: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.prose .picks a {
+  flex: none;
+  font-weight: 500;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { firstPick } from "@/core/adapters";
 import { addCarPrompt, carName, requestCarUrl, type CarDetails } from "@/core/add-car";
 import Link from "next/link";
 import { allMakes, allModels, genericProfile, matches, tidyName } from "@/core/catalog";
@@ -21,8 +22,8 @@ export function AdapterAdvice({ profile, year }: { profile: VehicleProfile; year
   const kkl = adapters[0] === "kkl";
   return (
     <p className="advice">
-      {kkl ? "Needs a KKL cable, about \u20ac20." : "Needs an ELM327 adapter, about \u20ac20 to \u20ac40."}
-      {!kkl && adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">Which one?</Link>
+      {kkl ? "Needs a KKL cable, about \u20ac20." : `Needs an ELM327 adapter, like the ${firstPick("elm327")?.name}.`}
+      {!kkl && adapters.includes("kkl") && year < 2008 && " A KKL cable works too."} <Link href="/adapters">What to buy</Link>
     </p>
   );
 }

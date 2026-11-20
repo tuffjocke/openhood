@@ -17,6 +17,8 @@ export interface CarReport {
   /** Profile used, e.g. "generic-obd2". */
   profile: string;
   adapter: AdapterKind;
+  /** What the adapter is sold as, e.g. "Vgate iCar Pro 2S". Lets the adapters page say what's tested. */
+  adapterModel?: string;
   /** The connection as reported, e.g. "ISO 15765-4 (CAN 11/500)" or "KWP2000 fast init". */
   protocol: string;
   /** "worked": connected and read faults. "partly": connected, something failed. "failed": no connection. */
