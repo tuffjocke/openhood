@@ -75,6 +75,8 @@ export default function Dashboard() {
   const [pending, setPending] = useState<Fault[] | null>(null);
   const [faultHistory, setFaultHistory] = useState<HistoryEntry[]>([]);
   const [busy, setBusy] = useState(false);
+  /** Phones show the first four readings (and any past its limit) until asked for the rest. */
+  const [allReadings, setAllReadings] = useState(false);
   const [recording, setRecording] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [serialOk, setSerialOk] = useState(true);
@@ -453,7 +455,7 @@ export default function Dashboard() {
           </button>
         </span>
       </div>
-          <section className="grid cluster">
+          <section className={`grid cluster${allReadings ? " all" : ""}`}>
             {profile.channels.map((c) => {
               const v = latest.current[c.key];
               const warn = isWarn(c, v);
@@ -475,7 +477,11 @@ export default function Dashboard() {
               );
             })}
           </section>
-
+          {profile.channels.length > 4 && (
+            <button className="quiet show-all" aria-expanded={allReadings} onClick={() => setAllReadings(!allReadings)}>
+              {allReadings ? "Show fewer" : "Show all"}
+            </button>
+          )}
 
       <section className="lower">
         <FaultPanel
