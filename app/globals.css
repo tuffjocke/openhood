@@ -3218,3 +3218,31 @@ main > details.more {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* One row under the fault cards: More on the left, Clear all and Read again at the end. */
+.tool-row {
+  position: relative;
+  max-width: 640px;
+  margin: 20px auto 0;
+}
+
+.tool-row .more-data {
+  max-width: none;
+  margin: 0;
+}
+
+.tool-buttons {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.tool-buttons button.quiet {
+  background: var(--surface);
+}
+
+#faults .readiness {
+  margin-top: 0;
+}

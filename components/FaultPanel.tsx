@@ -67,7 +67,9 @@ export function groupFaults(faults: Fault[], explanations?: Record<string, Fault
       groups.push(ng);
     }
   }
-  return groups;
+  // Most urgent first; faults without an explanation last. Equal ones keep the car's order.
+  const rank = (g: FaultGroup) => (g.info ? RANK[g.info.urgency] : -1);
+  return groups.sort((a, b) => rank(b) - rank(a));
 }
 
 /** One line that sums up the faults, and how serious the worst one is. Used as the panel's heading. */
@@ -310,7 +312,8 @@ export function FaultPanel({
   pending,
   readiness,
   history,
-  onRead,
+  confirming,
+  setConfirming,
   onClear,
   onFreezeFrame,
   onForgetHistory,
@@ -326,38 +329,20 @@ export function FaultPanel({
   pending: Fault[] | null;
   readiness: Readiness | null;
   history: HistoryEntry[];
-  onRead: () => void;
+  /** The "really clear?" question is open. The button that opens it lives in the dashboard's tool row. */
+  confirming: boolean;
+  setConfirming: (open: boolean) => void;
   onClear: () => void;
   onFreezeFrame: (f: Fault) => Promise<Values | null>;
   onForgetHistory: () => void;
   onExportHistory: () => void;
   onImportHistory: (file: File) => Promise<string>;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const f = profile.faults;
   const done = readiness?.monitors.filter((m) => m.complete).length ?? 0;
 
-  const summary = faultSummary(faults, pending, readiness, f?.explanations);
-
   return (
     <div className="panel" id="faults">
-      <div className="panel-head">
-        <h2 className={`faults-title level-${summary.level}`}>
-          {summary.level !== "none" && <i aria-hidden />}
-          {summary.text}
-        </h2>
-        <div>
-          {live && !!faults?.length && f?.clear && (
-            <button className="quiet" disabled={busy || confirming} onClick={() => setConfirming(true)}>
-              Clear all
-            </button>
-          )}
-          <button className="quiet" disabled={!live || busy} onClick={onRead}>
-            Read again
-          </button>
-        </div>
-      </div>
-
       {confirming && (
         <div className="confirm" role="alertdialog" aria-label="Clear fault codes?">
           <p>

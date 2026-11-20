@@ -85,6 +85,7 @@ export default function Dashboard() {
   const [adapter, setAdapter] = useState<string | undefined>(undefined);
   /** The "did this match your car?" answer for this connection. */
   const [asked, setAsked] = useState<"yes" | "no" | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -487,7 +488,8 @@ export default function Dashboard() {
           pending={pending}
           readiness={readiness}
           history={demo ? [] : faultHistory}
-          onRead={() => faultAction(false)}
+          confirming={confirmClear}
+          setConfirming={setConfirmClear}
           onClear={() => faultAction(true)}
           onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
           onForgetHistory={forgetHistory}
@@ -514,6 +516,24 @@ export default function Dashboard() {
         <HelpAddCar car={{ make: selection.make, model: selection.model, year: selection.year }} />
       )}
 
+      <div className="tool-row">
+        <span className="tool-buttons">
+          {live && !!faults?.length && profile.faults?.clear && (
+            <button
+              className="quiet"
+              disabled={busy || confirmClear}
+              onClick={() => {
+                setConfirmClear(true);
+                document.getElementById("faults")?.scrollIntoView({ block: "nearest" });
+              }}
+            >
+              Clear all
+            </button>
+          )}
+          <button className="quiet" disabled={!live || busy} onClick={() => faultAction(false)}>
+            Read again
+          </button>
+        </span>
       <details className="more-data">
         <summary>More</summary>
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
@@ -536,6 +556,7 @@ export default function Dashboard() {
           <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
         </p>
       </details>
+      </div>
       </>
       )}
 
