@@ -680,14 +680,15 @@ button.mark-name:hover:not(:disabled) {
 }
 
 /* The chosen car, once the fields have done their job. */
+/* The chosen car, once the fields have done their job: a quiet first line inside the step card. */
 .car-chosen {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 16px;
-  margin: 0;
-  font-size: 19px;
-  color: var(--ink-soft);
+  gap: 4px 14px;
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: var(--muted);
 }
 
 .car-chosen strong {
@@ -696,7 +697,7 @@ button.mark-name:hover:not(:disabled) {
 }
 
 .car-chosen .link-button {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .car-result {
@@ -1066,7 +1067,8 @@ main > details.more {
 }
 
 /* The step starts the panel. */
-.car-result > .step:first-child {
+.car-result > .step:first-child,
+.car-chosen + .step {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;

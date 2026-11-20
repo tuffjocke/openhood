@@ -152,19 +152,6 @@ export function CarChooser({
   const folded = !brief && !!car && !editing;
   return (
     <div className="chooser">
-      {folded && (
-        <p className="car-chosen">
-          <span>
-            <strong>
-              {car.make} {car.model}
-            </strong>{" "}
-            {car.year}
-          </span>
-          <button className="link-button" onClick={() => setEditing(true)}>
-            Change car
-          </button>
-        </p>
-      )}
       {!folded && (
       <div className="car-fields">
         <label>
@@ -280,6 +267,19 @@ export function CarChooser({
 
       {car && (
         <div className="car-result">
+          {folded && (
+            <p className="car-chosen">
+              <span>
+                <strong>
+                  {car.make} {car.model}
+                </strong>{" "}
+                {car.year}
+              </span>
+              <button className="link-button" onClick={() => setEditing(true)}>
+                Change car
+              </button>
+            </p>
+          )}
           {
             <>
                 {found.length > 1 && (
