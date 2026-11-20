@@ -168,7 +168,7 @@ export function FirstRun({
         <div className="hero-text">
           <h1>Engine light on? Find out why.</h1>
           <p className="lede">
-            A free fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
+            A free, open source fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
           </p>
 
           <div className="start">
