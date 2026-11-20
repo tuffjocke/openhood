@@ -153,9 +153,7 @@ export function CarChooser({
     ? ""
     : supported
       ? `${found.length === 1 ? `${found[0].engine}. ` : ""}${profile?.status === "experimental" ? "Not tested on a real car yet." : ""}`
-      : car.year < 2001
-        ? "It\u2019s an older car, so it may not answer. Trying can\u2019t hurt."
-        : "";
+      : "";
 
   return (
     <div className="chooser">
@@ -265,9 +263,9 @@ export function CarChooser({
                 <p className="verdict">
                   {supported
                     ? "Yes, someone has already added this car to Openhood."
-                    : `Nobody has added this car yet, but Openhood ${
-                        car.year >= 2004 ? "can very likely" : car.year >= 2001 ? "can probably" : "may"
-                      } still read its faults.`}
+                    : car.year < 2001
+                      ? "Nobody has added this car yet. It\u2019s an older car, so it may not answer, but trying can\u2019t hurt."
+                      : `Nobody has added this car yet, but Openhood can ${car.year >= 2004 ? "very likely" : "probably"} still read its faults.`}
                   {supported && <i className="tick" role="img" aria-label="Added" />}
                 </p>
               )}
