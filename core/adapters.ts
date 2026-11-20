@@ -31,6 +31,7 @@ export const ADAPTER_PICKS: AdapterPick[] = [
     products: {
       "amazon.com": "https://www.amazon.com/Vgate-iCar-Pro-Android-Windows/dp/B0CYZRMCK9",
       "amazon.de": "https://www.amazon.de/Vgate-iCar-Pro-2S-Diagnostic/dp/B0D4Y77CYX",
+      "amazon.se": "https://www.amazon.se/dp/B0D4Y77CYX",
     },
   },
   { kind: "elm327", name: "Veepeak OBDCheck BLE", connects: "Bluetooth", why: "Cheap, also well reviewed." },
@@ -62,14 +63,12 @@ export function amazonSite(locale: string): string {
 export const amazonSearch = (pick: AdapterPick, locale: string) =>
   `https://www.${amazonSite(locale)}/s?k=${encodeURIComponent(pick.search ?? pick.name)}`;
 
-const EU_SITES = ["amazon.se", "amazon.fr", "amazon.it", "amazon.es", "amazon.nl", "amazon.com.be", "amazon.pl"];
-
 /**
- * Where "buy" goes: the product page on the person's own Amazon site if we know one, the German
- * page for other EU sites (it ships across the EU), otherwise a search by name.
+ * Where "buy" goes: the product page on the person's own Amazon site if we know one, otherwise a
+ * search by name on their site. Never another country's listing: it may not open or deliver there.
  */
 export function amazonLink(pick: AdapterPick, locale: string): { url: string; product: boolean } {
   const site = amazonSite(locale);
-  const url = pick.products?.[site] ?? (EU_SITES.includes(site) ? pick.products?.["amazon.de"] : undefined);
+  const url = pick.products?.[site];
   return url ? { url, product: true } : { url: amazonSearch(pick, locale), product: false };
 }

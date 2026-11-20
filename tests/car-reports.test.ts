@@ -48,10 +48,11 @@ describe("car reports", () => {
     const { amazonLink } = await import("@/core/adapters");
     for (const p of ADAPTER_PICKS)
       for (const u of Object.values(p.products ?? {})) {
-        assert.match(u, /^https:\/\/www\.amazon\.[a-z.]+\/[^?]*\/dp\/[A-Z0-9]{10}$/, `${p.name}: a plain product link`);
+        assert.match(u, /^https:\/\/www\.amazon\.[a-z.]+\/([^?]*\/)?dp\/[A-Z0-9]{10}$/, `${p.name}: a plain product link`);
       }
     assert.equal(amazonLink(ADAPTER_PICKS[0], "en-US").product, true);
-    assert.match(amazonLink(ADAPTER_PICKS[0], "sv-SE").url, /amazon\.de\/.*\/dp\//, "EU falls back to the German listing");
+    assert.match(amazonLink(ADAPTER_PICKS[0], "sv-SE").url, /^https:\/\/www\.amazon\.se\/dp\//, "Sweden gets the Swedish listing");
+    assert.equal(amazonLink(ADAPTER_PICKS[0], "fr-FR").product, false, "no listing known: a search on their own site");
     assert.equal(amazonLink(ADAPTER_PICKS[0], "en-AU").product, false, "elsewhere: a search");
   });
 });
