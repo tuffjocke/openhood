@@ -141,8 +141,11 @@ Follow docs/adding-a-vehicle.md. In short:
   needed for that step. Ask for contributions only at the moment they apply (after a read, after a
   failure, after reading an unlisted car), never up front.
 - Hierarchy: one type scale (h1, section h2, verdict 22, body 16, small 14) and one primary action per
-  screen. New things on the start page go into the existing order (see the "hierarchy" block at the end
-  of globals.css) or behind a link, not in a new box of their own.
+  screen. New things on the start page go into the existing order (car, adapter, plug in, then the demo)
+  or behind a link, not in a new box of their own.
+- `app/globals.css` is ordered by component, in the order things appear on screen (its header lists the
+  sections). Change the rule that already styles an element, or add one next to it. Never append an
+  override block at the end of the file, and delete a component's styles when you delete the component.
 - Writing: plain English, no em or en dashes in UI text. As few words as possible: petrol heads don't
   like reading. No line of text unless it's needed; details go behind a link.
 - **Credit and licences.** Code or data ported from another project must be compatible with GPL-3.0
