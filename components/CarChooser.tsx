@@ -87,6 +87,7 @@ export function CarChooser({
   actions,
   autoFocus,
   brief,
+  keepOpen,
   notice,
 }: {
   profiles: VehicleProfile[];
@@ -97,6 +98,8 @@ export function CarChooser({
   autoFocus?: boolean;
   /** Just the car and the verdict, no steps or ways to add it (the header picker). */
   brief?: boolean;
+  /** Keep the fields open once the car is complete (the start page, which shows Continue instead). */
+  keepOpen?: boolean;
   /** Shown between the fields and the answer (the "this browser can't" warning). */
   notice?: ReactNode;
 }) {
@@ -149,7 +152,7 @@ export function CarChooser({
   const profile = engineChosen?.profile ?? found[0]?.profile;
   // The profile a read would use: the car's own (once the engine is known), else standard codes.
   const goWith = supported ? (found.length === 1 || engineChosen ? profile : undefined) : generic;
-  const folded = !brief && !!car && !editing;
+  const folded = !brief && !keepOpen && !!car && !editing;
   return (
     <div className="chooser">
       {!folded && (

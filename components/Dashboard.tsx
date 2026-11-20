@@ -70,10 +70,13 @@ type SavePickerWindow = Window & {
   }) => Promise<{ createWritable(): Promise<{ write(data: string): Promise<void>; close(): Promise<void> }> }>;
 };
 
-export default function Dashboard() {
+/** The start page ("home") or the steps for the chosen car ("read", at /read). */
+export default function Dashboard({ page = "home" }: { page?: "home" | "read" }) {
   const [selection, setSelection] = useState<Selection>({ profileId: PROFILES[0].id });
   const profile = getProfile(selection.profileId) ?? PROFILES[0];
   const [status, setStatus] = useState<Status>("idle");
+  /** The saved car has been read from the browser (the steps page waits for it). */
+  const [loaded, setLoaded] = useState(false);
   const [source, setSource] = useState<Source | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [faults, setFaults] = useState<Fault[] | null>(null);
@@ -110,6 +113,7 @@ export default function Dashboard() {
       const saved = JSON.parse(localStorage.getItem(VEHICLE_KEY) ?? "null") as Selection | null;
       if (saved && getProfile(saved.profileId)) setSelection({ ...saved, chosen: true });
     } catch {}
+    setLoaded(true);
     setSerialOk(WebSerialTransport.supported());
     setBluetoothOk(BluetoothTransport.supported());
   }, []);
@@ -479,6 +483,8 @@ export default function Dashboard() {
 
       {showFirstRun ? (
         <FirstRun
+          page={page}
+          loaded={loaded}
           vehicle={vehicleText}
           selection={selection}
           onSelect={pickVehicle}

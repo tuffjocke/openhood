@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ChannelGroup, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
@@ -122,6 +124,8 @@ function DemoFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }
  * then show exactly what to do next for that car.
  */
 export function FirstRun({
+  page,
+  loaded,
   vehicle,
   selection,
   onSelect,
@@ -133,6 +137,10 @@ export function FirstRun({
   onBluetooth,
   onSimulator,
 }: {
+  /** The start page, or the steps for the chosen car (/read). */
+  page: "home" | "read";
+  /** The saved car has been read from the browser. */
+  loaded: boolean;
   vehicle: string;
   selection: Selection;
   onSelect: (s: Selection) => void;
@@ -146,8 +154,13 @@ export function FirstRun({
   onSimulator: () => void;
 }) {
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
-  // The demo runs in the page while nothing else is connecting.
-  const demo = useDemoCar(profile, !connecting);
+  // The demo runs on the start page while nothing else is connecting.
+  const demo = useDemoCar(profile, page === "home" && !connecting);
+  // The steps page needs a car: without one, go back to the start page to pick it.
+  const router = useRouter();
+  useEffect(() => {
+    if (page === "read" && loaded && !carText) router.replace("/");
+  }, [page, loaded, carText, router]);
   const layout = dialLayout(profile);
   // One chart from each group (air, engine, fuel), up to three.
   const showcaseCharts = layout.groups.map((g) => layout.charts.find((c) => c.group === g)!).slice(0, 3);
@@ -235,6 +248,38 @@ export function FirstRun({
     );
   };
 
+  if (page === "read")
+    return (
+      <section className="first-run read-page" aria-labelledby="read-title">
+        <h1 id="read-title" className="sr-only">
+          Read your car
+        </h1>
+        {carText && (
+          <div className="start">
+            <div className="car-result">
+              <p className="car-chosen">
+                <span>
+                  <strong>
+                    {selection.make} {selection.model}
+                  </strong>{" "}
+                  {selection.year}
+                </span>
+                <Link className="link-button" href="/">
+                  Change car
+                </Link>
+              </p>
+              {nextStep(profile, !profile.generic)}
+            </div>
+          </div>
+        )}
+        <p className="read-demo">
+          <button className="link-button" onClick={onSimulator} disabled={!!connecting}>
+            {connecting === "simulator" ? "Starting the demo…" : "Or try a demo car first"}
+          </button>
+        </p>
+      </section>
+    );
+
   return (
     <section className="first-run" aria-label="Getting started">
       <div className="hero">
@@ -244,8 +289,18 @@ export function FirstRun({
             A free, open source fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
           </p>
         </div>
-        <div className="start">
-          <CarChooser profiles={PROFILES} selection={selection} onSelect={onSelect} actions={nextStep} />
+        <div className="start home">
+          <CarChooser
+            profiles={PROFILES}
+            selection={selection}
+            onSelect={onSelect}
+            keepOpen
+            actions={() => (
+              <Link className="button big continue" href="/read">
+                Continue
+              </Link>
+            )}
+          />
         </div>
       </div>
 
