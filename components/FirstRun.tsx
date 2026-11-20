@@ -1,20 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Channel, VehicleProfile } from "@/core/profile";
+import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { Gauge } from "./Gauge";
 import { CodeLookup } from "./landing/CodeLookup";
-import { Decoder } from "./landing/Decoder";
+import { EngineLight } from "./landing/EngineLight";
 import { SocketGuide } from "./landing/SocketGuide";
 import type { Selection } from "./VehiclePicker";
 
 /** A live reading from the selected profile's simulator, shown in the hero. Stops when unmounted. */
 function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: string }) {
   const [values, setValues] = useState<Record<string, number>>({});
+  const [fault, setFault] = useState<Fault | null>(null);
   const main = profile.channels[0];
   const side = profile.channels.slice(1, 3);
 
@@ -22,10 +23,20 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
     let alive = true;
     const s = new Session(profile, new SimulatedTransport(profile));
     setValues({});
+    setFault(null);
     const ids = [...new Set(profile.schedule)];
     (async () => {
       try {
         await s.connect();
+        if (profile.faults) {
+          const faults = await s.readFaults();
+          // Show the most telling one: explained, and the most urgent first.
+          const rank = (f: Fault) => {
+            const u = profile.faults?.explanations?.[f.id]?.urgency;
+            return u === "soon" ? 0 : u === "now" ? 1 : u === "ok" ? 2 : 3;
+          };
+          if (alive) setFault([...faults].sort((a, b) => rank(a) - rank(b))[0] ?? null);
+        }
         while (alive) {
           for (const id of ids) {
             if (!alive) break;
@@ -75,10 +86,31 @@ function LivePreview({ profile, vehicle }: { profile: VehicleProfile; vehicle: s
           </div>
         ))}
       </dl>
+      {fault && <PreviewFault fault={fault} profile={profile} />}
       <figcaption>
-        A simulated {vehicle || "car"}, live. {main ? `${main.label} in ${main.unit}.` : ""}
+        A demo {vehicle || "car"}, running live in your browser. {main ? `${main.label} in ${main.unit}.` : ""}
       </figcaption>
     </figure>
+  );
+}
+
+const URGENCY: Record<Urgency, string> = { ok: "Fine to drive", soon: "Fix soon", now: "Fix now" };
+
+/** One fault from the demo car, explained the way Openhood explains a real one. */
+function PreviewFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }) {
+  const info = profile.faults?.explanations?.[fault.id];
+  return (
+    <div className="preview-fault">
+      <EngineLight lit />
+      <div>
+        <p className="preview-fault-head">
+          {fault.code && <span className="preview-fault-code">{fault.code}</span>}
+          {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
+        </p>
+        <p className="preview-fault-title">{info?.title ?? fault.name}</p>
+        {info?.check && <p className="preview-fault-check">Check first: {info.check}</p>}
+      </div>
+    </div>
   );
 }
 
@@ -147,22 +179,11 @@ export function FirstRun({
             when you choose to. Nothing is sent anywhere unless you share it.
           </p>
         </div>
-        <Decoder />
+        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </div>
 
       <SocketGuide />
       <CodeLookup />
-
-      <section className="band" aria-labelledby="live-title">
-        <div className="band-text">
-          <h2 id="live-title">Live data too</h2>
-          <p>
-            Once connected, the dash comes alive: revs, temperatures, boost and air flow as you drive, and you can log a
-            drive to a file. This is a demo car running right now.
-          </p>
-        </div>
-        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
-      </section>
     </section>
   );
 }

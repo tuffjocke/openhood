@@ -1099,20 +1099,53 @@ pre {
   color: var(--muted);
 }
 
-/* The signature moment: a code becomes plain words. */
-.decoder {
-  margin: 0;
-  padding: 28px 30px 24px;
-  border-radius: var(--r-lg);
-  min-height: 390px;
-  display: flex;
-  flex-direction: column;
+/* One fault from the demo car, under the gauges. */
+.preview-fault {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cl-line);
 }
 
-.decoder-top {
+.preview-fault p {
+  margin: 0;
+}
+
+.preview-fault-head {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 12px;
+}
+
+.preview-fault-code {
+  font: 600 26px/1 var(--num);
+  letter-spacing: 0.03em;
+}
+
+.preview-fault-title {
+  margin-top: 8px !important;
+  font: 600 17px/1.3 var(--sans);
+}
+
+.preview-fault-check {
+  margin-top: 6px !important;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cl-muted);
+}
+
+.preview .urgency-ok {
+  background: var(--cl-line);
+  color: var(--cl-ink);
+}
+
+.preview .engine-light {
+  width: 44px;
+  height: 30px;
+  margin-top: -2px;
 }
 
 .engine-light {
@@ -1128,87 +1161,10 @@ pre {
   filter: drop-shadow(0 0 10px rgba(245, 163, 0, 0.45));
 }
 
-.decoder-code {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1em;
-  font: 600 clamp(64px, 8vw, 104px) / 0.9 var(--num);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.caret {
-  display: inline-block;
-  width: 0.08em;
-  height: 0.8em;
-  margin-left: 0.06em;
-  background: var(--cl-ink);
-  opacity: 0;
-}
-
-.caret.on {
-  animation: blink 0.9s steps(1) infinite;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 1;
-  }
-}
-
-.decoder-words {
-  margin-top: auto;
-  padding-top: 26px;
-  border-top: 1px solid var(--cl-line);
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
-}
-
-.decoder-words.in {
-  opacity: 1;
-  transform: none;
-}
-
-.decoder-title {
-  margin: 0;
-  font: 600 26px/1.15 var(--sans);
-  letter-spacing: -0.02em;
-}
-
-.decoder-plain {
-  margin: 10px 0 0;
-  max-width: 44ch;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--cl-muted);
-}
-
-.decoder-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px 14px;
-  margin: 18px 0 0;
-  font-size: 14px;
-  color: var(--cl-ink);
-}
-
-.decoder .urgency-ok {
-  background: var(--cl-line);
-  color: var(--cl-ink);
-}
-
-.decoder figcaption {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--cl-muted);
-}
-
 /* The three bands below the hero share one grid: words on the left, the thing itself on the right. */
 .band {
   display: grid;
-  /* Same columns as the hero, so every panel lines up under the decoder. */
+  /* Same columns as the hero, so every panel lines up under the live demo. */
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: clamp(28px, 5vw, 72px);
   align-items: start;
@@ -1435,15 +1391,9 @@ pre {
   .band {
     grid-template-columns: 1fr;
   }
-  .decoder {
-    min-height: 360px;
-  }
 }
 
 @media (max-width: 760px) {
-  .decoder {
-    padding: 22px 20px 20px;
-  }
   .pin-legend div {
     grid-template-columns: 96px 1fr;
   }
@@ -1454,9 +1404,6 @@ pre {
     width: 48px;
     height: 33px;
   }
-  .decoder-title {
-    font-size: 22px;
-  }
 }
 
 /* ------------------------------------------------------ choosing the car */
@@ -1465,7 +1412,7 @@ pre {
   align-items: start;
 }
 
-.hero .decoder {
+.hero .preview {
   position: sticky;
   top: 32px;
 }
@@ -1671,7 +1618,7 @@ pre {
 }
 
 @media (max-width: 900px) {
-  .hero .decoder {
+  .hero .preview {
     position: static;
   }
 }
