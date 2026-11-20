@@ -125,7 +125,10 @@ export function FirstRun({
               {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
             </button>
           </div>
-          <p className="trust">Openhood only reads. Nothing in your car is changed, and nothing leaves this browser.</p>
+          <p className="trust">
+            Openhood only reads, so nothing in your car changes. The one exception is clearing fault codes, and only
+            when you choose to. Nothing is sent anywhere unless you share it.
+          </p>
         </div>
         <Decoder />
       </div>
