@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
-import { PickList } from "./AdapterPicks";
+import { useFirstPick } from "./AdapterPicks";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
@@ -159,20 +159,32 @@ export function FirstRun({
     } catch {}
   }
 
-  const nextStep = (p: VehicleProfile) => {
+  const buy = useFirstPick((profile.adapters ?? ["kkl"])[0]);
+  const nextStep = (p: VehicleProfile, supported: boolean) => {
     const kinds = p.adapters ?? ["kkl"];
     const thing = kinds[0] === "kkl" ? "a KKL cable" : "an ELM327 adapter";
     if (!hasAdapter)
       return (
         <div className="step">
-          <p className="step-ask">Got {thing}?</p>
+          <p className="step-ask">
+            {/* Sure for a car Openhood knows; a good guess for any other car. */}
+            You {supported ? "" : "probably "}need {thing} to connect your {selection.make || "car"} to your computer.
+          </p>
           <div className="chooser-actions">
             <button className="primary big" onClick={() => gotAdapter(true)}>
               I have one
             </button>
+            {buy && (
+              <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
+                {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+              </a>
+            )}
           </div>
-          <p className="step-or">Or get this one:</p>
-          <PickList kind={kinds[0]} limit={1} compact />
+          {buy && (
+            <p className="step-foot">
+              Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+            </p>
+          )}
         </div>
       );
     const ble = bluetoothOk && kinds.includes("elm327");
