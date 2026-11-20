@@ -58,7 +58,7 @@ components/FaultPanel     faults: one card per fault in a single centred column,
                           or nothing: cars can't clear one code (OBD-II mode 04 and the Td5 clear erase everything)
 components/FirstRun       landing until the first connection, like a product page: black and light full-width
                           sections take turns, each light or dark section with one giant word and the thing itself
-                          over it. Black hero: headline left, start box right (one column below 900px), then the
+                          over it. Black hero: headline, line and start box stacked and centred, then the
                           demo car's live dials with callouts. Then "Last 30 seconds" (one chart per group),
                           "Faults" (the demo's fault, opened) and "Any car". Black parts swap the colour tokens,
                           so components need no dark styles of their own. One step at a time: 1 the car
