@@ -46,7 +46,8 @@ export function AgentTrack({ car }: { car: string }) {
     <div className="agent">
       <p className="agent-lede">
         Let an AI agent do it for you. It sets Openhood up, reads your car and explains what it finds. No coding, no
-        terminal: you copy one message into a new chat.
+        terminal: you copy one message into a new chat. You need a computer for this (Windows, Mac or Linux), not a
+        phone.
       </p>
       <ol className="agent-steps">
         <li>

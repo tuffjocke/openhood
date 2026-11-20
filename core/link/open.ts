@@ -1,7 +1,7 @@
 import type { AdapterKind, VehicleProfile } from "../profile";
 import { BluetoothTransport } from "../transport/bluetooth";
 import { SimulatedTransport } from "../transport/simulated";
-import { sleep, type ByteStream } from "../transport/types";
+import { sleep, TimeoutError, type ByteStream } from "../transport/types";
 import { WebSerialTransport } from "../transport/webserial";
 import { ElmLink } from "./elm327";
 import { KlineLink } from "./kline";
@@ -65,6 +65,24 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   }
 
   const port = await WebSerialTransport.choosePort();
+  if (!allowed.includes("elm327")) {
+    // KKL only: don't send probe text onto the car's data line. If the car stays silent, check
+    // whether an ELM327 was plugged in by mistake, to give a useful message.
+    const link = new KlineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
+    const open = link.open.bind(link);
+    link.open = async (connect) => {
+      try {
+        await open(connect);
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) throw e;
+        await link.close();
+        const wrong = await detectAdapter((baudRate) => new WebSerialTransport({ baudRate, echo: false, port }), onTraffic).catch(() => null);
+        if (wrong?.kind === "elm327") throw new WrongAdapterError(needsKkl(profile));
+        throw e;
+      }
+    };
+    return link;
+  }
   const found = await detectAdapter((baudRate) => new WebSerialTransport({ baudRate, echo: false, port }), onTraffic);
   if (found?.kind === "elm327") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));

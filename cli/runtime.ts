@@ -104,6 +104,7 @@ export class Runtime {
     const path = o.port;
     let kind = o.adapter && o.adapter !== "auto" ? o.adapter : undefined;
     let baudRate = profile.link.baudRate;
+    if (!kind && !allowed.includes("elm327")) kind = "kkl"; // nothing to detect, and no probe text on the K-line
     if (!kind) {
       const found = await detectAdapter((b) => new NodeSerialTransport({ path, baudRate: b, echo: false }), this.log);
       kind = found?.kind ?? "kkl";
@@ -234,6 +235,7 @@ export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarRepor
   if (!Number.isInteger(o.year) || o.year < 1980 || o.year > new Date().getFullYear() + 1) throw new UserError(`${o.year} isn't a model year.`);
   if (!o.port) throw new UserError("Recording needs the real car: add --port.");
 
+  const plain = (t: string) => t.replace(/[^\p{L}\p{N} .,:;()'\/+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 160);
   const base = { make: o.make, model: o.model, year: o.year, ...(o.engine ? { engine: o.engine } : {}), profile: o.profile, date: new Date().toISOString().slice(0, 10) };
   let report: CarReport;
   try {
@@ -249,14 +251,14 @@ export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarRepor
     } catch {
       result = "partly";
     }
-    report = { ...base, adapter, protocol, result, values, ...(o.notes ? { notes: o.notes } : {}) };
+    report = { ...base, adapter, protocol, result, values, ...(o.notes ? { notes: plain(o.notes) } : {}) };
   } catch (e) {
     if (e instanceof UserError) throw e;
     // A port that won't open says nothing about the car: don't record it.
     if (/cannot open|no such file|permission denied|access denied|port not open/i.test(String(e)))
       throw new UserError(`Couldn't open ${o.port}: ${e instanceof Error ? e.message : String(e)}. Check the port with: npm run openhood -- ports`);
     const why = (e instanceof Error ? e.message : String(e)).split("\n")[0].slice(0, 120);
-    report = { ...base, adapter: o.adapter === "kkl" ? "kkl" : "elm327", protocol: "none", result: "failed", notes: o.notes ? `${o.notes} (${why})` : why };
+    report = { ...base, adapter: o.adapter === "kkl" ? "kkl" : "elm327", protocol: "none", result: "failed", notes: plain(o.notes ? `${o.notes} (${why})` : why) };
   } finally {
     await rt.disconnect();
   }

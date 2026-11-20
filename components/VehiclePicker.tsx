@@ -77,6 +77,7 @@ export function VehiclePicker({
             selection={selection}
             onSelect={onSelect}
             autoFocus
+            brief
             actions={() => (
               <div className="chooser-actions">
                 <button onClick={() => setOpen(false)}>Done</button>

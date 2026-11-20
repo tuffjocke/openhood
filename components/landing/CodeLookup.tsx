@@ -12,7 +12,13 @@ export function CodeLookup() {
 
   // Shareable links: openhood/#P0171 opens with that code filled in.
   useEffect(() => {
-    const fromHash = normaliseCode(decodeURIComponent(location.hash.slice(1)));
+    let raw = "";
+    try {
+      raw = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return; // a mangled link: just start empty
+    }
+    const fromHash = normaliseCode(raw);
     if (lookupCode(fromHash)) {
       setInput(fromHash);
       document.getElementById("lookup")?.scrollIntoView();

@@ -15,6 +15,12 @@ describe("car reports", () => {
       assert.ok(["kkl", "elm327"].includes(r.adapter), `${where}: adapter`);
       assert.ok(["worked", "partly", "failed"].includes(r.result), `${where}: result`);
       assert.match(r.date, /^\d{4}-\d{2}-\d{2}$/, `${where}: date`);
+      // Notes are read by people and by AI agents working in the repo: keep them short and plain.
+      if (r.notes !== undefined) {
+        assert.ok(r.notes.length <= 160, `${where}: notes longer than 160 characters`);
+        assert.match(r.notes, /^[\p{L}\p{N} .,:;()'\/+-]*$/u, `${where}: notes may only hold plain words and numbers`);
+        assert.doesNotMatch(r.notes, /https?:|www\./i, `${where}: no links in notes`);
+      }
       const text = JSON.stringify(r);
       assert.doesNotMatch(text, /\b[A-HJ-NPR-Z0-9]{17}\b/, `${where}: looks like a VIN`);
       assert.doesNotMatch(text, /\b[PCBU][0-3][0-9A-F]{3}\b/, `${where}: fault codes don't belong here`);

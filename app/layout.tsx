@@ -6,10 +6,31 @@ import "@fontsource/barlow-condensed/600.css";
 import "./globals.css";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const SITE = "https://tuffjocke.github.io/openhood";
+const TITLE = "Openhood: engine light on? Find out why";
+const DESCRIPTION =
+  "Read your car\u2019s fault codes in plain words with a cheap adapter and your browser. Free and open source.";
+
+/**
+ * The site only ever loads its own files. Inline scripts and styles are allowed because the
+ * static export needs them. Only set in production: the dev server needs eval.
+ */
+const CSP =
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+  "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'";
 
 export const metadata: Metadata = {
-  title: "Openhood",
-  description: "Engine light on? Read your car’s fault codes in plain words with a cheap USB cable and your browser. Free and open source.",
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE,
+    siteName: "Openhood",
+    type: "website",
+    images: [{ url: `${SITE}/og.png`, width: 1200, height: 630, alt: "Openhood explains a fault code in plain words" }],
+  },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: [`${SITE}/og.png`] },
   manifest: `${base}/manifest.webmanifest`,
   icons: {
     icon: [{ url: `${base}/favicon-32.png`, sizes: "32x32", type: "image/png" }],
@@ -23,14 +44,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eeece5" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0f0e" },
+    { media: "(prefers-color-scheme: light)", color: "#eef1ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#151a1c" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>{process.env.NODE_ENV === "production" && <meta httpEquiv="Content-Security-Policy" content={CSP} />}</head>
       <body>
         {children}
         <ServiceWorker />

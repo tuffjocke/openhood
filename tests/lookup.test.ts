@@ -19,3 +19,15 @@ describe("code lookup", () => {
     for (const c of EXAMPLE_CODES) assert.ok(lookupCode(c)?.info, c);
   });
 });
+
+describe("typed car names", () => {
+  it("tidies what people type without breaking real names", async () => {
+    const { tidyName } = await import("@/core/catalog");
+    assert.equal(tidyName("  golf "), "Golf");
+    assert.equal(tidyName("v70"), "V70");
+    assert.equal(tidyName("grand   cherokee"), "Grand Cherokee");
+    assert.equal(tidyName("i30"), "i30");
+    assert.equal(tidyName("e-tron"), "e-tron");
+    assert.equal(tidyName("CR-V"), "CR-V");
+  });
+});

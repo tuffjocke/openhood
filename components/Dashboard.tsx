@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hex, NegativeResponse } from "@/core/kwp2000/frame";
 import {
@@ -150,6 +151,7 @@ export default function Dashboard() {
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
       setEverLive(true);
+      window.scrollTo(0, 0); // the faults are at the top
       void refreshFaults(s);
       void s.poll(onValues, (e) => {
         setStatus("error");
@@ -163,11 +165,23 @@ export default function Dashboard() {
   }
 
   async function disconnect() {
+    const wasDemo = source === "simulator";
     setRecording(false);
     await session.current?.disconnect();
     session.current = null;
     setStatus("idle");
     setSource(null);
+    if (wasDemo) goHome(); // the demo isn't their car: nothing to keep on screen
+  }
+
+  /** Back to the start page (car chooser, socket guide, code lookup). */
+  function goHome() {
+    setEverLive(false);
+    setError(null);
+    setFaults(null);
+    setPending(null);
+    setReadiness(null);
+    window.scrollTo(0, 0);
   }
 
   const hKey = historyKey([selection.profileId, selection.make, selection.model, selection.year]);
@@ -182,7 +196,8 @@ export default function Dashboard() {
   }, [hKey]);
 
   function remember(found: Fault[], isPending: boolean) {
-    if (!found.length) return;
+    // The demo's made-up faults must never land in the real car's history.
+    if (!found.length || session.current?.link.adapter === "simulator") return;
     setFaultHistory((prev) => {
       const next = mergeHistory(prev, found, Date.now(), isPending);
       try {
@@ -323,6 +338,7 @@ export default function Dashboard() {
   }
 
   const live = status === "live";
+  const demo = source === "simulator";
   // The guide replaces the empty gauges until the first connection with this car.
   const showFirstRun = !everLive && status !== "live";
   const label = selectionLabel(selection, profile);
@@ -335,8 +351,11 @@ export default function Dashboard() {
     <main className={`shell${showFirstRun ? " is-first-run" : ""}`}>
       <header className="top">
         <div className="mark">
-          <span className="mark-name">Openhood</span>
-          {!showFirstRun && (
+          <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title="Back to start">
+            Openhood
+          </button>
+          {!showFirstRun && demo && <span className="demo-name">Demo car</span>}
+          {!showFirstRun && !demo && (
             <VehiclePicker
               profiles={PROFILES}
               selection={selection}
@@ -353,14 +372,14 @@ export default function Dashboard() {
               <span className="status-text">
                 {status === "idle" && "Not connected"}
                 {status === "connecting" && "Waking the car…"}
-                {status === "live" && `${source === "simulator" ? "Simulator" : "Live"} · ${rate.toFixed(0)} reads/s`}
+                {status === "live" && `${demo ? "Demo" : "Live"}, ${rate.toFixed(0)} reads a second`}
                 {status === "error" && "Stopped"}
               </span>
             </span>
             {status === "idle" || status === "error" ? (
               <span className="action-buttons">
                 <button className="quiet" onClick={() => connect("simulator")}>
-                  Simulator
+                  Demo car
                 </button>
                 {bluetoothOk && (profile.adapters ?? ["kkl"]).includes("elm327") && (
                   <button className="quiet" onClick={() => connect("bluetooth")}>
@@ -368,7 +387,7 @@ export default function Dashboard() {
                   </button>
                 )}
                 <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Not available in this browser"}>
-                  Connect
+                  Read my car
                 </button>
               </span>
             ) : (
@@ -388,6 +407,17 @@ export default function Dashboard() {
               Send a test report
             </a>
           )}
+          {source && source !== "simulator" && " (opens a public GitHub issue you can read before posting)"}
+        </p>
+      )}
+
+      {demo && status === "live" && (
+        <p className="demo-banner">
+          <strong>This is a demo car.</strong> The faults and readings are made up, to show what Openhood does. Nothing here
+          is about your car.{" "}
+          <button className="link-button" onClick={disconnect}>
+            Back to start
+          </button>
         </p>
       )}
 
@@ -407,28 +437,6 @@ export default function Dashboard() {
       ) : (
         <>
           <FaultSummary faults={faults} pending={pending} readiness={readiness} explanations={profile.faults?.explanations} />
-          <section className="grid cluster">
-            {profile.channels.map((c) => {
-              const v = latest.current[c.key];
-              const warn = isWarn(c, v);
-              return (
-                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
-                  <div className="cell-head">{c.label}</div>
-                  <div className="value-row">
-                    {unavailable.has(c.key) ? (
-                      <span className="value na" title="This car doesn't report this value">
-                        n/a
-                      </span>
-                    ) : (
-                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
-                    )}
-                    <span className="unit">{c.unit}</span>
-                  </div>
-                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
-                </div>
-              );
-            })}
-          </section>
         </>
       )}
 
@@ -444,7 +452,7 @@ export default function Dashboard() {
           faults={faults}
           pending={pending}
           readiness={readiness}
-          history={faultHistory}
+          history={demo ? [] : faultHistory}
           onRead={() => faultAction(false)}
           onClear={() => faultAction(true)}
           onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
@@ -467,6 +475,30 @@ export default function Dashboard() {
           </p>
         </div>
       </section>
+
+      <h2 className="section-title">Live data</h2>
+          <section className="grid cluster">
+            {profile.channels.map((c) => {
+              const v = latest.current[c.key];
+              const warn = isWarn(c, v);
+              return (
+                <div className={`cell${warn ? " warn" : ""}`} key={c.key}>
+                  <div className="cell-head">{c.label}</div>
+                  <div className="value-row">
+                    {unavailable.has(c.key) ? (
+                      <span className="value na" title="This car doesn't report this value">
+                        n/a
+                      </span>
+                    ) : (
+                      <span className="value">{v === undefined ? "-" : fmt(v, c.decimals)}</span>
+                    )}
+                    <span className="unit">{c.unit}</span>
+                  </div>
+                  <Gauge value={v} min={c.min} max={c.max} warnAbove={c.warnAbove} warnBelow={c.warnBelow} />
+                </div>
+              );
+            })}
+          </section>
 
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
         <summary>Traffic with the car</summary>
@@ -502,7 +534,7 @@ export default function Dashboard() {
 
       <p className="disclaimer">
         Openhood is free software, provided as is, without any warranty. Use it at your own risk, with the car parked.{" "}
-        <a href="https://github.com/tuffjocke/openhood#disclaimer">Disclaimer</a>
+        <Link href="/disclaimer">Disclaimer</Link>
       </p>
 
       <footer className="foot">

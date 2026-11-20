@@ -49,3 +49,17 @@ export function allMakes(profiles: VehicleProfile[], names: Record<string, strin
 export function allModels(profiles: VehicleProfile[], names: Record<string, string[]>, make: string): string[] {
   return [...new Set([...(names[make] ?? []), ...models(profiles, make)])].sort(sortAlpha);
 }
+
+/**
+ * Tidy a model or make the person typed: trims, collapses spaces, and capitalises words typed in
+ * lowercase ("golf" becomes "Golf", "v70" becomes "V70", "grand cherokee" becomes "Grand Cherokee").
+ * Words that begin with a lone lowercase "i" or "e" before a digit or hyphen are left alone
+ * ("i30", "e-tron").
+ */
+export function tidyName(typed: string): string {
+  return typed
+    .trim()
+    .split(/\s+/)
+    .map((w) => (/^[ie][\d-]/.test(w) ? w : /^[a-z]{2}/.test(w) || /^[a-z]\d/.test(w) ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}

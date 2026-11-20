@@ -20,8 +20,9 @@ const KWP_READ = new Set([
   0x1a, // readEcuIdentification
   0x21, // readDataByLocalIdentifier
   0x22, // readDataByCommonIdentifier
-  0x23, // readMemoryByAddress
 ]);
+// Not here on purpose: 0x23 readMemoryByAddress. Raw ECU memory can hold immobiliser and key data,
+// which is out of scope for Openhood (AGENTS.md).
 
 /** Diagnostic sessions that don't open programming: default (0x81) and extended diagnostics (0x89, 0x92). */
 const SAFE_SESSIONS = new Set([0x81, 0x89, 0x92]);
@@ -38,6 +39,7 @@ export function checkReadOnly(payload: number[]): Verdict {
       : { ok: false, reason: "Only the default and extended diagnostic sessions are allowed, not programming." };
   }
   if (sid === 0x04 || sid === 0x14) return { ok: false, reason: "Clearing faults has its own tool, with a confirmation." };
+  if (sid === 0x23) return { ok: false, reason: "Reading raw ECU memory is not allowed: it can hold immobiliser and key data." };
   if (sid === 0x27) return { ok: false, reason: "Security access is done by the profile's connect step, not by raw requests." };
   return {
     ok: false,

@@ -25,11 +25,16 @@ export interface ReportInput {
   userAgent: string;
 }
 
+/** Traffic as text. Requests that identify the car (VIN, serial numbers) and their answers are hidden. */
 function trafficLines(traffic: TrafficEvent[]) {
-  return traffic.map(
-    (e) => `${(e.t / 1000).toFixed(3).padStart(9)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  ${e.note}` : ""}`,
-  );
+  let hide = false;
+  return traffic.map((e) => {
+    if (e.dir === "tx") hide = !!e.private;
+    return hide ? `${(e.t / 1000).toFixed(3).padStart(9)} ${e.dir === "tx" ? "->" : "<-"} (hidden: identifies the car)` : line(e);
+  });
 }
+
+const line = (e: TrafficEvent) => `${(e.t / 1000).toFixed(3).padStart(9)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  ${e.note}` : ""}`;
 
 export function buildReport(r: ReportInput, trafficLimit = 40): { title: string; body: string } {
   const p = r.profile;

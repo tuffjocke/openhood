@@ -1,7 +1,7 @@
 import { hex, NegativeResponse, positive, SID } from "../kwp2000/frame";
 import type { EcuLink, InitResult, RequestOptions } from "../profile";
 import { TimeoutError, type ByteStream } from "../transport/types";
-import type { Link, Traffic } from "./types";
+import { identifies, type Link, type Traffic } from "./types";
 
 /**
  * An ELM327-compatible adapter (ELM327, OBDLink/STN, and the many clones), over USB or Bluetooth.
@@ -89,9 +89,9 @@ export class ElmLink implements Link {
   ) {}
 
   /** Send one line, return the lines printed before the ">" prompt. */
-  async command(cmd: string, timeoutMs = 2000, note?: string): Promise<string[]> {
+  async command(cmd: string, timeoutMs = 2000, note?: string, priv = false): Promise<string[]> {
     this.stream.flush();
-    this.onTraffic({ t: performance.now(), dir: "tx", bytes: new Uint8Array(0), text: cmd, note });
+    this.onTraffic({ t: performance.now(), dir: "tx", bytes: new Uint8Array(0), text: cmd, note, private: priv });
     await this.stream.write(enc.encode(cmd + "\r"));
     let raw: Uint8Array;
     try {
@@ -130,7 +130,7 @@ export class ElmLink implements Link {
   }
 
   private async ask(payload: number[], opts: RequestOptions): Promise<Uint8Array[]> {
-    const lines = await this.command(hex(Uint8Array.from(payload)).replace(/\s/g, ""), 3000, opts.note);
+    const lines = await this.command(hex(Uint8Array.from(payload)).replace(/\s/g, ""), 3000, opts.note, identifies(payload));
     const sid = payload[0];
     const answers = parseElmResponse(lines);
     const ok = answers.filter((r) => r[0] === positive(sid));

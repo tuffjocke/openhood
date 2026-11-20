@@ -12,7 +12,7 @@ import {
 } from "../kwp2000/frame";
 import type { EcuLink, InitResult, RequestOptions, VehicleProfile } from "../profile";
 import { sleep, TimeoutError, type Transport } from "../transport/types";
-import type { Link, Traffic } from "./types";
+import { identifies, type Link, type Traffic } from "./types";
 
 const RESPONSE_TIMEOUT_MS = 300;
 
@@ -91,7 +91,7 @@ export class KlineLink implements Link {
         ? addressedFrame(payload, addresses.ecu, addresses.tester, addressMode)
         : shortFrame(payload);
     this.transport.flush(); // drop late answers from earlier requests
-    this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note });
+    this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note, private: identifies(payload) });
     await this.transport.write(msg, this.profile.link.interByteMs);
   }
 

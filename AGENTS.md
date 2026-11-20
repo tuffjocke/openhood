@@ -44,14 +44,15 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
 core/safety.ts            which raw requests tools may send: read services only
 components/Dashboard.tsx  the whole UI, driven by the selected profile
-components/CarChooser     make, model, year (any car in names.ts, model typed if unknown), then next steps:
-                          read it if a profile fits, else standard codes or the add-your-car AI prompt
+components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied), then next steps:
+                          read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
 components/FirstRun       landing until the first connection: hero with two tracks (in this browser: CarChooser;
                           with an AI agent: AgentTrack, #agent) + live demo with one explained fault, socket guide, code lookup
 components/landing/       AgentTrack (setup + ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
                           SocketGuide, EngineLight
+components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a-vehicle.md, tested)
@@ -60,7 +61,8 @@ core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
 profiles/car-reports.*    shared knowledge of real cars: what adapter and connection worked (added by
                           `npm run openhood -- record`, shown in CarChooser). Nothing personal: no VIN, no codes
-app/                      Next.js shell + globals.css (all styling)
+app/                      Next.js shell + globals.css (all styling), /adapters and /disclaimer help pages,
+                          layout.tsx (link preview, content security policy in production)
 public/                   manifest, icons, sw.js (offline service worker, bump VERSION when its logic changes)
 components/ServiceWorker  registers sw.js in production builds
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
@@ -110,8 +112,11 @@ Follow docs/adding-a-vehicle.md. In short:
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
 - **Car reports are facts from real cars.** Only add an entry after reading the car (`record` does it).
   Never invent one, and never put a VIN, fault codes or anything else personal in it.
+- **Privacy in reports.** Test reports become public GitHub issues. Requests that identify one car
+  (OBD mode 09, KWP 0x1A) are flagged `private` by the links and hidden from reports, with their answers.
+  Demo (simulator) faults never go into a car's fault history. Car report notes: 160 plain characters, no links.
 - **Tools stay read-only.** The CLI and MCP server only send raw requests that `core/safety.ts` allows.
-  Don't widen that list to include anything that writes, unlocks or programs.
+  Don't widen that list to include anything that writes, unlocks or programs, or reads raw memory (0x23).
 - **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens
   only when the user chooses to (export file, GitHub issue). Discuss in an issue before changing that.
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.
@@ -150,6 +155,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.
+- Help for people lives on the site (/adapters, /disclaimer), not on GitHub. Use `next/link` for them.
+  The start page comes back from the Openhood wordmark, and by itself after the demo.
+- A KKL-only profile is not probed for an ELM327 before connecting (no stray bytes on the K-line); the
+  probe only runs if the car stays silent, to say "wrong adapter".
 - Web Serial needs a user gesture and works in Chrome/Edge desktop and Chrome 148+ Android. Not Safari.
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.
