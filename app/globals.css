@@ -294,25 +294,34 @@ button:disabled {
   letter-spacing: -0.015em;
 }
 
-.vp-fields {
+.car-fields {
   display: grid;
   grid-template-columns: 1.3fr 1.3fr 0.8fr;
   gap: 10px;
 }
 
-.vp-fields label {
+.car-fields label {
   position: relative;
   display: grid;
   gap: 7px;
 }
 
-.vp-fields label > span,
+.car-fields label > span,
 .vp-engines > span {
   font-size: 13px;
   color: var(--muted);
 }
 
-.vp-fields label::after {
+.car-fields input {
+  cursor: text;
+  padding-right: 14px;
+}
+
+.car-fields input::placeholder {
+  color: var(--muted);
+}
+
+.car-fields label:has(select)::after {
   content: "";
   position: absolute;
   right: 16px;
@@ -325,7 +334,8 @@ button:disabled {
   pointer-events: none;
 }
 
-.vp-fields select {
+.car-fields select,
+.car-fields input {
   appearance: none;
   width: 100%;
   height: 48px;
@@ -338,12 +348,14 @@ button:disabled {
   cursor: pointer;
 }
 
-.vp-fields select:focus-visible {
+.car-fields select:focus-visible,
+.car-fields input:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
-.vp-fields select:disabled {
+.car-fields select:disabled,
+.car-fields input:disabled {
   cursor: default;
   color: var(--muted);
   background: color-mix(in srgb, var(--paper) 50%, var(--surface));
@@ -1193,7 +1205,6 @@ pre {
   color: var(--cl-muted);
 }
 
-.how,
 .socket,
 .lookup,
 .curious {
@@ -1204,10 +1215,6 @@ pre {
   margin: 0;
   font: 600 clamp(30px, 3.6vw, 44px) / 1.05 var(--sans);
   letter-spacing: -0.03em;
-}
-
-.how .steps {
-  margin-top: 36px;
 }
 
 /* Where's the socket: drawn like a workshop manual figure. */
@@ -1512,6 +1519,238 @@ pre {
   }
 }
 
+/* ------------------------------------------------------ choosing the car */
+
+.hero {
+  align-items: start;
+}
+
+.hero .decoder {
+  position: sticky;
+  top: 32px;
+}
+
+.start {
+  margin-top: 36px;
+  padding: clamp(20px, 2.6vw, 30px);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.first-run .start h2,
+.vp-head {
+  margin: 0 0 18px;
+  font: 600 22px/1.2 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.car-result {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font: 600 19px/1.3 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.tick {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.tick::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  width: 6px;
+  height: 11px;
+  border-right: 2px solid var(--paper);
+  border-bottom: 2px solid var(--paper);
+  transform: rotate(45deg);
+}
+
+.car-sub {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+}
+
+.engines {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.engines > span {
+  margin-right: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.read-steps {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: read;
+}
+
+.read-steps li {
+  counter-increment: read;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  padding: 6px 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.read-steps li::before {
+  content: counter(read);
+  font: 600 18px/1.3 var(--num);
+  color: var(--muted);
+}
+
+.read-steps a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.chooser-actions {
+  margin-top: 20px;
+}
+
+.start .hero-note {
+  margin-top: 20px;
+  background: var(--sign);
+}
+
+.paths {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.path {
+  padding: 22px 22px 24px;
+  border-radius: var(--r-md);
+  background: var(--paper);
+}
+
+.path h3 {
+  margin: 0;
+  font: 600 18px/1.25 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.path p {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.path .path-note {
+  padding-left: 12px;
+  box-shadow: inset 3px 0 0 var(--sign);
+}
+
+.path .path-foot {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.path-foot a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.copy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 18px;
+}
+
+.copy-hint {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.prompt {
+  margin-top: 14px;
+}
+
+.prompt summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prompt pre {
+  max-height: 240px;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font: 12.5px/1.5 var(--mono);
+  white-space: pre-wrap;
+  color: var(--ink-soft);
+}
+
+.demo-line {
+  margin: 22px 0 0;
+  color: var(--ink-soft);
+}
+
+.demo-line .link-button {
+  font-size: inherit;
+}
+
+.vp-panel {
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+}
+
+.vp-panel .chooser-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .hero .decoder {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .car-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .car-fields label:first-child {
+    grid-column: span 2;
+  }
+  .path {
+    padding: 18px 18px 20px;
+  }
+  .start .primary.big {
+    width: 100%;
+  }
+}
+
 /* ------------------------------------------------------------------ phone */
 
 @media (max-width: 900px) {
@@ -1596,9 +1835,6 @@ pre {
   .lower {
     grid-template-columns: 1fr;
     gap: 40px;
-  }
-  .vp-fields {
-    grid-template-columns: 1fr;
   }
   .summary {
     padding: 14px 18px;

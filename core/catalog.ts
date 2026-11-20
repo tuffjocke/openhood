@@ -39,3 +39,13 @@ export function matches(profiles: VehicleProfile[], make: string, model: string,
 }
 
 export const genericProfile = (profiles: VehicleProfile[]) => profiles.find((p) => p.generic);
+
+/** Every make a person can pick: the allowed names plus any a profile uses. */
+export function allMakes(profiles: VehicleProfile[], names: Record<string, string[]>): string[] {
+  return [...new Set([...Object.keys(names), ...makes(profiles)])].sort(sortAlpha);
+}
+
+/** Known models for a make, from the allowed names and the profiles. Empty means "type it in". */
+export function allModels(profiles: VehicleProfile[], names: Record<string, string[]>, make: string): string[] {
+  return [...new Set([...(names[make] ?? []), ...models(profiles, make)])].sort(sortAlpha);
+}

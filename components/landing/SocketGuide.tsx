@@ -31,7 +31,7 @@ function Connector() {
 /** Where the diagnostic socket is, what it looks like, and which cable to buy. */
 export function SocketGuide() {
   return (
-    <section className="socket" aria-labelledby="socket-title">
+    <section className="socket" id="socket" aria-labelledby="socket-title">
       <figure className="socket-art">
         <Connector />
         <dl className="pin-legend">

@@ -33,12 +33,15 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 components/Dashboard.tsx  the whole UI, driven by the selected profile
-components/VehiclePicker  make → model → year picker, built from every profile's `vehicles`
+components/CarChooser     make, model, year (any car in names.ts, model typed if unknown), then next steps:
+                          read it if a profile fits, else standard codes or the add-your-car AI prompt
+components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       landing until the first connection: hero, steps, socket guide, code lookup, live demo
+components/FirstRun       landing until the first connection: hero with CarChooser, socket guide, code lookup, live demo
 components/landing/       Decoder (code to plain words animation), CodeLookup (no cable, #P0171 links), SocketGuide, EngineLight
 components/Gauge          segmented bar gauge used in the cluster and the hero
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
+core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a-vehicle.md, tested)
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
@@ -49,6 +52,7 @@ tests/profiles.test.ts    contract tests, run for every registered profile autom
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
+tests/add-car.test.ts     the prompt matches the docs and fills in the car
 tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, architecture.md, k-line-primer.md

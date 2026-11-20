@@ -44,7 +44,7 @@ function isWarn(c: Channel, v: number | undefined) {
 function explain(e: unknown): string | null {
   if (e instanceof DOMException && e.name === "NotFoundError") return null; // picker cancelled
   if (e instanceof TimeoutError)
-    return "No answer from the ECU. Check that the ignition is on and that the cable is a KKL type, not an ELM327.";
+    return "The car didn't answer. Check that the ignition is on and the cable is pushed all the way in. It must be a KKL cable: Bluetooth readers (ELM327) don't work.";
   if (e instanceof NegativeResponse) return e.message;
   return e instanceof Error ? e.message : String(e);
 }
@@ -66,7 +66,6 @@ export default function Dashboard() {
   const [now, setNow] = useState(0);
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
   const [everLive, setEverLive] = useState(false);
-  const [pickerRequest, setPickerRequest] = useState(0);
 
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
@@ -302,14 +301,15 @@ export default function Dashboard() {
       <header className="top">
         <div className="mark">
           <span className="mark-name">Openhood</span>
-          <VehiclePicker
-            profiles={PROFILES}
-            selection={selection}
-            profile={profile}
-            disabled={status === "live" || status === "connecting"}
-            onSelect={pickVehicle}
-            openRequest={pickerRequest}
-          />
+          {!showFirstRun && (
+            <VehiclePicker
+              profiles={PROFILES}
+              selection={selection}
+              profile={profile}
+              disabled={status === "live" || status === "connecting"}
+              onSelect={pickVehicle}
+            />
+          )}
         </div>
         {!showFirstRun && (
           <div className="actions">
@@ -354,11 +354,11 @@ export default function Dashboard() {
       {showFirstRun ? (
         <FirstRun
           vehicle={vehicleText}
-          chosen={!!selection.chosen}
+          selection={selection}
+          onSelect={pickVehicle}
           profile={profile}
           serialOk={serialOk}
           connecting={status === "connecting" ? source : null}
-          onChangeCar={() => setPickerRequest((n) => n + 1)}
           onConnect={() => connect("serial")}
           onSimulator={() => connect("simulator")}
         />
