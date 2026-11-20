@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Channel, Fault, Urgency, VehicleProfile } from "@/core/profile";
 import { PROFILES } from "@/profiles";
+import { PickList } from "./AdapterPicks";
 import { CarChooser } from "./CarChooser";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
@@ -170,10 +170,9 @@ export function FirstRun({
             <button className="primary big" onClick={() => gotAdapter(true)}>
               I have one
             </button>
-            <Link className="button ghost big" href="/adapters">
-              What to buy
-            </Link>
           </div>
+          <p className="step-or">Or get this one:</p>
+          <PickList kind={kinds[0]} limit={1} compact />
         </div>
       );
     const ble = bluetoothOk && kinds.includes("elm327");
