@@ -343,6 +343,7 @@ export function FaultPanel({
 
   return (
     <div className="panel" id="faults">
+      <h2 className="section-title">Fault codes</h2>
       {confirming && (
         <div className="confirm" role="alertdialog" aria-label="Clear fault codes?">
           <p>

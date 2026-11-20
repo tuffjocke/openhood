@@ -3246,3 +3246,7 @@ main > details.more {
 #faults .readiness {
   margin-top: 0;
 }
+
+#faults .section-title {
+  margin: 28px 0 14px;
+}
