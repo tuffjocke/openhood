@@ -75,6 +75,8 @@ I am not a programmer. Do the technical steps yourself, one at a time, and tell 
 3. Pick the profile for my car from: npm run openhood -- profiles (use generic-obd2 if my car isn't listed). Then read the faults with: npm run openhood -- faults --profile <id> --port <port>
 4. Explain each fault in plain words: what's wrong, how urgent it is, and what to check first. If it fails, look at the error, try again with --traffic, and help me fix it (ignition on, plug pushed in, right adapter).
 
+5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npm run openhood -- record --profile <id> --port <port> --make <make> --model <model> --year <year>. It only stores the car, the adapter, the connection and whether it worked: no VIN, no fault codes. If my model is missing from profiles/names.ts, add it with the manufacturer's official spelling (ask me if unsure). Then offer to send it in as a pull request on GitHub, and help me do it if I say yes.
+
 Rules: read only. Never clear codes or send anything that changes the car without asking me first. See docs/cli.md in the repository for the commands.
 
 My car is ${car || "(ask me which car it is)"}.`;

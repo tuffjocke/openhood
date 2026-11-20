@@ -10,13 +10,15 @@
  *   faults  --profile <id> [car]     read fault codes
  *   live    --profile <id> [car] [--seconds 5]
  *   request --profile <id> [car] <hex>   one read-only raw request, e.g. "01 0C"
+ *   record  --profile <id> --port <path> --make <make> --model <model> --year <year> [--engine ..] [--notes ..]
+ *                                    read the car and add what worked to profiles/car-reports.json
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio
  *
  * [car] is --port <path> for real hardware (adapter detected, or --adapter kkl|elm327),
  * or nothing for the simulator (--elm can|kline to simulate an ELM327).
  */
 import { serve } from "./mcp";
-import { Runtime, UserError, type ConnectOptions } from "./runtime";
+import { recordCar, Runtime, UserError, type ConnectOptions } from "./runtime";
 
 function parse(argv: string[]) {
   const flags: Record<string, string | true> = {};
@@ -32,12 +34,13 @@ function parse(argv: string[]) {
   return { flags, rest };
 }
 
-const USAGE = `Usage: npm run openhood -- <profiles | ports | explain <code> | faults | live | request <hex> | mcp> [options]
+const USAGE = `Usage: npm run openhood -- <profiles | ports | explain <code> | faults | live | request <hex> | record | mcp> [options]
   --profile <id>   e.g. generic-obd2 (see "profiles")
   --port <path>    real hardware, e.g. /dev/ttyUSB0 or COM3; leave out for the simulator
   --adapter kkl|elm327   skip detection
   --elm can|kline  simulator: go through a simulated ELM327
-  --seconds <n>    live: keep reading for n seconds`;
+  --seconds <n>    live: keep reading for n seconds
+  --make, --model, --year, --engine, --notes   record: the car, names as in profiles/names.ts`;
 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
@@ -64,6 +67,14 @@ async function main() {
         return print(await rt.ports());
       case "explain":
         return print(rt.explain(rest[0] ?? ""));
+      case "record": {
+        const str = (k: string) => (typeof flags[k] === "string" ? (flags[k] as string) : undefined);
+        if (!str("make") || !str("model") || !str("year")) throw new UserError("record needs --make, --model and --year.");
+        const r = await recordCar(rt, { ...connectOpts(), make: str("make")!, model: str("model")!, year: Number(str("year")), engine: str("engine"), notes: str("notes") });
+        print(r);
+        console.error("Added to profiles/car-reports.json. Send it in with a pull request so others with this car know what works.");
+        return;
+      }
       case "faults":
       case "live":
       case "request": {

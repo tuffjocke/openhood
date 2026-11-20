@@ -58,6 +58,8 @@ core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a
 core/report.ts            "Send test report": builds a pre-filled GitHub issue link, no server
 core/catalog.ts           make/model/year lookups over profiles
 profiles/names.ts         allowed makes and models (official spelling), enforced by tests
+profiles/car-reports.*    shared knowledge of real cars: what adapter and connection worked (added by
+                          `npm run openhood -- record`, shown in CarChooser). Nothing personal: no VIN, no codes
 app/                      Next.js shell + globals.css (all styling)
 public/                   manifest, icons, sw.js (offline service worker, bump VERSION when its logic changes)
 components/ServiceWorker  registers sw.js in production builds
@@ -69,6 +71,7 @@ tests/add-car.test.ts     the prompt matches the docs and fills in the car
 tests/elm.test.ts         ELM327 answer parsing, CAN detection, CAN trouble code format
 tests/mcp.test.ts         MCP server: initialize, tools, faults over simulated ELM327, refusals
 tests/safety.test.ts      read-only allowlist for raw requests
+tests/car-reports.test.ts every car report is valid and has nothing personal
 tests/lookup.test.ts      code lookup: normalising input, known and unknown codes
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, architecture.md, k-line-primer.md
@@ -105,6 +108,8 @@ Follow docs/adding-a-vehicle.md. In short:
   profile that lists `"elm327"` through a simulated ELM327 on CAN and K-line.
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
+- **Car reports are facts from real cars.** Only add an entry after reading the car (`record` does it).
+  Never invent one, and never put a VIN, fault codes or anything else personal in it.
 - **Tools stay read-only.** The CLI and MCP server only send raw requests that `core/safety.ts` allows.
   Don't widen that list to include anything that writes, unlocks or programs.
 - **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens

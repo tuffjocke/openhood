@@ -8,7 +8,10 @@ import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
 import { SimulatedElm } from "../core/transport/simulated-elm";
+import { readFileSync, writeFileSync } from "node:fs";
 import { getProfile, lookupCode, PROFILES } from "../profiles";
+import type { CarReport } from "../profiles/car-reports";
+import { VEHICLE_NAMES } from "../profiles/names";
 import { NodeSerialTransport } from "./node-serial";
 
 const TRAFFIC_LINES = 500;
@@ -204,6 +207,63 @@ export class Runtime {
       (e) => `${(e.t / 1000).toFixed(3)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  (${e.note})` : ""}`,
     );
   }
+}
+
+const REPORTS_FILE = new URL("../profiles/car-reports.json", import.meta.url);
+
+export interface RecordOptions extends ConnectOptions {
+  make: string;
+  model: string;
+  year: number;
+  engine?: string;
+  notes?: string;
+}
+
+/**
+ * Connect, read, and add what was found to profiles/car-reports.json: make, model, year, adapter,
+ * connection and whether it worked. Nothing personal (no VIN, no fault codes). A failed connection
+ * is recorded too, since that's knowledge as well.
+ */
+export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarReport> {
+  if (!(o.make in VEHICLE_NAMES))
+    throw new UserError(`"${o.make}" isn't in profiles/names.ts. Use the official make name: ${Object.keys(VEHICLE_NAMES).join(", ")}.`);
+  if (!VEHICLE_NAMES[o.make].includes(o.model))
+    throw new UserError(
+      `"${o.model}" isn't in profiles/names.ts under ${o.make} yet. Add it there with the manufacturer's official spelling, model only (no engine or trim), alphabetically. If you aren't sure of the spelling, ask the person.`,
+    );
+  if (!Number.isInteger(o.year) || o.year < 1980 || o.year > new Date().getFullYear() + 1) throw new UserError(`${o.year} isn't a model year.`);
+  if (!o.port) throw new UserError("Recording needs the real car: add --port.");
+
+  const base = { make: o.make, model: o.model, year: o.year, ...(o.engine ? { engine: o.engine } : {}), profile: o.profile, date: new Date().toISOString().slice(0, 10) };
+  let report: CarReport;
+  try {
+    const c = await rt.connect(o);
+    const init = c.init;
+    const protocol = init.kind === "adapter" ? init.protocol || "unknown" : init.kind === "fast" ? "KWP2000 fast init" : `5-baud init, ${init.protocol}`;
+    const adapter = c.connectedThrough === "elm327" ? "elm327" : "kkl";
+    let result: CarReport["result"] = "worked";
+    let values = 0;
+    try {
+      await rt.faults();
+      values = Object.values(await rt.live()).filter((v) => !(v as { unavailable?: boolean }).unavailable).length;
+    } catch {
+      result = "partly";
+    }
+    report = { ...base, adapter, protocol, result, values, ...(o.notes ? { notes: o.notes } : {}) };
+  } catch (e) {
+    if (e instanceof UserError) throw e;
+    // A port that won't open says nothing about the car: don't record it.
+    if (/cannot open|no such file|permission denied|access denied|port not open/i.test(String(e)))
+      throw new UserError(`Couldn't open ${o.port}: ${e instanceof Error ? e.message : String(e)}. Check the port with: npm run openhood -- ports`);
+    const why = (e instanceof Error ? e.message : String(e)).split("\n")[0].slice(0, 120);
+    report = { ...base, adapter: o.adapter === "kkl" ? "kkl" : "elm327", protocol: "none", result: "failed", notes: o.notes ? `${o.notes} (${why})` : why };
+  } finally {
+    await rt.disconnect();
+  }
+  const all = JSON.parse(readFileSync(REPORTS_FILE, "utf8")) as CarReport[];
+  all.push(report);
+  writeFileSync(REPORTS_FILE, JSON.stringify(all, null, 2) + "\n");
+  return report;
 }
 
 export function parseHex(text: string): number[] {

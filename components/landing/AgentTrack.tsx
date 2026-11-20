@@ -46,7 +46,7 @@ export function AgentTrack({ car }: { car: string }) {
     <div className="agent">
       <p className="agent-lede">
         Let an AI agent do it for you. It sets Openhood up, reads your car and explains what it finds. No coding, no
-        terminal: you paste one message.
+        terminal: you copy one message into a new chat.
       </p>
       <ol className="agent-steps">
         <li>
@@ -69,8 +69,12 @@ export function AgentTrack({ car }: { car: string }) {
         </li>
         <li>
           <div>
-            <h3>Paste this message</h3>
-            <p>{car ? "Your car is already filled in." : "Pick your car in the other tab first and it\u2019s filled in, or tell the agent when it asks."}</p>
+            <h3>Copy this into a new chat to start analysing your car</h3>
+            <p>
+              {car ? "Your car is already in it. " : "Pick your car in the other tab first and it\u2019s filled in, or tell the agent when it asks. "}
+              Afterwards the agent offers to add your car to Openhood&rsquo;s shared list of what works, so the next person
+              with the same car knows.
+            </p>
             <Copyable text={readCarPrompt(car)} label="Message for your AI agent" collapsed />
           </div>
         </li>

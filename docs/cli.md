@@ -29,7 +29,23 @@ npm run openhood -- explain P0171            # a fault code in plain words, no c
 npm run openhood -- faults --profile generic-obd2 --port /dev/ttyUSB0
 npm run openhood -- live   --profile generic-obd2 --port COM3 --seconds 5
 npm run openhood -- request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
+
+# read the car and add what worked to profiles/car-reports.json
+npm run openhood -- record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003
 ```
+
+## The shared list of cars
+
+`profiles/car-reports.json` is Openhood's growing knowledge of real cars: make, model, year, which
+adapter and connection worked, and whether faults could be read. The website shows it when someone
+picks the same car ("Read by 3 people (2002 to 2004), with an ELM327 adapter").
+
+- `record` adds an entry after reading the car, including when it couldn't connect, since that's
+  useful too. Send it in as a pull request.
+- People using the website get an "Add your car to the shared list" link after a read, which opens a
+  pre-filled GitHub issue instead.
+- Nothing personal goes in: no VIN, no fault codes. Makes and models must be in `profiles/names.ts`
+  with the official spelling; `record` says so if a model is missing. Tests check every entry.
 
 - Leave out `--port` to use the simulator, which is handy to try things first. Add `--elm can` or
   `--elm kline` to go through a simulated ELM327 adapter.

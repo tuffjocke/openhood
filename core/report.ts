@@ -80,3 +80,23 @@ export function reportUrl(r: ReportInput): string {
   }
   return `${REPO_URL}/issues/new`;
 }
+
+/**
+ * "Add my car to the shared list" from the website: a GitHub issue holding one entry for
+ * profiles/car-reports.json, for a maintainer (or an agent) to add. Nothing personal in it.
+ */
+export function carReportUrl(entry: Record<string, unknown>): string {
+  const title = `Car report: ${entry.make} ${entry.model} ${entry.year}, ${entry.result}`;
+  const body = [
+    "Adding this car to profiles/car-reports.json, so others with the same car know what works.",
+    "",
+    "```json",
+    JSON.stringify(entry, null, 2),
+    "```",
+    "",
+    "Anything to add (engine, what didn't work)?",
+    "",
+  ].join("\n");
+  const q = new URLSearchParams({ title, body, labels: "car-report" });
+  return `${REPO_URL}/issues/new?${q}`;
+}

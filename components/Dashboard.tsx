@@ -10,7 +10,7 @@ import {
   parseExport,
   type HistoryEntry,
 } from "@/core/history";
-import { reportUrl } from "@/core/report";
+import { carReportUrl, reportUrl } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
 import { AdapterError } from "@/core/link/elm327";
@@ -228,6 +228,25 @@ export default function Dashboard() {
     } catch (e) {
       return e instanceof Error ? e.message : "Couldn't import that file.";
     }
+  }
+
+  /** A car report for profiles/car-reports.json, filled in at click time. Nothing personal. */
+  function fillCarReport(e: React.MouseEvent<HTMLAnchorElement>) {
+    const s = session.current;
+    if (!s || !selection.make || !selection.model || !selection.year) return;
+    const i = s.init;
+    e.currentTarget.href = carReportUrl({
+      make: selection.make,
+      model: selection.model,
+      year: selection.year,
+      ...(selection.engine ? { engine: selection.engine } : {}),
+      profile: profile.id,
+      adapter: s.link.adapter === "elm327" ? "elm327" : "kkl",
+      protocol: i.kind === "adapter" ? i.protocol || "unknown" : i.kind === "fast" ? "KWP2000 fast init" : `5-baud init, ${i.protocol}`,
+      result: faults ? "worked" : "partly",
+      values: profile.channels.filter((c) => latest.current[c.key] !== undefined).length,
+      date: new Date().toISOString().slice(0, 10),
+    });
   }
 
   /** Fill in the GitHub issue link at click time, so it has the latest values and traffic. */
@@ -464,6 +483,15 @@ export default function Dashboard() {
         )}
       </details>
       </>
+      )}
+
+      {live && source !== "simulator" && selection.make && selection.model && selection.year && (
+        <p className="share-car">
+          Did it work? Help the next person with a {selection.make} {selection.model}.{" "}
+          <a href="#" target="_blank" rel="noreferrer" onClick={fillCarReport}>
+            Add your car to the shared list
+          </a>
+        </p>
       )}
 
       <p className="profile-info">

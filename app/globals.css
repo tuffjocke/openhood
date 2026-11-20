@@ -1594,6 +1594,30 @@ pre {
   transform: rotate(45deg);
 }
 
+.share-car {
+  margin: 28px 0 0;
+  padding: 16px 20px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-soft);
+}
+
+.share-car a {
+  color: var(--ink);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.car-others {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 14px;
+  color: var(--ink);
+}
+
 .car-sub {
   margin: 8px 0 0;
   color: var(--ink-soft);

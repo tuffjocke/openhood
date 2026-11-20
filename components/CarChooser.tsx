@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { addCarPrompt, carName, requestCarUrl, type CarDetails } from "@/core/add-car";
 import { allMakes, allModels, genericProfile, matches } from "@/core/catalog";
 import type { VehicleProfile } from "@/core/profile";
+import { reportsFor, summarise } from "@/profiles/car-reports";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 
@@ -144,6 +145,8 @@ export function CarChooser({
   }, [car?.make, car?.model, car?.year, found.length]);
 
   const supported = found.length > 0;
+  // What others with this car found, from profiles/car-reports.json.
+  const others = car ? summarise(reportsFor(car.make, car.model, car.year)) : null;
   const profile = engineChosen?.profile ?? found[0]?.profile;
 
   return (
@@ -235,6 +238,7 @@ export function CarChooser({
               ))}
             </div>
           )}
+          {others && <p className="car-others">{others}</p>}
           <p className="car-sub">
             {found.length === 1 && `${found[0].engine}. `}
             {profile?.status === "experimental" &&
@@ -253,6 +257,7 @@ export function CarChooser({
       {car && !supported && (
         <div className="car-result" aria-live="polite">
           <p className="verdict">{car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.</p>
+          {others && <p className="car-others">{others}</p>}
           <p className="car-sub">
             The {carName(car)} doesn&rsquo;t have its own profile yet. You can read it today, and you can help add it.
           </p>

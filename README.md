@@ -13,6 +13,8 @@ live data and faults. No installs, no dealer tools.
   (raw K-line, for manufacturer-specific profiles). Openhood detects which one you plugged in
 - Raw traffic view for reverse engineering
 - One-click test reports to GitHub, with the traffic log included
+- A shared list of which cars work with which adapter ([profiles/car-reports.json](profiles/car-reports.json)),
+  built from real reads, shown in the app when you pick your car
 - A command line and an MCP server, so coding agents can read the car while they write a profile
   ([docs/cli.md](docs/cli.md)), read-only
 - Works on laptops (Chrome, Edge) and Android phones (Chrome 148+)
