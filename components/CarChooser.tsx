@@ -267,8 +267,9 @@ export function CarChooser({
               {car && (
                 <p className="verdict">
                   {supported
-                    ? "Yes, Openhood knows it."
+                    ? "Yes, someone has already added this car to Openhood."
                     : `${car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.`}
+                  {supported && <i className="tick" role="img" aria-label="Added" />}
                 </p>
               )}
               {car && (sub || others) && (

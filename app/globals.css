@@ -2880,3 +2880,20 @@ details.more p {
     text-align: center;
   }
 }
+
+.result-title .verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.result-title .verdict {
+  display: block;
+}
+
+.verdict .tick {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: -3px;
+}
