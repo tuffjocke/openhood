@@ -2006,6 +2006,289 @@ details.path.more:not([open]) {
   margin-top: 44px;
 }
 
+/* ------------------------------------------- compact start, wide demo */
+
+.hero {
+  display: block;
+}
+
+.hero h1 {
+  max-width: none;
+}
+
+/* Tabs and the three car fields share one row; everything after spans the box. */
+.start {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 14px;
+  align-items: center;
+  margin-top: 30px;
+  padding: 14px;
+}
+
+.start [role="tabpanel"],
+.start .chooser {
+  display: contents;
+}
+
+.start [role="tabpanel"] > *,
+.start .chooser > * {
+  grid-column: 1 / -1;
+}
+
+.start .chooser > .car-fields {
+  grid-column: 2;
+}
+
+.start .tracks {
+  margin: 0;
+  background: var(--paper);
+}
+
+.start .car-fields {
+  grid-template-columns: 1.2fr 1.2fr 0.7fr;
+  gap: 8px;
+}
+
+.start .car-fields label {
+  gap: 0;
+}
+
+.start .car-fields label:has(select)::after {
+  bottom: 21px;
+}
+
+.start .field-hint {
+  margin: 8px 6px 0;
+}
+
+.start .hero-note {
+  margin: 12px 0 0;
+  max-width: none;
+}
+
+.car-result {
+  margin: 14px 6px 6px;
+  padding-top: 16px;
+}
+
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.result-head .car-sub,
+.result-head .car-others {
+  margin: 0;
+}
+
+.verdict {
+  font-size: 17px;
+}
+
+.tick {
+  width: 22px;
+  height: 22px;
+}
+
+.tick::after {
+  left: 8px;
+  top: 5px;
+  width: 5px;
+  height: 9px;
+}
+
+.result-go {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-top: 14px;
+}
+
+.result-go .advice {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+
+.result-go .read-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  flex: 1;
+  margin: 0;
+}
+
+.result-go .read-steps li {
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  padding: 0;
+}
+
+.result-go .chooser-actions {
+  margin: 0;
+}
+
+.result-go button.big {
+  padding: 14px 24px;
+}
+
+details.more {
+  margin-top: 14px;
+}
+
+details.more summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+details.more summary::-webkit-details-marker {
+  display: none;
+}
+
+details.more p {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* Agent steps side by side. */
+.start .agent {
+  margin: 14px 6px 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+
+.agent-steps {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr 1fr;
+  gap: 0 28px;
+  margin: 0;
+}
+
+.agent-steps li,
+.agent-steps li + li {
+  border: 0;
+  padding: 12px 0 4px;
+}
+
+.agent-steps .copyable {
+  margin-top: 8px;
+}
+
+.agent-steps .copyable pre {
+  position: relative;
+}
+
+.demo-line {
+  margin-top: 14px;
+}
+
+/* The demo, full width under the start box. */
+.first-run > .preview {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.4fr);
+  gap: 0 clamp(24px, 4vw, 56px);
+  align-items: center;
+  margin-top: clamp(36px, 5vw, 64px);
+  padding: 26px 32px 20px;
+}
+
+.first-run > .preview .preview-main {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.first-run > .preview .gauge {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 14px 0 0;
+  height: 16px;
+}
+
+.first-run > .preview .preview-value {
+  font-size: clamp(64px, 7vw, 96px);
+}
+
+.first-run > .preview .preview-side {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  grid-template-columns: 1fr;
+  padding: 0;
+  border: 0;
+}
+
+.first-run > .preview .preview-fault {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.first-run > .preview figcaption {
+  grid-column: 1 / -1;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .start {
+    grid-template-columns: 1fr;
+    gap: 10px 0;
+  }
+  .start .chooser > .car-fields {
+    grid-column: 1;
+  }
+  .start .tracks {
+    display: flex;
+  }
+  .start .tracks button {
+    flex: 1;
+  }
+  .agent-steps {
+    grid-template-columns: 1fr;
+  }
+  .first-run > .preview {
+    grid-template-columns: 1fr 1fr;
+    padding: 22px 20px 18px;
+  }
+  .first-run > .preview .preview-side {
+    grid-column: 2;
+  }
+  .first-run > .preview .preview-fault {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--cl-line);
+  }
+  .first-run > .preview figcaption {
+    grid-row: 4;
+  }
+}
+
+@media (max-width: 760px) {
+  .start .car-fields {
+    grid-template-columns: 1.5fr 1fr;
+  }
+  .start .car-fields label:first-child {
+    grid-column: span 2;
+  }
+  .result-go .chooser-actions,
+  .result-go button.big {
+    width: 100%;
+  }
+}
+
 /* ------------------------------------------------------------------ phone */
 
 @media (max-width: 900px) {

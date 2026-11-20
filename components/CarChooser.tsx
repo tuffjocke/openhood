@@ -162,12 +162,12 @@ export function CarChooser({
     <div className="chooser">
       <div className="car-fields">
         <label>
-          <span>Make</span>
+          <span className="sr-only">Make</span>
           {makeTyped ? (
             <input
               value={make}
               onChange={(e) => setMake(e.target.value)}
-              placeholder="Type the make"
+              placeholder="Make"
               autoFocus={typeMake}
               autoComplete="off"
               spellCheck={false}
@@ -186,7 +186,7 @@ export function CarChooser({
               }}
             >
               <option value="" disabled>
-                Choose
+                Make
               </option>
               {makeList.map((m) => (
                 <option key={m}>{m}</option>
@@ -196,7 +196,7 @@ export function CarChooser({
           )}
         </label>
         <label>
-          <span>Model</span>
+          <span className="sr-only">Model</span>
           {modelList.length > 0 && !typeModel ? (
             <select
               value={modelList.includes(model) ? model : ""}
@@ -209,7 +209,7 @@ export function CarChooser({
               }}
             >
               <option value="" disabled>
-                Choose
+                Model
               </option>
               {modelList.map((m) => (
                 <option key={m}>{m}</option>
@@ -221,7 +221,7 @@ export function CarChooser({
               value={model}
               disabled={!make.trim()}
               onChange={(e) => setModel(e.target.value)}
-              placeholder={make ? "Type the model" : ""}
+              placeholder="Model"
               autoFocus={typeModel}
               autoComplete="off"
               spellCheck={false}
@@ -230,10 +230,10 @@ export function CarChooser({
           )}
         </label>
         <label>
-          <span>Year</span>
+          <span className="sr-only">Year</span>
           <select value={year} disabled={!make.trim()} onChange={(e) => setYear(e.target.value)}>
             <option value="" disabled>
-              Choose
+              Year
             </option>
             {YEARS.map((y) => (
               <option key={y}>{y}</option>
@@ -258,10 +258,17 @@ export function CarChooser({
 
       {!fieldsOnly && car && supported && (
         <div className="car-result" aria-live="polite">
-          <p className="verdict">
-            <i className="tick" aria-hidden />
-            Yes, Openhood knows it.
-          </p>
+          <div className="result-head">
+            <p className="verdict">
+              <i className="tick" aria-hidden />
+              Yes, Openhood knows it.
+            </p>
+            <p className="car-sub">
+              {found.length === 1 && `${found[0].engine}. `}
+              {profile?.status === "experimental" && "Not tested on a real car yet."}
+            </p>
+            {others && <p className="car-others">{others}</p>}
+          </div>
           {found.length > 1 && (
             <div className="engines">
               <span>Which engine?</span>
@@ -277,51 +284,40 @@ export function CarChooser({
               ))}
             </div>
           )}
-          {others && <p className="car-others">{others}</p>}
-          <p className="car-sub">
-            {found.length === 1 && `${found[0].engine}. `}
-            {profile?.status === "experimental" &&
-              "Not tested on a real car yet."}
-          </p>
           {(found.length === 1 || engineChosen) && profile && (
-            <>
+            <div className="result-go">
               <AdapterAdvice profile={profile} year={car.year} />
               {!brief && <ReadSteps />}
               {actions(profile, true)}
-            </>
+            </div>
           )}
         </div>
       )}
 
-      {!fieldsOnly && car && !supported && (
+      {!fieldsOnly && car && !supported && generic && (
         <div className="car-result" aria-live="polite">
-          <p className="verdict">{car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.</p>
-          {others && <p className="car-others">{others}</p>}
-
-          {brief ? (
-            <>
-              {generic && <AdapterAdvice profile={generic} year={car.year} />}
-              {generic && actions(generic, false)}
-            </>
-          ) : (
-            <div className="paths">
-              <section className="path">
-                {car.year < 2001 && <p className="path-note">A bit early for standard codes. Trying can&rsquo;t hurt.</p>}
-                {generic && <AdapterAdvice profile={generic} year={car.year} />}
-                <ReadSteps />
-                {generic && actions(generic, false)}
-              </section>
-
-              <details className="path more">
-                <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
-                <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
-                <CopyPrompt car={car} />
-                <p className="path-foot">
-                  Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
-                  <a href={GUIDE_URL}>Guide</a>
-                </p>
-              </details>
-            </div>
+          <div className="result-head">
+            <p className="verdict">
+              {car.year >= 2004 ? "Very likely" : car.year >= 2001 ? "Probably" : "Maybe"}, with the standard codes.
+            </p>
+            {car.year < 2001 && <p className="car-sub">A bit early for them. Trying can&rsquo;t hurt.</p>}
+            {others && <p className="car-others">{others}</p>}
+          </div>
+          <div className="result-go">
+            <AdapterAdvice profile={generic} year={car.year} />
+            {!brief && <ReadSteps />}
+            {actions(generic, false)}
+          </div>
+          {!brief && (
+            <details className="more">
+              <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
+              <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
+              <CopyPrompt car={car} />
+              <p className="path-foot">
+                Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
+                <a href={GUIDE_URL}>Guide</a>
+              </p>
+            </details>
           )}
         </div>
       )}

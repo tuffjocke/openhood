@@ -48,8 +48,9 @@ components/CarChooser     make, model, year (any car: unknown makes and models a
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
 components/FaultPanel     faults: summary strip, grouped rows, explanations, urgency, freeze frames, pending, history
-components/FirstRun       landing until the first connection: hero with two tracks (in this browser: CarChooser;
-                          with an AI agent: AgentTrack, #agent) + live demo with one explained fault, socket guide, code lookup
+components/FirstRun       landing until the first connection: headline, one compact start box (tabs "In this browser" /
+                          "With an AI agent" and the car fields on one row, result or agent steps below), then the
+                          full-width live demo with one explained fault, socket guide, code lookup
 components/landing/       AgentTrack (setup + ready-made request for a coding agent), CodeLookup (no cable, #P0171 links),
                           SocketGuide, EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
@@ -128,7 +129,8 @@ Follow docs/adding-a-vehicle.md. In short:
   (`components/Gauge.tsx`). Road-sign yellow (`--sign`) means "look at this", falu red (`--falu`) only
   "fix now". Familjen Grotesk for text, Barlow Condensed for numbers, both self-hosted. Sentence-case labels,
   no all-caps. Must work on a phone and in dark mode (follows the system setting).
-- Writing: plain English, no em or en dashes in UI text.
+- Writing: plain English, no em or en dashes in UI text. As few words as possible: petrol heads don't
+  like reading. No line of text unless it's needed; details go behind a link.
 - **Credit and licences.** Code or data ported from another project must be compatible with GPL-3.0
   (MIT, BSD, Apache, GPL) and get an entry in THIRD_PARTY_NOTICES.md. A project with no licence may
   only be used for facts (bytes, scalings), never copied code.

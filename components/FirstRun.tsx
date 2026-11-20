@@ -227,8 +227,9 @@ export function FirstRun({
             <span>Only reads. Nothing in your car changes.</span>
           </p>
         </div>
-        {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
       </div>
+
+      {!connecting && <LivePreview profile={profile} vehicle={vehicle} />}
 
       <SocketGuide />
       <CodeLookup />
