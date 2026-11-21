@@ -217,8 +217,9 @@ export function FirstRun({
   // computer's settings first and then read like a cable.
   const readBle = link === "bluetooth" && ble;
   const busy = connecting === (readBle ? "bluetooth" : "serial");
-  // A car's own profile that nobody has read a real car with yet: the AI agent route comes first, because
-  // an agent can see the traffic, work around problems and record the car for others (docs/cli.md).
+  // The AI agent comes first for every car: it can see the traffic, work around problems and record
+  // the car for others (docs/cli.md). A car's own profile that nobody has read a real car with yet
+  // gets a message asking the agent to dig in.
   const untried =
     !profile.generic &&
     profile.status !== "tested" &&
@@ -240,7 +241,7 @@ export function FirstRun({
       {(readBle || serialOk) && (
         <div className="chooser-actions">
           <button
-            className={untried ? "ghost big" : "primary big"}
+            className="ghost big"
             onClick={readBle ? onBluetooth : onConnect}
             disabled={!!connecting}
           >
@@ -275,7 +276,7 @@ export function FirstRun({
           : "An AI agent on your computer reads the car and tells you what to fix."}
       </p>
       <div className="chooser-actions">
-        <AgentButton car={carText} primary={untried || !canRead} untried={untried} />
+        <AgentButton car={carText} primary untried={untried} />
       </div>
     </div>
   );
@@ -356,17 +357,8 @@ export function FirstRun({
             <>
               <p className="step-line">The socket is under the dashboard, near your knee. Then pick one:</p>
               <div className="ways">
-                {untried ? (
-                  <>
-                    {aiWay}
-                    {readWay}
-                  </>
-                ) : (
-                  <>
-                    {readWay}
-                    {aiWay}
-                  </>
-                )}
+                {aiWay}
+                {readWay}
               </div>
               <p className="step-foot">Only reads. Nothing in your car changes.</p>
             </>

@@ -9,7 +9,7 @@ const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
  * The other way to read: copy a ready-made message for a coding agent (the Claude or Codex
  * desktop app on the computer that's plugged into the car). The agent sets Openhood up and reads
  * the car, so it works in any browser. Web versions of those agents can't reach an adapter.
- * A button on the steps page (the main one where the browser can't read a car itself).
+ * The main button on the steps page.
  */
 export function AgentButton({ car, primary, untried }: { car: string; primary?: boolean; untried?: boolean }) {
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
