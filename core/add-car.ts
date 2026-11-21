@@ -71,7 +71,7 @@ export function requestCarUrl(c: CarDetails): string {
 export function readCarPrompt(car: string, untried = false): string {
   const first = untried
     ? `
-Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. Openhood's MCP server (.mcp.json in the repository) lets you connect, read faults and live data, and see the raw traffic yourself; use it if you can, otherwise the CLI with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources, and tell me what you found. Offer to send it in as a GitHub issue or pull request so the profile gets better.
+Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. If you can add an MCP server, Openhood has one (command: npx -y openhood mcp) that lets you connect, read faults and live data, and see the raw traffic yourself; otherwise use the commands with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and tell me what you found. Offer to send it in as a GitHub issue so the profile gets better.
 `
     : "";
   return `Help me read my car's fault codes with Openhood, an open-source car diagnostics tool:
@@ -79,15 +79,15 @@ https://github.com/tuffjocke/openhood
 
 I am not a programmer. Do the technical steps yourself, one at a time, and tell me in plain words what you're doing. Ask me before installing anything.
 
-1. Get Openhood onto this computer: clone the repository (or download it as a ZIP if Git is missing) into a folder, then run npm install. If Node.js is missing, help me install the LTS version.
-2. My adapter is plugged into the car and this computer, and the ignition is on. Find it with: npm run openhood -- ports
-3. Pick the profile for my car from: npm run openhood -- profiles (use generic-obd2 if my car isn't listed). Then read the faults with: npm run openhood -- faults --profile <id> --port <port>
+1. Openhood runs with Node.js. If it's missing, help me install the LTS version. Nothing else needs installing: each command below fetches Openhood by itself (about 4 MB). If npx says the openhood package isn't found, clone the repository instead, run npm install, and use "npm run openhood --" wherever it says "npx -y openhood".
+2. My adapter is plugged into the car and this computer, and the ignition is on. Find it with: npx -y openhood ports
+3. Pick the profile for my car from: npx -y openhood profiles (use generic-obd2 if my car isn't listed). Then read the faults with: npx -y openhood faults --profile <id> --port <port>
 4. Explain each fault in plain words: what's wrong, how urgent it is, and what to check first. If it fails, look at the error, try again with --traffic, and help me fix it (ignition on, plug pushed in, right adapter).
 
-5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npm run openhood -- record --profile <id> --port <port> --make <make> --model <model> --year <year> --adapter-model "<what my adapter is sold as, ask me>". It only stores the car, the adapter, the connection and whether it worked: no VIN, no fault codes. If my model is missing from profiles/names.ts, add it with the manufacturer's official spelling (ask me if unsure). Then offer to send it in as a pull request on GitHub, and help me do it if I say yes.
+5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npx -y openhood record --profile <id> --port <port> --make <make> --model <model> --year <year> --adapter-model "<what my adapter is sold as, ask me>". It only keeps the car, the adapter, the connection and whether it worked: no VIN, no fault codes. It prints a link to a ready-made GitHub issue: give it to me and help me send it if I want to (it needs a GitHub account).
 
 ${first}
-Rules: read only. Never clear codes or send anything that changes the car without asking me first. See docs/cli.md in the repository for the commands.
+Rules: read only. Never clear codes or send anything that changes the car without asking me first. The commands are described in docs/cli.md in the repository.
 
 My car is ${car || "(ask me which car it is)"}.`;
 }

@@ -7,7 +7,14 @@ The website does everything most people need. This is for two other jobs:
 - **Scripting**: read faults or live values from a terminal.
 
 It runs the same code as the website (`core/` and `profiles/`), with Node's serial port library instead
-of Web Serial. Run it from a clone of the repository, after `npm install`.
+of Web Serial. Two ways to run it:
+
+- **From npm**, nothing to install but Node.js: `npx openhood <command>`. The package is one file with
+  every car profile in it, plus serialport, about 4 MB in all.
+- **From a clone** of the repository, after `npm install`: `npm run openhood -- <command>`. Use this
+  when you work on a profile; `record` then writes into the repository's list of cars.
+
+The examples below use `npx openhood`; in a clone, write `npm run openhood --` instead.
 
 ## No terminal: let an agent do it
 
@@ -16,24 +23,25 @@ On the website, pick your car and press **Or let an AI agent read it** to copy t
 1. Open the **Claude** or **Codex desktop app** on the computer you'll plug into the car, and start a
    new coding task. The web versions run in the cloud and can't reach your adapter.
 2. Plug the adapter into the car and the computer, ignition on.
-3. Paste the message. The agent downloads Openhood, installs it (asking you first), finds the adapter,
-   reads the faults and explains them. It uses the commands below.
+3. Paste the message. The agent checks Node.js is there (asking you before installing it), finds the
+   adapter, reads the faults and explains them. It uses the commands below through `npx`.
 
 ## Commands
 
 First time on a real car? Follow [first-read.md](first-read.md).
 
 ```
-npm run openhood -- profiles                 # vehicle profiles and which adapters they run on
-npm run openhood -- ports                    # USB adapters, KKL cables, paired Bluetooth adapters
-npm run openhood -- explain P0171            # a fault code in plain words, no car needed
+npx openhood profiles                 # vehicle profiles and which adapters they run on
+npx openhood ports                    # USB adapters, KKL cables, paired Bluetooth adapters
+npx openhood explain P0171            # a fault code in plain words, no car needed
 
-npm run openhood -- faults --profile generic-obd2 --port /dev/ttyUSB0
-npm run openhood -- live   --profile generic-obd2 --port COM3 --seconds 5
-npm run openhood -- request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
+npx openhood faults --profile generic-obd2 --port /dev/ttyUSB0
+npx openhood live   --profile generic-obd2 --port COM3 --seconds 5
+npx openhood request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
 
-# read the car and add what worked to profiles/car-reports.json
-npm run openhood -- record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
+# read the car and share what worked (from npm: prints a link to a ready-made GitHub issue;
+# in a clone: adds it to profiles/car-reports.json for a pull request)
+npx openhood record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
   --adapter-model "Vgate iCar Pro 2S"
 ```
 
@@ -43,8 +51,9 @@ npm run openhood -- record --profile generic-obd2 --port /dev/ttyUSB0 --make Vol
 adapter and connection worked, and whether faults could be read. The website shows it when someone
 picks the same car ("Read by 3 people (2002 to 2004), with an ELM327 adapter").
 
-- `record` adds an entry after reading the car, including when it couldn't connect, since that's
-  useful too. Send it in as a pull request.
+- `record` makes an entry after reading the car, including when it couldn't connect, since that's
+  useful too. From npm it prints a link to a pre-filled GitHub issue; in a clone it adds the entry to
+  the file, to send in as a pull request.
 - People using the website get an "Add your car to the shared list" link after a read, which opens a
   pre-filled GitHub issue instead.
 - Nothing personal goes in: no VIN, no fault codes. Makes and models must be in `profiles/names.ts`
@@ -59,15 +68,15 @@ picks the same car ("Read by 3 people (2002 to 2004), with an ELM327 adapter").
 
 ## As an MCP server for coding agents
 
-**Claude Code** picks it up from `.mcp.json` in the repository: start `claude` in the repo folder and
-approve the "openhood" server when asked. To add it by hand, or for another folder:
+Any agent (Claude Code, Claude Desktop, Codex, Cursor): add a stdio MCP server running
+`npx -y openhood mcp`. For Claude Code:
 
 ```
-claude mcp add openhood -- npx tsx /path/to/openhood/cli/openhood.ts mcp
+claude mcp add openhood -- npx -y openhood mcp
 ```
 
-**Other agents** (Codex, Cursor, Claude Desktop): add a stdio MCP server with the command
-`npx tsx /path/to/openhood/cli/openhood.ts mcp`.
+In a clone of the repository, Claude Code also picks it up from `.mcp.json` (the clone's own code):
+start `claude` in the repo folder and approve the "openhood" server when asked.
 
 The agent gets these tools:
 
@@ -89,6 +98,6 @@ The agent gets these tools:
   KWP2000 read services, see `core/safety.ts`). Writing, security access, programming sessions and
   clearing are refused. Clearing has its own tool that needs a confirmation.
 - Profile code is not limited by this: a reviewed profile may unlock its ECU in `connect`.
-- `npm run openhood -- mcp --unsafe-allow-any-request` lifts the limit, for maintainers working on
+- `npm run openhood -- mcp --unsafe-allow-any-request` (in a clone) lifts the limit, for maintainers working on
   something approved in an issue. Don't use it to modify a car.
 - Test with the car parked. If you test while driving, someone else drives.

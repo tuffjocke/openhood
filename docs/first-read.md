@@ -10,24 +10,18 @@ Openhood only reads. Nothing below changes anything in the car.
 
 Do this now so the laptop is sorted before you sit in the car.
 
-1. Install [Node.js](https://nodejs.org) 20 or newer.
-2. Get Openhood and install it:
+1. Install [Node.js](https://nodejs.org) 20 or newer. That's all: `npx` fetches Openhood itself.
+   (Working on a profile? Clone the repository, `npm install`, and write `npm run openhood --`
+   wherever this page says `npx openhood`.)
+2. Read the demo car. No adapter needed:
 
    ```
-   git clone https://github.com/tuffjocke/openhood
-   cd openhood
-   npm install
-   ```
-
-3. Read the demo car. No adapter needed:
-
-   ```
-   npm run openhood -- faults --profile generic-obd2
+   npx openhood faults --profile generic-obd2
    ```
 
    **Good:** it prints made-up codes such as P0171 and P0420, each with a plain-words explanation.
 
-4. Open the website in Chrome or Edge on the same laptop and press **Try a demo car**.
+3. Open the website in Chrome or Edge on the same laptop and press **Try a demo car**.
 
    **Good:** live readings move and fault cards show.
 
@@ -43,9 +37,9 @@ Work down this list and stop at the first step that fails.
 
 | Step | Do this | Good looks like |
 | --- | --- | --- |
-| 1 | `npm run openhood -- ports` | Your adapter is in the list. Note its name, like `COM3` or `/dev/ttyUSB0`. |
-| 2 | `npm run openhood -- faults --profile <profile> --port <name> --traffic` | It says what it connected through, then lists stored codes, or none. |
-| 3 | `npm run openhood -- live --profile <profile> --port <name> --seconds 10` | Numbers that make sense: battery near 12 V, coolant near outside temperature on a cold engine, 0 rpm. |
+| 1 | `npx openhood ports` | Your adapter is in the list. Note its name, like `COM3` or `/dev/ttyUSB0`. |
+| 2 | `npx openhood faults --profile <profile> --port <name> --traffic` | It says what it connected through, then lists stored codes, or none. |
+| 3 | `npx openhood live --profile <profile> --port <name> --seconds 10` | Numbers that make sense: battery near 12 V, coolant near outside temperature on a cold engine, 0 rpm. |
 | 4 | Start the engine, run step 3 again | About 700 to 900 rpm at idle, battery 13.5 to 14.5 V. |
 | 5 | Website: pick the car, **Read my car** | The same codes and readings as steps 2 to 4. |
 | 6 | Website: answer **Did this match your car?** | Yes adds the car to the shared list. No sends a test report. |
@@ -60,7 +54,7 @@ Which `<profile>`:
 Don't retry more than twice. Save what happened and move on:
 
 ```
-npm run openhood -- faults --profile <profile> --port <name> --traffic > first-read.txt 2>&1
+npx openhood faults --profile <profile> --port <name> --traffic > first-read.txt 2>&1
 ```
 
 Then send `first-read.txt` together with:

@@ -22,7 +22,7 @@ describe("add your car prompt", () => {
 
   it("gives the agent working commands and the car", () => {
     const p = readCarPrompt("1999 Land Rover Defender");
-    for (const cmd of ["npm run openhood -- ports", "npm run openhood -- profiles", "npm run openhood -- faults --profile", "npm run openhood -- record"])
+    for (const cmd of ["npx -y openhood ports", "npx -y openhood profiles", "npx -y openhood faults --profile", "npx -y openhood record"])
       assert.ok(p.includes(cmd), cmd);
     assert.ok(p.endsWith("My car is 1999 Land Rover Defender."));
     assert.ok(readCarPrompt("").includes("ask me which car"));

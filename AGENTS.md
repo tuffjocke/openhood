@@ -17,6 +17,7 @@ npm run typecheck
 npm test            # contract tests: every profile against its own simulator
 npm run check       # typecheck + test + build. Run this before you say you are done.
 npm run openhood -- faults --profile generic-obd2   # CLI, simulator unless --port is given (docs/cli.md)
+npm run build:npm   # the npm package `openhood` (CLI + MCP server, one file) into dist/npm
 ```
 
 **Testing on a real car:** this repo's `.mcp.json` starts Openhood's MCP server. If you have its tools
@@ -46,7 +47,11 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
-                          runtime.ts (connection shared by both), node-serial.ts (serial port from Node)
+                          runtime.ts (connection shared by both), node-serial.ts (serial port from Node),
+                          command.ts (`npx openhood` or `npm run openhood --` in messages)
+scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
+                          every profile, only serialport at runtime. Agents and people run `npx -y openhood ...`;
+                          .github/workflows/npm.yml publishes it when a v* tag is pushed (NPM_TOKEN secret)
 core/safety.ts            which raw requests tools may send: read services only
 components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: the binnacle at the top (three
                           dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
@@ -118,6 +123,7 @@ tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidyi
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 tests/units.test.ts       unit guess and conversions
 tests/i18n.test.ts        every t() text has Swedish, no dashes
+tests/npm.test.ts         the npm package builds and runs on its own
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real

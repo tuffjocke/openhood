@@ -8,7 +8,9 @@ import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
 import { SimulatedElm } from "../core/transport/simulated-elm";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { carReportUrl } from "../core/report";
+import { CMD } from "./command";
 import { getProfile, lookupCode, PROFILES } from "../profiles";
 import type { CarReport } from "../profiles/car-reports";
 import { VEHICLE_NAMES } from "../profiles/names";
@@ -227,10 +229,16 @@ export interface RecordOptions extends ConnectOptions {
  * connection and whether it worked. Nothing personal (no VIN, no fault codes). A failed connection
  * is recorded too, since that's knowledge as well.
  */
-export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarReport> {
-  if (!(o.make in VEHICLE_NAMES))
+export async function recordCar(
+  rt: Runtime,
+  o: RecordOptions,
+): Promise<{ report: CarReport; saved: boolean; sendUrl: string }> {
+  // In a clone of the repository the report goes into the file, ready for a pull request. Run from
+  // the npm package there is no file to add to: the person sends it in with a pre-filled issue.
+  const inRepo = existsSync(REPORTS_FILE);
+  if (inRepo && !(o.make in VEHICLE_NAMES))
     throw new UserError(`"${o.make}" isn't in profiles/names.ts. Use the official make name: ${Object.keys(VEHICLE_NAMES).join(", ")}.`);
-  if (!VEHICLE_NAMES[o.make].includes(o.model))
+  if (inRepo && !VEHICLE_NAMES[o.make].includes(o.model))
     throw new UserError(
       `"${o.model}" isn't in profiles/names.ts under ${o.make} yet. Add it there with the manufacturer's official spelling, model only (no engine or trim), alphabetically. If you aren't sure of the spelling, ask the person.`,
     );
@@ -259,16 +267,18 @@ export async function recordCar(rt: Runtime, o: RecordOptions): Promise<CarRepor
     if (e instanceof UserError) throw e;
     // A port that won't open says nothing about the car: don't record it.
     if (/cannot open|no such file|permission denied|access denied|port not open/i.test(String(e)))
-      throw new UserError(`Couldn't open ${o.port}: ${e instanceof Error ? e.message : String(e)}. Check the port with: npm run openhood -- ports`);
+      throw new UserError(`Couldn't open ${o.port}: ${e instanceof Error ? e.message : String(e)}. Check the port with: ${CMD} ports`);
     const why = (e instanceof Error ? e.message : String(e)).split("\n")[0].slice(0, 120);
     report = { ...base, adapter: o.adapter === "kkl" ? "kkl" : "elm327", protocol: "none", result: "failed", notes: plain(o.notes ? `${o.notes} (${why})` : why) };
   } finally {
     await rt.disconnect();
   }
+  const sendUrl = carReportUrl(report as unknown as Record<string, unknown>);
+  if (!inRepo) return { report, saved: false, sendUrl };
   const all = JSON.parse(readFileSync(REPORTS_FILE, "utf8")) as CarReport[];
   all.push(report);
   writeFileSync(REPORTS_FILE, JSON.stringify(all, null, 2) + "\n");
-  return report;
+  return { report, saved: true, sendUrl };
 }
 
 export function parseHex(text: string): number[] {

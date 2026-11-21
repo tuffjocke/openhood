@@ -1,7 +1,8 @@
 /**
  * Openhood on the command line, and as an MCP server for coding agents.
  *
- *   npm run openhood -- <command> [options]
+ *   npx openhood <command> [options]          from the npm package
+ *   npm run openhood -- <command> [options]   in a clone of the repository
  *
  * Commands:
  *   profiles                         vehicle profiles and the adapters they run on
@@ -13,11 +14,13 @@
  *   record  --profile <id> --port <path> --make <make> --model <model> --year <year>
  *           [--adapter-model "Vgate iCar Pro 2S"] [--engine ..] [--notes ..]
  *                                    read the car and add what worked to profiles/car-reports.json
+ *                                    (from npm: prints a link to send it in instead)
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio
  *
  * [car] is --port <path> for real hardware (adapter detected, or --adapter kkl|elm327),
  * or nothing for the simulator (--elm can|kline to simulate an ELM327).
  */
+import { CMD } from "./command";
 import { serve } from "./mcp";
 import { recordCar, Runtime, UserError, type ConnectOptions } from "./runtime";
 
@@ -35,7 +38,7 @@ function parse(argv: string[]) {
   return { flags, rest };
 }
 
-const USAGE = `Usage: npm run openhood -- <profiles | ports | explain <code> | faults | live | request <hex> | record | mcp> [options]
+const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live | request <hex> | record | mcp> [options]
   --profile <id>   e.g. generic-obd2 (see "profiles")
   --port <path>    real hardware, e.g. /dev/ttyUSB0 or COM3; leave out for the simulator
   --adapter kkl|elm327   skip detection
@@ -51,7 +54,7 @@ async function main() {
   const rt = new Runtime();
   const print = (x: unknown) => console.log(typeof x === "string" ? x : JSON.stringify(x, null, 2));
   const connectOpts = (): ConnectOptions => {
-    if (typeof flags.profile !== "string") throw new UserError("Add --profile <id>. See: npm run openhood -- profiles");
+    if (typeof flags.profile !== "string") throw new UserError(`Add --profile <id>. See: ${CMD} profiles`);
     return {
       profile: flags.profile,
       port: typeof flags.port === "string" ? flags.port : undefined,
@@ -72,8 +75,12 @@ async function main() {
         const str = (k: string) => (typeof flags[k] === "string" ? (flags[k] as string) : undefined);
         if (!str("make") || !str("model") || !str("year")) throw new UserError("record needs --make, --model and --year.");
         const r = await recordCar(rt, { ...connectOpts(), make: str("make")!, model: str("model")!, year: Number(str("year")), engine: str("engine"), adapterModel: str("adapter-model"), notes: str("notes") });
-        print(r);
-        console.error("Added to profiles/car-reports.json. Send it in with a pull request so others with this car know what works.");
+        print(r.report);
+        console.error(
+          r.saved
+            ? "Added to profiles/car-reports.json. Send it in with a pull request so others with this car know what works."
+            : `Send it in so others with this car know what works (needs a GitHub account):\n${r.sendUrl}`,
+        );
         return;
       }
       case "faults":
