@@ -985,7 +985,7 @@ button.mark-name:hover:not(:disabled) {
 }
 
 .read-demo {
-  margin: 24px 0 0;
+  margin: 24px 0 48px;
   font-size: 15px;
   color: var(--muted);
 }
@@ -1292,8 +1292,26 @@ main > details.more {
     font-size: 20px;
   }
 
+  .steps > li {
+    grid-template-columns: 30px 1fr;
+    gap: 0 12px;
+  }
+
+  .step-num {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .steps > li:not(:last-child)::before {
+    left: 14px;
+    top: 36px;
+  }
+
+  /* The two ways get the card's full width back from the number column. */
   .ways {
     grid-template-columns: 1fr;
+    margin-left: -42px;
   }
 
   .way .primary.big,
@@ -1553,13 +1571,13 @@ body:has(.shell.is-first-run) {
 }
 
 @media (max-width: 760px) {
-  .callout {
-    font-size: 13px;
+  /* On a phone the big dial sits above the other two, so lines to each dial can't line up: the dials' own units say enough. */
+  .product .callouts {
+    display: none;
   }
 
-  .callout::before {
-    height: 28px;
-    margin-bottom: 8px;
+  .callout {
+    font-size: 13px;
   }
 
   .showcase-line {
@@ -1941,9 +1959,34 @@ body:has(.shell.is-first-run) {
     border-radius: 32px;
   }
 
+  /* Big dial on top, the other two side by side under it: three in a row is too small to read. */
   .dials {
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 4px 6%;
     margin-top: 4px;
+  }
+
+  .dial {
+    flex: 0 0 44%;
+    max-width: 44%;
+  }
+
+  .dial.big {
+    order: -1;
+    flex: 0 0 86%;
+    max-width: 86%;
+  }
+
+  .dial-num {
+    font-size: 15px;
+  }
+
+  .dial.big .dial-num {
+    font-size: 13px;
+  }
+
+  .dial-unit {
+    font-size: 6.5cqw;
   }
 
   /* A phone shows the first two charts, plus any past its limit, until asked for the rest. */
