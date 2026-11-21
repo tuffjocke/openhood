@@ -13,7 +13,9 @@ import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { LiveChart, type Point } from "./LiveChart";
 import { AgentButton } from "./landing/AgentButton";
 import { GUIDE_URL } from "./CarChooser";
+import { profileIn, valuesIn } from "@/core/units";
 import { reportsFor } from "@/profiles/car-reports";
+import { useUnits } from "./useUnits";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
@@ -161,12 +163,17 @@ export function FirstRun({
   // A profile without live readings (an airbag module) has nothing to show off: use standard OBD-II then.
   const showcase = profile.channels.length ? profile : (PROFILES.find((p) => p.generic) ?? profile);
   const demo = useDemoCar(showcase, page === "home" && !connecting);
+  const [units] = useUnits();
+  const shownCar = profileIn(showcase, units);
+  const shownValues = valuesIn(showcase, demo.values, units);
+  const shownPoints = (key: string) =>
+    (demo.history.points[key] ?? []).map((p) => ({ t: p.t, v: valuesIn(showcase, { [key]: p.v }, units)[key] }));
   // The steps page needs a car: without one, go back to the start page to pick it.
   const router = useRouter();
   useEffect(() => {
     if (page === "read" && loaded && !carText) router.replace("/");
   }, [page, loaded, carText, router]);
-  const layout = dialLayout(showcase);
+  const layout = dialLayout(shownCar);
   // One chart from each group (air, engine, fuel), up to three.
   const showcaseCharts = layout.groups.map((g) => layout.charts.find((c) => c.group === g)!).slice(0, 3);
   if (showcaseCharts.length === 0) showcaseCharts.push(...layout.charts.slice(0, 3));
@@ -425,7 +432,7 @@ export function FirstRun({
       </div>
 
       <div className="product">
-        <DialRow profile={showcase} values={demo.values} />
+        <DialRow profile={shownCar} values={shownValues} />
         <div className="callouts">
           {layout.dials.map(({ channel, big }) => (
             <Callout key={channel.key} name={big && layout.battery ? `${channel.label} and battery` : channel.label} />
@@ -446,7 +453,7 @@ export function FirstRun({
           </h2>
           <div className="showcase-charts">
             {showcaseCharts.map((c) => (
-              <LiveChart key={c.key} channel={c} points={demo.history.points[c.key] ?? []} now={demo.history.now} value={demo.values[c.key]} />
+              <LiveChart key={c.key} channel={c} points={shownPoints(c.key)} now={demo.history.now} value={shownValues[c.key]} />
             ))}
           </div>
           <div className="callouts">

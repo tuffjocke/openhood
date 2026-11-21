@@ -85,6 +85,9 @@ components/Dial           round dial for the live screen: fine scale round the e
 components/LiveChart      one reading as a card: name (coloured by group) and unit, value, last 30 s as a line
 components/Dials          which readings get dials and which charts (dialLayout), and the row of dials, shared by
                           the live screen and the start page demo
+core/units.ts             km/h and °C, mph and °C (UK) or mph and °F (US): converts channels and values for showing and
+                          logging only; profiles stay metric. components/useUnits picks from the browser's region,
+                          and the footer has the switch
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
 core/adapters.ts          adapters we recommend by name, with shop searches (no affiliate links); shown on /adapters
                           as tested only when a car report names them (adapterModel)
@@ -109,6 +112,7 @@ tests/safety.test.ts      read-only allowlist for raw requests
 tests/car-reports.test.ts every car report is valid and has nothing personal
 tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidying typed car names
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
+tests/units.test.ts       unit guess and conversions
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real

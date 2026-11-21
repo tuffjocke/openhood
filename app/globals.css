@@ -2427,11 +2427,23 @@ span.fault-label {
 
 .foot-links {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
 }
 
 .foot a {
   text-underline-offset: 4px;
+}
+
+/* Units, as a quiet choice among the footer links. */
+.foot .units {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* On the start page the footer closes the last light section, full width. */

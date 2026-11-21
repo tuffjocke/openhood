@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hex, NegativeResponse } from "@/core/kwp2000/frame";
 import {
   buildExport,
@@ -21,6 +21,8 @@ import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
+import { useUnits } from "./useUnits";
+import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units";
 import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
@@ -100,6 +102,11 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const [asked, setAsked] = useState<"yes" | "no" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
+  // Readings are kept in metric, as the profile gives them, and converted only to show and log.
+  const [units, setUnits] = useUnits();
+  const shown = useMemo(() => profileIn(profile, units), [profile, units]);
+  const show = useCallback((v: Values) => valuesIn(profile, v, units), [profile, units]);
+
   const session = useRef<Session | null>(null);
   const latest = useRef<Values>({});
   const history = useRef<Record<string, Point[]>>({});
@@ -124,14 +131,14 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       const t = performance.now();
       setNow(t);
       if (recording && status === "live") {
-        const v = latest.current;
+        const v = show(latest.current);
         rows.current.push(
           [((t - recStart.current) / 1000).toFixed(1), ...profile.channels.map((c) => v[c.key]?.toFixed(c.decimals + 1) ?? "")].join(","),
         );
       }
     }, 100);
     return () => clearInterval(id);
-  }, [recording, status, profile]);
+  }, [recording, status, profile, show]);
 
   const onValues = useCallback((v: Values) => {
     const t = performance.now();
@@ -360,7 +367,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       return;
     }
     setRecording(false);
-    const header = ["time_s", ...profile.channels.map((c) => `${c.key}_${c.unit.replace(/[^a-z%]/gi, "")}`)].join(",");
+    const header = ["time_s", ...shown.channels.map((c) => `${c.key}_${c.unit.replace(/[^a-z%]/gi, "")}`)].join(",");
     void saveDrive(header + "\n" + rows.current.join("\n"));
   }
 
@@ -388,7 +395,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
   // The profile picks its dials; the rest of its readings become charts, grouped by colour.
-  const { charts: chartChannels, groups: chartGroups } = dialLayout(profile);
+  const { charts: chartChannels, groups: chartGroups } = dialLayout(shown);
+  const shownLatest = show(latest.current);
 
   // Logging a drive sits with the other header actions, after Back to start or Disconnect.
   const logTools = (
@@ -518,7 +526,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
               </span>
               <span className="binnacle-link">{session.current ? linkLine(session.current) : ""}</span>
             </div>
-            <DialRow profile={profile} values={latest.current} unavailable={unavailable} />
+            <DialRow profile={shown} values={shownLatest} unavailable={unavailable} />
             {chartChannels.length > 0 && (
               <>
                 {chartGroups.length > 0 && (
@@ -536,9 +544,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                     <LiveChart
                       key={c.key}
                       channel={c}
-                      points={history.current[c.key] ?? []}
+                      points={units === "metric" ? (history.current[c.key] ?? []) : (history.current[c.key] ?? []).map((p) => ({ t: p.t, v: show({ [c.key]: p.v })[c.key] }))}
                       now={now}
-                      value={latest.current[c.key]}
+                      value={shownLatest[c.key]}
                       unavailable={unavailable.has(c.key)}
                     />
                   ))}
@@ -555,9 +563,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
       <section className="lower">
         <FaultPanel
-          profile={profile}
+          profile={shown}
           vehicle={vehicleText}
-          values={latest.current}
+          values={shownLatest}
           live={live}
           busy={busy}
           faults={faults}
@@ -567,7 +575,10 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           confirming={confirmClear}
           setConfirming={setConfirmClear}
           onClear={() => faultAction(true)}
-          onFreezeFrame={(f) => session.current?.readFreezeFrame(f) ?? Promise.resolve(null)}
+          onFreezeFrame={async (f) => {
+            const v = (await session.current?.readFreezeFrame(f)) ?? null;
+            return v && show(v);
+          }}
           onForgetHistory={forgetHistory}
         />
       </section>
@@ -650,6 +661,13 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
               Demo car
             </button>
           )}
+          <select className="units" value={units} onChange={(e) => setUnits(e.target.value as Units)} aria-label="Units">
+            {UNITS.map((u) => (
+              <option key={u} value={u}>
+                {UNIT_NAMES[u]}
+              </option>
+            ))}
+          </select>
           <a href="https://github.com/tuffjocke/openhood/blob/main/CONTRIBUTING.md">Contribute</a>
           <a href="https://github.com/tuffjocke/openhood">GitHub</a>
         </span>
