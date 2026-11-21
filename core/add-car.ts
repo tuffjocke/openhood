@@ -64,7 +64,16 @@ export function requestCarUrl(c: CarDetails): string {
  * (Claude or Codex desktop app) sets Openhood up and reads the car, so the person never needs
  * a terminal. Uses the CLI, which works without registering the MCP server.
  */
-export function readCarPrompt(car: string): string {
+/**
+ * `untried`: the car's own profile hasn't read a real car yet. The agent is then asked to check it
+ * properly with the MCP server or the traffic log, since it's the first to try.
+ */
+export function readCarPrompt(car: string, untried = false): string {
+  const first = untried
+    ? `
+Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. Openhood's MCP server (.mcp.json in the repository) lets you connect, read faults and live data, and see the raw traffic yourself; use it if you can, otherwise the CLI with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources, and tell me what you found. Offer to send it in as a GitHub issue or pull request so the profile gets better.
+`
+    : "";
   return `Help me read my car's fault codes with Openhood, an open-source car diagnostics tool:
 https://github.com/tuffjocke/openhood
 
@@ -77,6 +86,7 @@ I am not a programmer. Do the technical steps yourself, one at a time, and tell 
 
 5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npm run openhood -- record --profile <id> --port <port> --make <make> --model <model> --year <year> --adapter-model "<what my adapter is sold as, ask me>". It only stores the car, the adapter, the connection and whether it worked: no VIN, no fault codes. If my model is missing from profiles/names.ts, add it with the manufacturer's official spelling (ask me if unsure). Then offer to send it in as a pull request on GitHub, and help me do it if I say yes.
 
+${first}
 Rules: read only. Never clear codes or send anything that changes the car without asking me first. See docs/cli.md in the repository for the commands.
 
 My car is ${car || "(ask me which car it is)"}.`;

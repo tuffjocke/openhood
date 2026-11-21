@@ -74,7 +74,9 @@ components/FirstRun       landing until the first connection, like a product pag
                           "I have a USB one" / "I have a Bluetooth one", else "I have one", plus Buy on Amazon;
                           remembered, then folds to a done line), 2 "Plug in, ignition on" with two ways side by
                           side: read the codes here (Bluetooth tries Web Bluetooth, with paired-in-settings as the
-                          fallback), or ask an AI (copies the agent message). /read
+                          fallback), or ask an AI (copies the agent message). For a car's own profile with no
+                          working car report yet, the AI way comes first and its message asks the agent to use the
+                          MCP server, dig into what fails or is missing, and send it in. /read
                           without a saved car goes back to the start page
 components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)

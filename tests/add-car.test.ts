@@ -26,5 +26,7 @@ describe("add your car prompt", () => {
       assert.ok(p.includes(cmd), cmd);
     assert.ok(p.endsWith("My car is 1999 Land Rover Defender."));
     assert.ok(readCarPrompt("").includes("ask me which car"));
+    assert.ok(!readCarPrompt("1997 Volvo 850").includes("MCP server"));
+    assert.ok(readCarPrompt("1997 Volvo 850", true).includes("MCP server"), "untried cars ask the agent to dig in");
   });
 });

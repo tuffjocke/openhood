@@ -13,6 +13,7 @@ import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { LiveChart, type Point } from "./LiveChart";
 import { AgentButton } from "./landing/AgentButton";
 import { GUIDE_URL } from "./CarChooser";
+import { reportsFor } from "@/profiles/car-reports";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
@@ -216,6 +217,68 @@ export function FirstRun({
   // computer's settings first and then read like a cable.
   const readBle = link === "bluetooth" && ble;
   const busy = connecting === (readBle ? "bluetooth" : "serial");
+  // A car's own profile that nobody has read a real car with yet: the AI agent route comes first, because
+  // an agent can see the traffic, work around problems and record the car for others (docs/cli.md).
+  const untried =
+    !profile.generic &&
+    profile.status !== "tested" &&
+    !reportsFor(selection.make ?? "", selection.model ?? "", Number(selection.year)).some(
+      (r) => r.result === "worked" && r.profile === profile.id,
+    );
+  const readWay = (
+    <div className="way">
+      <h3>Read the codes</h3>
+      <p>See every fault here, in plain words.</p>
+      {!canRead && (
+        <p className="hero-note" role="note">
+          <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
+        </p>
+      )}
+      {canRead && !readBle && !serialOk && (
+        <p className="link-hint">This browser only reaches Bluetooth adapters.</p>
+      )}
+      {(readBle || serialOk) && (
+        <div className="chooser-actions">
+          <button
+            className={untried ? "ghost big" : "primary big"}
+            onClick={readBle ? onBluetooth : onConnect}
+            disabled={!!connecting}
+          >
+            {busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car"}
+          </button>
+        </div>
+      )}
+      {canRead && link === "bluetooth" && (
+        <p className="link-hint">
+          {readBle && serialOk ? (
+            <>
+              Not found?{" "}
+              <button className="link-button" onClick={onConnect} disabled={!!connecting}>
+                Pair it in your settings, then read it here
+              </button>
+            </>
+          ) : readBle ? (
+            "Turn the adapter on. No pairing needed."
+          ) : (
+            `Pair it in your ${device}\u2019s Bluetooth settings first.`
+          )}
+        </p>
+      )}
+    </div>
+  );
+  const aiWay = (
+    <div className="way">
+      <h3>Ask an AI</h3>
+      <p>
+        {untried
+          ? "Not tried on this car yet. An AI agent on your computer can read it, fix what goes wrong and add it for others."
+          : "An AI agent on your computer reads the car and tells you what to fix."}
+      </p>
+      <div className="chooser-actions">
+        <AgentButton car={carText} primary={untried || !canRead} untried={untried} />
+      </div>
+    </div>
+  );
   // Steps for the chosen car: 1 get the cable, 2 read it here or with an AI agent.
   const steps = (
     <ol className="steps">
@@ -293,52 +356,17 @@ export function FirstRun({
             <>
               <p className="step-line">The socket is under the dashboard, near your knee. Then pick one:</p>
               <div className="ways">
-                <div className="way">
-                  <h3>Read the codes</h3>
-                  <p>See every fault here, in plain words.</p>
-                  {!canRead && (
-                    <p className="hero-note" role="note">
-                      <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
-                    </p>
-                  )}
-                  {canRead && !readBle && !serialOk && (
-                    <p className="link-hint">This browser only reaches Bluetooth adapters.</p>
-                  )}
-                  {(readBle || serialOk) && (
-                    <div className="chooser-actions">
-                      <button
-                        className="primary big"
-                        onClick={readBle ? onBluetooth : onConnect}
-                        disabled={!!connecting}
-                      >
-                        {busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car"}
-                      </button>
-                    </div>
-                  )}
-                  {canRead && link === "bluetooth" && (
-                    <p className="link-hint">
-                      {readBle && serialOk ? (
-                        <>
-                          Not found?{" "}
-                          <button className="link-button" onClick={onConnect} disabled={!!connecting}>
-                            Pair it in your settings, then read it here
-                          </button>
-                        </>
-                      ) : readBle ? (
-                        "Turn the adapter on. No pairing needed."
-                      ) : (
-                        `Pair it in your ${device}\u2019s Bluetooth settings first.`
-                      )}
-                    </p>
-                  )}
-                </div>
-                <div className="way">
-                  <h3>Ask an AI</h3>
-                  <p>An AI agent on your computer reads the car and tells you what to fix.</p>
-                  <div className="chooser-actions">
-                    <AgentButton car={carText} primary={!canRead} />
-                  </div>
-                </div>
+                {untried ? (
+                  <>
+                    {aiWay}
+                    {readWay}
+                  </>
+                ) : (
+                  <>
+                    {readWay}
+                    {aiWay}
+                  </>
+                )}
               </div>
               <p className="step-foot">Only reads. Nothing in your car changes.</p>
             </>

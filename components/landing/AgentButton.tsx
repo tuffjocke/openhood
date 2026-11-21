@@ -11,9 +11,9 @@ const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
  * the car, so it works in any browser. Web versions of those agents can't reach an adapter.
  * A button on the steps page (the main one where the browser can't read a car itself).
  */
-export function AgentButton({ car, primary }: { car: string; primary?: boolean }) {
+export function AgentButton({ car, primary, untried }: { car: string; primary?: boolean; untried?: boolean }) {
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
-  const text = readCarPrompt(car);
+  const text = readCarPrompt(car, untried);
 
   async function copy() {
     try {
