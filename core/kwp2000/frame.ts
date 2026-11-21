@@ -38,8 +38,10 @@ export function addressedFrame(
   target: number,
   source: number,
   mode: "physical" | "functional" = "physical",
+  /** Added to the length in the format byte (see VehicleProfile.link.lengthOffset). */
+  lengthOffset = 0,
 ): Uint8Array {
-  const out = [(mode === "functional" ? 0xc0 : 0x80) | payload.length, target, source, ...Array.from(payload)];
+  const out = [(mode === "functional" ? 0xc0 : 0x80) | (payload.length + lengthOffset), target, source, ...Array.from(payload)];
   out.push(checksum(out));
   return Uint8Array.from(out);
 }

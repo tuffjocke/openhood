@@ -131,8 +131,11 @@ export function CarChooser({
 
   const complete = !!makeName && !!typed && !!year;
   const car: CarDetails | null = complete ? { make: makeName, model: canonical, year: Number(year) } : null;
-  const found = car ? matches(profiles, car.make, car.model, car.year) : [];
   const generic = genericProfile(profiles);
+  const own = car ? matches(profiles, car.make, car.model, car.year) : [];
+  // Profiles for other parts of the car (brakes, airbag) don't read the engine: offer standard codes too.
+  const found =
+    own.length && generic && own.every((m) => m.system) ? [...own, { profile: generic, engine: "Engine", system: "Engine" }] : own;
   const engineChosen = found.find((m) => m.engine === selection.engine && m.profile.id === selection.profileId);
 
   // Tell the dashboard as soon as the car is complete. Several engines wait for a choice.
@@ -287,7 +290,7 @@ export function CarChooser({
             <>
                 {found.length > 1 && (
                   <div className="engines">
-                    <span>Which engine?</span>
+                    <span>{found.some((m) => m.system) ? "What to read?" : "Which engine?"}</span>
                     {found.map((m) => (
                       <button
                         key={m.profile.id + m.engine}
@@ -295,7 +298,7 @@ export function CarChooser({
                         aria-pressed={engineChosen === m}
                         onClick={() => onSelect({ ...car, profileId: m.profile.id, engine: m.engine, chosen: true })}
                       >
-                        {m.engine}
+                        {m.system ?? m.engine}
                       </button>
                     ))}
                   </div>

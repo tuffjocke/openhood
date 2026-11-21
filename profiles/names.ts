@@ -43,5 +43,5 @@ export const VEHICLE_NAMES: Record<string, string[]> = {
   Toyota: [],
   Vauxhall: [],
   Volkswagen: ["Golf", "Passat", "Polo"],
-  Volvo: [],
+  Volvo: ["850", "C70", "S70", "V70"],
 };

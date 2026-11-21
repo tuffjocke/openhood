@@ -194,6 +194,11 @@ export interface VehicleMatch {
   to: number;
   /** Engine or variant, to tell profiles apart for the same car: "2.5 Td5 diesel". */
   engine: string;
+  /**
+   * For profiles that read something other than the engine: what they read, in a few words
+   * ("ABS brakes", "Airbag"). The car chooser then asks which one, and offers standard engine codes too.
+   */
+  system?: string;
 }
 
 export interface VehicleProfile {
@@ -257,6 +262,11 @@ export interface VehicleProfile {
     interMessageMs?: number;
     /** Gap between bytes we send (KWP2000 P4, 0 to 20 ms). Default 0: send the frame in one go. */
     interByteMs?: number;
+    /**
+     * Added to the data length in an addressed frame's format byte, both ways. Default 0 (ISO 14230).
+     * Volvo's keyword D3 B0 protocol counts one more than the data: `82 51 13 A1 87` carries one byte.
+     */
+    lengthOffset?: number;
   };
 
   /**

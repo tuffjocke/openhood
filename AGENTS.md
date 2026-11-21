@@ -42,6 +42,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   land-rover-td5/         reference profile: index, data, faults, fault-map, fault-explanations, keygen, simulator, README
   generic-obd2/           standard OBD-II: functional addressing, supported PIDs, DTCs, pending, freeze frame, self-tests
   vw-audi-kwp1281/        older VW Group engines: finds readings by formula at connect, VAG fault names and explanations
+  volvo-850/              850, S70, V70, C70 ABS, airbag and instruments (keyword D3 B0): three profiles, faults only
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
@@ -52,7 +53,9 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
                           drive" sits in the header, and asks where to save the file), the faults panel below, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
                           fault history export/import, traffic and profile details behind "More"
-components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Once filled
+components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Several
+                          engines: "Which engine?". Profiles for other parts (`system`: ABS, airbag): "What to read?",
+                          with standard engine codes offered next to them. Once filled
                           in, the fields fold into one line with "Change car" at the top of the step card (not in the header picker). Then next steps:
                           read it if a profile fits, else standard codes, with the add-your-car AI prompt folded away
 components/VehiclePicker  the car pill in the header, opens CarChooser
@@ -105,6 +108,7 @@ tests/car-reports.test.ts every car report is valid and has nothing personal
 tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidying typed car names
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
+tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
                           car), architecture.md, k-line-primer.md
 ```
@@ -202,6 +206,9 @@ Follow docs/adding-a-vehicle.md. In short:
   lists). The link sends keep-alives itself when idle. Titles mean different things than KWP2000 service ids,
   so `core/safety.ts` checks them with their own list. A group can build its request from state (`requestFor`)
   for ECUs that say at connect where readings live.
+- Volvo's keyword D3 B0 is ISO 14230 framing with `lengthOffset: 1` (the format byte counts one more than the
+  data) after a 5-baud wake-up. Profiles with no live data have `channels: []` and a keep-alive group; the
+  dashboard then shows no binnacle and the start page demo uses standard OBD-II instead.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.

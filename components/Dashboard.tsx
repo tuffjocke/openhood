@@ -434,7 +434,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
             <button onClick={disconnect} disabled={status === "connecting"}>
               Back to start
             </button>
-            {logTools}
+            {profile.channels.length > 0 && logTools}
           </div>
         )}
         {!showFirstRun && !demo && (
@@ -464,7 +464,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 Disconnect
               </button>
             )}
-            {(live || recording || unsavedDrive) && logTools}
+            {/* Nothing to log for a profile without live readings. */}
+            {(live || recording || unsavedDrive) && profile.channels.length > 0 && logTools}
           </div>
         )}
       </header>
@@ -503,6 +504,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
       {!showFirstRun && (
         <>
+          {/* Profiles for parts like the airbag have faults but no live readings: no binnacle then. */}
+          {profile.channels.length > 0 && (
           <section className="binnacle" aria-label="Live data">
             <div className="binnacle-corners">
               <span className="binnacle-lamp">
@@ -548,6 +551,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
               </>
             )}
           </section>
+          )}
 
       <section className="lower">
         <FaultPanel

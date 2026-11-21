@@ -7,6 +7,8 @@ import type { VehicleProfile } from "./profile";
 export interface Match {
   profile: VehicleProfile;
   engine: string;
+  /** Set for profiles that read something other than the engine (VehicleMatch.system). */
+  system?: string;
 }
 
 const sortAlpha = (a: string, b: string) => a.localeCompare(b);
@@ -34,7 +36,7 @@ export function matches(profiles: VehicleProfile[], make: string, model: string,
   return profiles.flatMap((p) =>
     p.vehicles
       .filter((v) => v.make === make && v.model === model && year >= v.from && year <= v.to)
-      .map((v) => ({ profile: p, engine: v.engine })),
+      .map((v) => ({ profile: p, engine: v.engine, system: v.system })),
   );
 }
 

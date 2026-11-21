@@ -157,13 +157,15 @@ export function FirstRun({
 }) {
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
   // The demo runs on the start page while nothing else is connecting.
-  const demo = useDemoCar(profile, page === "home" && !connecting);
+  // A profile without live readings (an airbag module) has nothing to show off: use standard OBD-II then.
+  const showcase = profile.channels.length ? profile : (PROFILES.find((p) => p.generic) ?? profile);
+  const demo = useDemoCar(showcase, page === "home" && !connecting);
   // The steps page needs a car: without one, go back to the start page to pick it.
   const router = useRouter();
   useEffect(() => {
     if (page === "read" && loaded && !carText) router.replace("/");
   }, [page, loaded, carText, router]);
-  const layout = dialLayout(profile);
+  const layout = dialLayout(showcase);
   // One chart from each group (air, engine, fuel), up to three.
   const showcaseCharts = layout.groups.map((g) => layout.charts.find((c) => c.group === g)!).slice(0, 3);
   if (showcaseCharts.length === 0) showcaseCharts.push(...layout.charts.slice(0, 3));
@@ -403,7 +405,7 @@ export function FirstRun({
       </div>
 
       <div className="product">
-        <DialRow profile={profile} values={demo.values} />
+        <DialRow profile={showcase} values={demo.values} />
         <div className="callouts">
           {layout.dials.map(({ channel, big }) => (
             <Callout key={channel.key} name={big && layout.battery ? `${channel.label} and battery` : channel.label} />
@@ -441,7 +443,7 @@ export function FirstRun({
           <h2 id="faults-title" className="giant">
             Faults
           </h2>
-          <DemoFault fault={demo.fault} profile={profile} />
+          <DemoFault fault={demo.fault} profile={showcase} />
           <p className="showcase-line">Every code in plain words: what it means, what usually causes it, what to check first.</p>
         </section>
       )}

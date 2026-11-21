@@ -47,6 +47,10 @@ contributors). No code from it is included.
 
 ## Protocol facts
 
+Volvo keyword D3 B0 bytes, module addresses and the raw-to-Volvo fault code tables in
+`profiles/volvo-850/` are facts from jonesrh.info (and a copy of its code list on stonis-world.com),
+which give no licence. No code or text from them is included; see `profiles/volvo-850/README.md`.
+
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
 TD5-Dash and discotd5.com are used as facts about the ECU's protocol, with credit in
 `profiles/land-rover-td5/README.md`. No code from those projects is included.

@@ -82,7 +82,7 @@ export class SimulatedTransport implements Transport {
       const reply = iso
         ? iso9141Response(payload, 0x10)
         : req.addressed
-          ? addressedFrame(payload, tester, ecu)
+          ? addressedFrame(payload, tester, ecu, "physical", this.profile.link.lengthOffset)
           : shortFrame(payload);
       setTimeout(() => this.rx.push(reply), 8 + Math.random() * 12 + i * 35);
     });

@@ -71,8 +71,9 @@ export class KlineLink implements Link {
     const confirm = Uint8Array.of(~kb[1] & 0xff);
     this.onTraffic({ t: performance.now(), dir: "tx", bytes: confirm, note: "confirm key byte" });
     await this.transport.write(confirm);
-    const ack = await this.transport.read(1, 100);
-    this.onTraffic({ t: performance.now(), dir: "rx", bytes: ack, note: "ECU ready" });
+    // ISO ECUs answer with the inverted address. Not every protocol says so, so don't insist on it.
+    const ack = await this.transport.read(1, 100).catch(() => new Uint8Array(0));
+    if (ack.length) this.onTraffic({ t: performance.now(), dir: "rx", bytes: ack, note: "ECU ready" });
     await sleep(this.profile.link.interMessageMs ?? 55);
     const iso9141 = kb[0] === kb[1] && (kb[0] === 0x08 || kb[0] === 0x94);
     return { kind: "slow", keyBytes: [kb[0], kb[1]], protocol: iso9141 ? "iso9141" : "kwp2000" };
@@ -89,7 +90,7 @@ export class KlineLink implements Link {
     const msg = this.iso9141
       ? iso9141Frame(payload, addresses.tester)
       : addressed
-        ? addressedFrame(payload, addresses.ecu, addresses.tester, addressMode)
+        ? addressedFrame(payload, addresses.ecu, addresses.tester, addressMode, this.profile.link.lengthOffset)
         : shortFrame(payload);
     this.transport.flush(); // drop late answers from earlier requests
     this.onTraffic({ t: performance.now(), dir: "tx", bytes: msg, note: opts.note, private: identifies(payload) });
@@ -105,7 +106,8 @@ export class KlineLink implements Link {
       return parseIso9141(raw).payload;
     }
     const head = await this.transport.read(1, timeoutMs);
-    const rest = await this.transport.read(remainingLength(head[0]), RESPONSE_TIMEOUT_MS);
+    const offset = head[0] & 0x80 ? (this.profile.link.lengthOffset ?? 0) : 0;
+    const rest = await this.transport.read(remainingLength(head[0]) - offset, RESPONSE_TIMEOUT_MS);
     const raw = new Uint8Array(1 + rest.length);
     raw[0] = head[0];
     raw.set(rest, 1);
