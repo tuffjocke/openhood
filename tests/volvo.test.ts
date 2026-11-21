@@ -9,6 +9,8 @@ import { addressedFrame, checksum } from "@/core/kwp2000/frame";
 import type { TrafficEvent } from "@/core/link/types";
 import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
+import { ElmLink } from "@/core/link/elm327";
+import { SimulatedElm } from "@/core/transport/simulated-elm";
 import { PROFILES } from "@/profiles";
 import { parseD3b0Faults, volvo850Abs, volvo850Combi } from "@/profiles/volvo-850";
 import { COMBI_CODES } from "@/profiles/volvo-850/codes";
@@ -47,5 +49,17 @@ describe("Volvo keyword D3 B0", () => {
     assert.deepEqual(found.map((m) => m.system).sort(), ["ABS brakes", "Airbag", "Instruments"]);
     assert.equal(matches(PROFILES, "Volvo", "850", 1995).length, 0);
     assert.ok(volvo850Combi.faults?.explanations?.["CI-221"]);
+  });
+
+  it("sets up an ELM327 the way jonesrh does: ATSP 3, ATIIA 01, ATWM 82 01 13 A1, ATSH 83 01 13, AE01", async () => {
+    const sent: string[] = [];
+    const link = new ElmLink(new SimulatedElm(volvo850Abs, { can: false }), (e) => e.dir === "tx" && e.text && sent.push(e.text), volvo850Abs.link.elm);
+    const s = new Session(volvo850Abs, link);
+    await s.connect();
+    const faults = await s.readFaults();
+    assert.deepEqual(faults.map((f) => f.id), ["ABS-321", "ABS-431"]);
+    for (const c of ["ATSP3", "ATIIA01", "ATTA13", "ATWM820113A1", "ATSH820113", "ATSH830113", "AE01"]) assert.ok(sent.includes(c), c);
+    assert.ok(sent.indexOf("ATSH830113") < sent.indexOf("AE01"), "the header for two data bytes comes before AE01");
+    await s.disconnect();
   });
 });

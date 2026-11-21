@@ -157,9 +157,11 @@ Follow docs/adding-a-vehicle.md. In short:
   be ones the car was actually sold with that engine, from a source. Don't add a new make or model to
   `names.ts` unless you are sure it exists and is spelled the official way; if unsure, ask the person.
   The tests reject unknown names.
-- **Adapters.** A profile lists what it runs on in `adapters` (default `["kkl"]`). Add `"elm327"` only if
-  every request is standard OBD-II; manufacturer protocols need `["kkl"]`. Contract tests run every
-  profile that lists `"elm327"` through a simulated ELM327 on CAN and K-line.
+- **Adapters.** A profile lists what it runs on in `adapters` (default `["kkl"]`), the recommended one first.
+  Add `"elm327"` if every request is standard OBD-II, or if the profile gives `link.elm`: the protocol,
+  wake-up address, headers and keep-alive an ELM327 needs for a manufacturer K-line protocol, from a
+  source. KWP1281 and anything with a security unlock need `["kkl"]`. Contract tests run every profile
+  that lists `"elm327"` through a simulated ELM327 (which only answers when set up the way `link.elm` says).
 - **Read-only by default.** Anything that writes to an ECU beyond clearing faults (adaptations,
   coding, flashing, maps) needs an issue and explicit maintainer approval first.
 - **Car reports are facts from real cars.** Only add an entry after reading the car (`record` does it).
@@ -224,6 +226,8 @@ Follow docs/adding-a-vehicle.md. In short:
   lists). The link sends keep-alives itself when idle. Titles mean different things than KWP2000 service ids,
   so `core/safety.ts` checks them with their own list. A group can build its request from state (`requestFor`)
   for ECUs that say at connect where readings live.
+- `link.elm` makes the ELM327 link skip the OBD-II search: it sets ATSP, ATIIA, ATTA and ATWM once and an ATSH
+  header for each request length, then answers come back with headers stripped (ATH0) as usual.
 - Volvo's keyword D3 B0 is ISO 14230 framing with `lengthOffset: 1` (the format byte counts one more than the
   data) after a 5-baud wake-up. Profiles with no live data have `channels: []` and a keep-alive group; the
   dashboard then shows no binnacle and the start page demo uses standard OBD-II instead.

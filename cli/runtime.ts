@@ -101,7 +101,7 @@ export class Runtime {
     if (!o.port) {
       if (o.simulateElmCan === undefined) return kLineLink(profile, new SimulatedTransport(profile), this.log);
       if (!allowed.includes("elm327")) throw new UserError(`${profile.name} can't run through an ELM327 adapter.`);
-      return new ElmLink(new SimulatedElm(profile, { can: o.simulateElmCan }), this.log);
+      return new ElmLink(new SimulatedElm(profile, { can: o.simulateElmCan }), this.log, profile.link.elm);
     }
     const path = o.port;
     let kind = o.adapter && o.adapter !== "auto" ? o.adapter : undefined;
@@ -115,7 +115,7 @@ export class Runtime {
     if (!allowed.includes(kind))
       throw new UserError(`${profile.name} needs ${allowed.includes("kkl") ? "a KKL cable" : "an ELM327-type adapter"}, but this is ${kind === "kkl" ? "a KKL cable (or nothing answered)" : "an ELM327 adapter"}.`);
     return kind === "elm327"
-      ? new ElmLink(new NodeSerialTransport({ path, baudRate, echo: false }), this.log)
+      ? new ElmLink(new NodeSerialTransport({ path, baudRate, echo: false }), this.log, profile.link.elm)
       : kLineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate }), this.log);
   }
 

@@ -141,9 +141,27 @@ export type InitResult =
  * The hardware between the browser and the car:
  *  - "kkl": a plain USB K-line cable. Raw access, needed for manufacturer protocols. Pre-CAN cars only.
  *  - "elm327": an ELM327-compatible adapter (USB or Bluetooth). Speaks standard OBD-II on every
- *    protocol, CAN included, but can't do most manufacturer-specific K-line sessions.
+ *    protocol, CAN included. Manufacturer K-line sessions only when the profile gives `link.elm`.
  */
 export type AdapterKind = "kkl" | "elm327";
+
+/**
+ * An ELM327 set up for a manufacturer's K-line protocol, from the ELM327 datasheet's AT commands:
+ * the protocol (ATSP), the 5-baud wake-up address (ATIIA), the tester address (ATTA), the header for
+ * each request (ATSH) and a keep-alive message the adapter repeats on its own (ATWM).
+ */
+export interface ElmRoute {
+  /** ELM327 protocol number: 3 = ISO 9141-2 (5-baud wake-up), 4 = ISO 14230 5-baud, 5 = ISO 14230 fast. */
+  protocol: 3 | 4 | 5;
+  /** Address sent at 5 baud to wake the ECU (protocols 3 and 4). */
+  initAddress?: number;
+  /** Our own address, if the ECU expects one other than F1. */
+  testerAddress?: number;
+  /** The three header bytes for a request with this many data bytes: format, target, source. */
+  header(dataLength: number): [number, number, number];
+  /** Data the adapter sends by itself to keep the ECU awake (with the header for its length). */
+  keepAlive?: number[];
+}
 
 /** What a profile gets to talk to the ECU with. */
 export interface EcuLink {
@@ -224,7 +242,8 @@ export interface VehicleProfile {
   hardware?: string;
   /**
    * Which adapters can run this profile, the recommended one first. Default ["kkl"].
-   * Only list "elm327" if the profile uses nothing but standard OBD-II requests.
+   * List "elm327" if the profile uses nothing but standard OBD-II requests, or if it gives
+   * `link.elm`: how an ELM327 carries its manufacturer protocol.
    */
   adapters?: AdapterKind[];
   /** Overall maturity. Keep "experimental" until it has been used on a real car. */
@@ -241,6 +260,11 @@ export interface VehicleProfile {
     protocol?: "kwp2000" | "kwp1281";
     /** Other speeds to try if the ECU doesn't answer the wake-up at `baudRate` (some KWP1281 ECUs use 9600). */
     altBaudRates?: number[];
+    /**
+     * How an ELM327 adapter reaches this ECU when it isn't plain OBD-II. Only for protocols the adapter
+     * frames itself (ISO 9141 or ISO 14230 style): not KWP1281, which confirms every byte.
+     */
+    elm?: ElmRoute;
     /**
      * How to wake the ECU:
      *  - "fast": ISO 14230 fast init (25 ms pulse)

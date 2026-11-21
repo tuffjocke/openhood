@@ -61,7 +61,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
 
   if (via === "bluetooth") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
-    return new ElmLink(new BluetoothTransport(), onTraffic);
+    return new ElmLink(new BluetoothTransport(), onTraffic, profile.link.elm);
   }
 
   const port = await WebSerialTransport.choosePort();
@@ -86,7 +86,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   const found = await detectAdapter((baudRate) => new WebSerialTransport({ baudRate, echo: false, port }), onTraffic);
   if (found?.kind === "elm327") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
-    return new ElmLink(new WebSerialTransport({ baudRate: found.baudRate, echo: false, port }), onTraffic);
+    return new ElmLink(new WebSerialTransport({ baudRate: found.baudRate, echo: false, port }), onTraffic, profile.link.elm);
   }
   // A KKL cable, or nothing answered yet: try the K-line, which is all a silent cable can be.
   if (!allowed.includes("kkl"))

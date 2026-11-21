@@ -56,10 +56,10 @@ function d3b0Profile(o: {
     covers: `850 · 1996 to 1997, S70, V70, C70 · 1997 to 1998`,
     vehicles: YEARS.map((y) => ({ ...y, engine: "Any engine", system: o.system })),
     ecu: o.ecu,
-    // Volvo's own protocol on the K-line. ELM327 adapters can do it with custom headers, but
-    // Openhood only drives them with standard OBD-II so far (see README).
-    adapters: ["kkl"],
-    hardware: "A KKL cable into the diagnostic socket, then into your computer.",
+    // Most people own an ELM327, which carries this protocol when set up by hand (link.elm, from
+    // jonesrh's command sequence). A KKL cable works too.
+    adapters: ["elm327", "kkl"],
+    hardware: "An ELM327 adapter or a KKL cable in the diagnostic socket.",
     status: "experimental",
 
     link: {
@@ -71,6 +71,16 @@ function d3b0Profile(o: {
       lengthOffset: 1,
       // There is no live data to poll yet, only the keep-alive: no need to send it flat out.
       interMessageMs: 250,
+      // Through an ELM327, as jonesrh does it: ISO 9141 with a 5-baud wake-up at the module's
+      // address (ATSP 3, ATIIA), tester 13 (ATTA 13), a header per request length (ATSH 83 01 13
+      // before AE01) and the adapter repeating the keep-alive itself (ATWM 82 01 13 A1).
+      elm: {
+        protocol: 3,
+        initAddress: o.address,
+        testerAddress: 0x13,
+        header: (n) => [0x81 + n, o.address, 0x13],
+        keepAlive: D3B0.keepAlive,
+      },
     },
 
     async connect(ecu) {

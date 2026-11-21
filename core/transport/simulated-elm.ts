@@ -1,4 +1,4 @@
-import type { SimulatedEcu, VehicleProfile } from "../profile";
+import type { ElmRoute, SimulatedEcu, VehicleProfile } from "../profile";
 import { ByteQueue, sleep, type ByteStream } from "./types";
 
 const enc = new TextEncoder();
@@ -17,6 +17,10 @@ const h2 = (b: number) => b.toString(16).toUpperCase().padStart(2, "0");
  * The quirks are things real adapters are reported to do: `protocolNumber` overrides the ATDPN
  * answer ("0" = won't say), `ignoresHeaders` is a clone that says OK to ATH1 and changes nothing,
  * `junkAfterReset` prints rubbish in place of its name after ATZ.
+ *
+ * For a profile with an ELM327 route (link.elm) it plays a K-line adapter set up by hand: it only
+ * answers once ATSP, ATIIA and ATSH match the route, prints "BUS INIT: ...OK" on the first request,
+ * and strips headers and checksum as ATH0 does.
  */
 export interface ElmQuirks {
   can: boolean;
@@ -32,6 +36,8 @@ export class SimulatedElm implements ByteStream {
   private echo = true;
   private headers = false;
   private line = "";
+  /** What a manufacturer route set: protocol, wake-up address and header. */
+  private set: { sp?: string; iia?: string; sh?: string } = {};
 
   constructor(
     private profile: VehicleProfile,
@@ -70,8 +76,12 @@ export class SimulatedElm implements ByteStream {
       this.searched = false;
       this.ecu = null;
       this.headers = false;
+      this.set = {};
       return ["", this.opts.junkAfterReset ? "\u00ff\u00fe?" : "ELM327 v1.5"];
     }
+    if (cmd.startsWith("ATSP")) this.set.sp = cmd.slice(4);
+    if (cmd.startsWith("ATIIA")) this.set.iia = cmd.slice(5);
+    if (cmd.startsWith("ATSH")) this.set.sh = cmd.slice(4);
     if (cmd === "ATH1" || cmd === "ATH0") {
       if (!this.opts.ignoresHeaders) this.headers = cmd === "ATH1";
       return ["OK"];
@@ -86,6 +96,9 @@ export class SimulatedElm implements ByteStream {
     if (cmd.startsWith("AT")) return ["OK"];
     if (!/^([0-9A-F]{2})+$/.test(cmd)) return ["?"];
 
+    const route = this.profile.link.elm;
+    if (route) return this.answerRoute(route, cmd);
+
     const prefix: string[] = [];
     if (!this.searched) {
       this.searched = true;
@@ -99,6 +112,25 @@ export class SimulatedElm implements ByteStream {
     let frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     if (this.opts.can && [0x43, 0x47, 0x4a].includes(frames[0]?.[0])) frames = [toCanDtcAnswer(frames)];
     return [...prefix, ...frames.flatMap((f) => this.print(f))];
+  }
+
+  /** A manufacturer protocol through the adapter: only answers when it was set up the way the route says. */
+  private answerRoute(route: ElmRoute, cmd: string): string[] {
+    const payload: number[] = [];
+    for (let i = 0; i < cmd.length; i += 2) payload.push(parseInt(cmd.slice(i, i + 2), 16));
+    const want = route.header(payload.length).map(h2).join("");
+    const iia = route.initAddress === undefined ? undefined : h2(route.initAddress);
+    if (this.set.sp !== String(route.protocol) || this.set.iia !== iia || this.set.sh !== want) return ["NO DATA"];
+    const prefix: string[] = [];
+    if (!this.searched) {
+      this.searched = true;
+      this.ecu = this.profile.simulator();
+      prefix.push("BUS INIT: ...OK");
+    }
+    const res = this.ecu?.handle(Uint8Array.from(payload));
+    if (!res) return [...prefix, "NO DATA"];
+    const frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
+    return [...prefix, ...frames.map((f) => f.map(h2).join(""))];
   }
 
   private print(f: number[]): string[] {

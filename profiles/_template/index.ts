@@ -71,7 +71,8 @@ export const templateProfile: VehicleProfile = {
   vehicles: [{ make: "Make", model: "Model", from: 2000, to: 2005, engine: "2.0 petrol" }],
   ecu: "Which ECU",
   hardware: "Standard KKL cable. Where the OBD socket is, and any adapter needed.",
-  // KKL for manufacturer protocols. Add "elm327" only if every request is standard OBD-II.
+  // KKL for manufacturer protocols. Add "elm327" if every request is standard OBD-II, or give link.elm
+  // (see profiles/volvo-850) when an ELM327 can carry the protocol with its own headers.
   adapters: ["kkl"],
   status: "experimental",
   // For VW Group cars on KWP1281 add protocol: "kwp1281" with init: "slow" (see profiles/vw-audi-kwp1281).

@@ -26,6 +26,7 @@ Nothing here has been checked on a car by us yet.
 | Read faults `AE 01` → `EE 01`, one raw code per byte, `FF` = none | community, known answer | jonesrh.info interpreter, stonis-world.com copy of jonesrh's code list |
 | Clear faults `AF 01` → `EF 01` | community | jonesrh.info interpreter |
 | Module addresses `01`, `58`, `51` | community | jonesrh.info scan page |
+| ELM327 set-up: `ATSP 3`, `ATIIA`, `ATTA 13`, `ATWM 82 xx 13 A1`, `ATSH` per length | community, known answer | jonesrh.info, matthewsvolvosite.com |
 | Raw code → Volvo code tables (`codes.ts`) | community | jonesrh's list of interpreted KWPD3B0 codes, a best effort by its own account |
 | Whether the module sends the inverted address after the wake-up | guess | Usual for ISO 9141 wake-ups; the link doesn't insist on it |
 | Plain-language explanations (`codes.ts`) | community | Written for Openhood |
@@ -49,10 +50,10 @@ Tested on: nothing yet. When you test on a car, add a line here:
 
 ## ELM327 adapters
 
-jonesrh reads these modules with an ordinary ELM327 (`ATSP 3`, `ATIIA 01`, `ATWM 82 01 13 A1`,
-`ATSH 83 01 13`, then `AE01`). Openhood only drives ELM327 adapters with standard OBD-II so far, so
-these profiles need a KKL cable. Supporting the ELM327 route would be a general change to
-`core/link/elm327.ts` (custom wake-up address and headers), worth an issue first.
+jonesrh reads these modules with an ordinary ELM327, and so does Openhood (`link.elm`): `ATSP 3`
+(ISO 9141, 5-baud wake-up), `ATIIA 01` (the module's address), `ATTA 13`, `ATWM 82 01 13 A1` (the
+adapter keeps the module awake itself), then `ATSH 83 01 13` before a two-byte request like `AE01`.
+The header changes with the request's length because of the format byte. A KKL cable works too.
 
 ## Which cars
 

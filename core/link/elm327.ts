@@ -1,5 +1,5 @@
 import { hex, NegativeResponse, positive, SID } from "../kwp2000/frame";
-import type { EcuLink, InitResult, RequestOptions } from "../profile";
+import type { EcuLink, ElmRoute, InitResult, RequestOptions } from "../profile";
 import { TimeoutError, type ByteStream } from "../transport/types";
 import { identifies, type Link, type Traffic } from "./types";
 
@@ -9,7 +9,9 @@ import { identifies, type Link, type Traffic } from "./types";
  * text ("0100") and read text answers until the ">" prompt. Reference: the ELM327 datasheet
  * (Elm Electronics), sections on AT commands, protocols and multiline responses.
  *
- * Only standard OBD-II requests make sense through it: profiles opt in with adapters: ["elm327"].
+ * Standard OBD-II by default: profiles opt in with adapters: ["elm327"]. A profile can also give an
+ * ElmRoute (link.elm) for a manufacturer K-line protocol: the adapter is then set to that protocol,
+ * wake-up address and headers instead of searching for OBD-II.
  */
 
 const PROMPT = 0x3e; // ">"
@@ -133,10 +135,15 @@ export class ElmLink implements Link {
   version = "";
   /** True once the adapter is printing CAN frames with their sender (ATH1). See parseElmCanFrames. */
   private headers = false;
+  /** The header last set with ATSH, for a manufacturer route. */
+  private header = "";
+  /** The first request of a manufacturer route wakes the ECU, which takes a few seconds. */
+  private woken = false;
 
   constructor(
     private stream: ByteStream,
     private onTraffic: Traffic = () => {},
+    private route?: ElmRoute,
   ) {}
 
   /** Send one line, return the lines printed before the ">" prompt. */
@@ -168,6 +175,7 @@ export class ElmLink implements Link {
     // Some adapters print junk right after a reset. Ask for the name once more before giving up.
     if (!this.version) this.version = name(await this.command("ATI", 2000, "adapter name"));
     if (!this.version) throw new AdapterError("This doesn't look like an ELM327 adapter.");
+    if (this.route) return this.openRoute(this.route, connect);
     // Echo off, no linefeeds, no spaces, no headers, adaptive timing, automatic protocol.
     for (const c of ["ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0"]) await this.command(c);
     // The first OBD request makes the adapter search for the car's protocol (up to ~10 s).
@@ -190,12 +198,36 @@ export class ElmLink implements Link {
     await connect(this, this.init);
   }
 
+  /** A manufacturer protocol: fixed protocol, wake-up address and keep-alive; headers per request. */
+  private async openRoute(r: ElmRoute, connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
+    const h = (n: number) => n.toString(16).toUpperCase().padStart(2, "0");
+    const cmds = ["ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", `ATSP${r.protocol}`];
+    if (r.initAddress !== undefined) cmds.push(`ATIIA${h(r.initAddress)}`);
+    if (r.testerAddress !== undefined) cmds.push(`ATTA${h(r.testerAddress)}`);
+    if (r.keepAlive) cmds.push(`ATWM${[...r.header(r.keepAlive.length), ...r.keepAlive].map(h).join("")}`);
+    for (const c of cmds) await this.command(c);
+    this.header = "";
+    this.woken = false;
+    const names = { 3: "ISO 9141-2, 5-baud wake-up", 4: "ISO 14230, 5-baud wake-up", 5: "ISO 14230, fast wake-up" };
+    this.init = { kind: "adapter", can: false, protocol: names[r.protocol] };
+    await connect(this, this.init);
+  }
+
   close() {
     return this.stream.close();
   }
 
   private async ask(payload: number[], opts: RequestOptions): Promise<Uint8Array[]> {
-    const lines = await this.command(hex(Uint8Array.from(payload)).replace(/\s/g, ""), 3000, opts.note, identifies(payload));
+    if (this.route) {
+      const header = this.route.header(payload.length).map((b) => b.toString(16).toUpperCase().padStart(2, "0")).join("");
+      if (header !== this.header) {
+        await this.command(`ATSH${header}`);
+        this.header = header;
+      }
+    }
+    const timeout = this.route && !this.woken ? 10000 : 3000;
+    this.woken = true;
+    const lines = await this.command(hex(Uint8Array.from(payload)).replace(/\s/g, ""), timeout, opts.note, identifies(payload));
     const sid = payload[0];
     const answers = this.headers ? parseElmCanFrames(lines) : parseElmResponse(lines);
     const ok = answers.filter((r) => r[0] === positive(sid));
