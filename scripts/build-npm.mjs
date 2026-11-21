@@ -22,7 +22,7 @@ await build({
   format: "esm",
   target: "node20",
   external: ["serialport"],
-  define: { OPENHOOD_NPM: "true" },
+  define: { OPENHOOD_NPM: "true", OPENHOOD_VERSION: JSON.stringify(root.version) },
   banner: { js: "#!/usr/bin/env node" },
   legalComments: "none",
   logLevel: "warning",

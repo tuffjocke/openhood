@@ -7,7 +7,7 @@ import { Runtime, UserError } from "./runtime";
  * tools/call, ping. Kept dependency-free on purpose; stdout carries only protocol messages.
  */
 
-const VERSION = "0.1.0";
+import { VERSION } from "./command";
 
 const INSTRUCTIONS = `Openhood reads cars through a KKL cable or an ELM327 adapter, or a simulator when no car is connected.
 Typical flow: list_profiles, list_ports, connect, read_faults, read_live. Use traffic to see the raw conversation.
