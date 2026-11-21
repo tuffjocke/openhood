@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, etc.) and humans 
 
 ## What this is
 
-Openhood is a browser app that talks to car ECUs through a KKL cable (raw K-line, KWP2000 / ISO 14230)
+Openhood is a browser app that talks to car ECUs through a KKL cable (raw K-line: KWP2000 / ISO 14230, or VW's KWP1281)
 or an ELM327-type adapter (standard OBD-II on any protocol, CAN included), using Web Serial and Web Bluetooth. It shows live data, reads and clears fault codes and logs drives.
 It is a static Next.js site hosted on GitHub Pages. There is no backend.
 
@@ -29,15 +29,19 @@ of asking the person to copy traffic. They are read-only; `clear_faults` needs t
 core/                     vehicle independent, change rarely
   profile.ts              THE CONTRACT: VehicleProfile and friends. Read this first.
   session.ts              profile.connect, polling, faults, one-at-a-time queue; talks through a Link
-  link/                   kline.ts (KKL/simulator: wake-up, framing), elm327.ts (adapter text commands),
-                          open.ts (pick the device, detect KKL or ELM327, check the profile allows it)
+  link/                   kline.ts (KKL/simulator: wake-up, framing; kLineLink picks it or KWP1281),
+                          kwp1281.ts (VW Group: every byte confirmed, keep-alive), elm327.ts (adapter text
+                          commands), open.ts (pick the device, detect KKL or ELM327, check the profile allows it)
   kwp2000/frame.ts        framing, checksums, SIDs, NRCs, byte helpers (u16, be16, hex)
+  kwp1281/protocol.ts     KWP1281 block titles, timings, fault codes, measuring block formulas
   transport/              webserial.ts (USB/paired Bluetooth), bluetooth.ts (BLE adapters),
-                          simulated.ts (fake ECU on a K-line), simulated-elm.ts (fake ELM327, CAN or K-line)
+                          simulated.ts (fake ECU on a K-line), simulated-kwp1281.ts (its KWP1281 byte handshake),
+                          simulated-elm.ts (fake ELM327, CAN or K-line)
 profiles/                 one folder per vehicle/ECU, all vehicle knowledge lives here
   index.ts                registry: add new profiles here
   land-rover-td5/         reference profile: index, data, faults, fault-map, fault-explanations, keygen, simulator, README
   generic-obd2/           standard OBD-II: functional addressing, supported PIDs, DTCs, pending, freeze frame, self-tests
+  vw-audi-kwp1281/        older VW Group engines: finds readings by formula at connect, VAG fault names and explanations
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
@@ -100,6 +104,7 @@ tests/safety.test.ts      read-only allowlist for raw requests
 tests/car-reports.test.ts every car report is valid and has nothing personal
 tests/lookup.test.ts      code lookup (used by the CLI and MCP `explain`), tidying typed car names
 tests/td5.test.ts         Td5 known answers from published sources (keygen vector, frames, Nanocom values)
+tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
                           car), architecture.md, k-line-primer.md
 ```
@@ -192,6 +197,11 @@ Follow docs/adding-a-vehicle.md. In short:
   apart otherwise. Older protocols stay headers off. Profiles just get payloads. Its timeouts carry a plain
   message for people.
 - Fast init is timed with JS timers (BREAK for 25 ms). Jitter of a few ms is normal.
+- KWP1281 (`link.protocol: "kwp1281"`): requests are [block title, ...data] and answers start with the ECU's
+  title (`[0x29, 1]` → `[0xE7, ...]`). `requestMany` confirms each answer until the ECU sends its ack (fault
+  lists). The link sends keep-alives itself when idle. Titles mean different things than KWP2000 service ids,
+  so `core/safety.ts` checks them with their own list. A group can build its request from state (`requestFor`)
+  for ECUs that say at connect where readings live.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.

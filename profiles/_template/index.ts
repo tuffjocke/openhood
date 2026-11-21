@@ -74,6 +74,7 @@ export const templateProfile: VehicleProfile = {
   // KKL for manufacturer protocols. Add "elm327" only if every request is standard OBD-II.
   adapters: ["kkl"],
   status: "experimental",
+  // For VW Group cars on KWP1281 add protocol: "kwp1281" with init: "slow" (see profiles/vw-audi-kwp1281).
   link: { baudRate: 10400, init: "fast", addresses: { ecu: 0x10, tester: 0xf1 } },
   async connect(ecu) {
     await ecu.request([0x81], { addressed: true, note: "start communication" });

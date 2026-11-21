@@ -12,6 +12,7 @@ import {
 } from "../kwp2000/frame";
 import type { EcuLink, InitResult, RequestOptions, VehicleProfile } from "../profile";
 import { sleep, TimeoutError, type Transport } from "../transport/types";
+import { Kwp1281Link } from "./kwp1281";
 import { identifies, type Link, type Traffic } from "./types";
 
 const RESPONSE_TIMEOUT_MS = 300;
@@ -157,4 +158,11 @@ export class KlineLink implements Link {
       await sleep(this.profile.link.interMessageMs ?? 30);
     }
   }
+}
+
+/** The right raw K-line link for a profile: KWP1281 (core/link/kwp1281) or KWP2000 / ISO 9141-2. */
+export function kLineLink(profile: VehicleProfile, transport: Transport, onTraffic?: Traffic): Link {
+  return profile.link.protocol === "kwp1281"
+    ? new Kwp1281Link(profile, transport, onTraffic)
+    : new KlineLink(profile, transport, onTraffic);
 }

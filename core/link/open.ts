@@ -4,7 +4,7 @@ import { SimulatedTransport } from "../transport/simulated";
 import { sleep, TimeoutError, type ByteStream } from "../transport/types";
 import { WebSerialTransport } from "../transport/webserial";
 import { ElmLink } from "./elm327";
-import { KlineLink } from "./kline";
+import { kLineLink } from "./kline";
 import type { Link, Traffic } from "./types";
 
 /** How the person connects: a serial device (USB or paired Bluetooth), a BLE adapter, or the demo. */
@@ -57,7 +57,7 @@ export async function detectAdapter(
  */
 export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraffic: Traffic): Promise<Link> {
   const allowed = profile.adapters ?? ["kkl"];
-  if (via === "simulator") return new KlineLink(profile, new SimulatedTransport(profile), onTraffic);
+  if (via === "simulator") return kLineLink(profile, new SimulatedTransport(profile), onTraffic);
 
   if (via === "bluetooth") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
@@ -68,7 +68,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   if (!allowed.includes("elm327")) {
     // KKL only: don't send probe text onto the car's data line. If the car stays silent, check
     // whether an ELM327 was plugged in by mistake, to give a useful message.
-    const link = new KlineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
+    const link = kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
     const open = link.open.bind(link);
     link.open = async (connect) => {
       try {
@@ -93,7 +93,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
     throw new WrongAdapterError(
       "This looks like a plain KKL cable, or the adapter didn't answer. This car needs an ELM327-type adapter.",
     );
-  return new KlineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
+  return kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
 }
 
 const needsKkl = (p: VehicleProfile) =>

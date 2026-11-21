@@ -58,6 +58,11 @@ export interface Group {
   /** Request payload (service id + data), e.g. [0x21, 0x09]. */
   request: number[];
   /**
+   * Optional: build the request from what `connect` found instead, for ECUs that say at connect
+   * where they keep a reading (KWP1281 measuring blocks). Used in place of `request` when given.
+   */
+  requestFor?(state: Readonly<Values>): number[];
+  /**
    * Optional: is this group supported by the connected ECU? Checked once after connect,
    * using whatever `connect` stored in state (e.g. OBD "supported PIDs" bitmasks).
    * Unavailable groups are skipped when polling. Default: always available.
@@ -120,7 +125,8 @@ export interface Readiness {
 /**
  * How the link to the ECU was set up.
  *  - "fast" / "slow": a KKL cable woke the ECU on the K-line. After slow init the key bytes tell
- *    which protocol it speaks.
+ *    which protocol it speaks. A KWP1281 ECU then sends its identification text (`ident`): part
+ *    number and engine, not personal, but the coding line can be per car, so keep it to the profile.
  *  - "adapter": an ELM327-type adapter set up the link itself. `can` is true on CAN cars (most cars
  *    from 2008 on), where some OBD answers differ slightly (mode 03 starts with a count byte).
  *    `protocol` is the adapter's own description, for the traffic log.
@@ -128,6 +134,7 @@ export interface Readiness {
 export type InitResult =
   | { kind: "fast" }
   | { kind: "slow"; keyBytes: [number, number]; protocol: "iso9141" | "kwp2000" }
+  | { kind: "slow"; keyBytes: [number, number]; protocol: "kwp1281"; ident: string[] }
   | { kind: "adapter"; can: boolean; protocol: string };
 
 /**
@@ -220,6 +227,15 @@ export interface VehicleProfile {
 
   link: {
     baudRate: number;
+    /**
+     * Which K-line protocol. Default "kwp2000" (ISO 14230, or ISO 9141-2 when the key bytes say so).
+     * "kwp1281": VW Group's older protocol, every byte confirmed by the other side (core/kwp1281).
+     * Needs init "slow". Requests are a block title and its data, e.g. [0x29, 1] reads group 1,
+     * and answers start with the ECU's block title, e.g. [0xE7, ...].
+     */
+    protocol?: "kwp2000" | "kwp1281";
+    /** Other speeds to try if the ECU doesn't answer the wake-up at `baudRate` (some KWP1281 ECUs use 9600). */
+    altBaudRates?: number[];
     /**
      * How to wake the ECU:
      *  - "fast": ISO 14230 fast init (25 ms pulse)

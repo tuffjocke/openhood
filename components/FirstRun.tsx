@@ -234,7 +234,7 @@ export function FirstRun({
               <h2 className="step-title">{elm ? "Get the adapter" : "Get the cable"}</h2>
               <p className="step-line">
                 {/* Sure for a car Openhood knows; a good guess for any other car. */}
-                {profile.generic ? "We think you" : "You"} need an {thing} to connect your {selection.make || "car"} to your{" "}
+                {profile.generic ? "We think you" : "You"} need {thing.startsWith("ELM") ? "an" : "a"} {thing} to connect your {selection.make || "car"} to your{" "}
                 {device}.
               </p>
               {elm ? (

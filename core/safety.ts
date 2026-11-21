@@ -5,6 +5,8 @@
  * ECU or clear faults as part of its own connect and clear steps.
  *
  * Service ids are from SAE J1979 / ISO 15031-5 (OBD-II modes) and ISO 14230-3 (KWP2000).
+ * KWP1281 (VW Group) uses different numbers for different things, so it has its own list: there,
+ * 0x05 clears faults and 0x10, 0x22 and 0x2A change coding and adaptation.
  */
 
 /** OBD-II modes that read: live data, freeze frame, stored/pending/permanent codes, test results, vehicle info. */
@@ -27,11 +29,28 @@ const KWP_READ = new Set([
 /** Diagnostic sessions that don't open programming: default (0x81) and extended diagnostics (0x89, 0x92). */
 const SAFE_SESSIONS = new Set([0x81, 0x89, 0x92]);
 
+/** KWP1281 block titles that only read: identification, faults, measuring blocks, and the ack. */
+const KWP1281_READ = new Set([
+  0x00, // extra identification
+  0x07, // read faults
+  0x09, // ack (next block, keep-alive)
+  0x12, // read group 0
+  0x29, // read group
+]);
+
 export type Verdict = { ok: true } | { ok: false; reason: string };
 
-export function checkReadOnly(payload: number[]): Verdict {
+export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" = "kwp2000"): Verdict {
   const sid = payload[0];
   if (sid === undefined) return { ok: false, reason: "Empty request." };
+  if (protocol === "kwp1281") {
+    if (KWP1281_READ.has(sid)) return { ok: true };
+    if (sid === 0x05) return { ok: false, reason: "Clearing faults has its own tool, with a confirmation." };
+    return {
+      ok: false,
+      reason: `Block title 0x${sid.toString(16).padStart(2, "0")} isn't a read. Openhood only sends read requests.`,
+    };
+  }
   if (OBD_READ.has(sid) || KWP_READ.has(sid)) return { ok: true };
   if (sid === 0x10) {
     return SAFE_SESSIONS.has(payload[1])

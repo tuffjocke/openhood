@@ -32,6 +32,8 @@ export interface Transport {
   readUntilIdle(idleMs: number, timeoutMs: number): Promise<Uint8Array>;
   /** Drop anything sitting in the receive buffer. */
   flush(): void;
+  /** Change the line speed, for ECUs that answer at another rate. Optional: not every transport can. */
+  setBaudRate?(baudRate: number): Promise<void>;
 }
 
 /**

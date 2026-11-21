@@ -1,4 +1,4 @@
-import { KlineLink } from "./link/kline";
+import { kLineLink } from "./link/kline";
 import { isLink, type Link, type TrafficEvent } from "./link/types";
 import type { Fault, InitResult, Readiness, Values, VehicleProfile } from "./profile";
 import type { Transport } from "./transport/types";
@@ -29,7 +29,7 @@ export class Session {
     linkOrTransport: Link | Transport,
     onTraffic: (e: TrafficEvent) => void = () => {},
   ) {
-    this.link = isLink(linkOrTransport) ? linkOrTransport : new KlineLink(profile, linkOrTransport, onTraffic);
+    this.link = isLink(linkOrTransport) ? linkOrTransport : kLineLink(profile, linkOrTransport, onTraffic);
   }
 
   /** How the ECU was reached. */
@@ -74,7 +74,7 @@ export class Session {
   async readGroup(id: string): Promise<Values> {
     const g = this.profile.groups.find((g) => g.id === id);
     if (!g) throw new Error(`Profile ${this.profile.id} has no group "${id}"`);
-    const res = await this.exclusive(() => this.link.request(g.request));
+    const res = await this.exclusive(() => this.link.request(g.requestFor?.(this.state) ?? g.request));
     const v = g.decode(res, this.state);
     Object.assign(this.state, v);
     return v;

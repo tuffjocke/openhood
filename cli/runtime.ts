@@ -1,6 +1,6 @@
 import { hex } from "../core/kwp2000/frame";
 import { ElmLink } from "../core/link/elm327";
-import { KlineLink } from "../core/link/kline";
+import { kLineLink } from "../core/link/kline";
 import { detectAdapter } from "../core/link/open";
 import type { Link, TrafficEvent } from "../core/link/types";
 import type { AdapterKind, Fault, VehicleProfile } from "../core/profile";
@@ -97,7 +97,7 @@ export class Runtime {
   private async openLink(profile: VehicleProfile, o: ConnectOptions): Promise<Link> {
     const allowed = profile.adapters ?? ["kkl"];
     if (!o.port) {
-      if (o.simulateElmCan === undefined) return new KlineLink(profile, new SimulatedTransport(profile), this.log);
+      if (o.simulateElmCan === undefined) return kLineLink(profile, new SimulatedTransport(profile), this.log);
       if (!allowed.includes("elm327")) throw new UserError(`${profile.name} can't run through an ELM327 adapter.`);
       return new ElmLink(new SimulatedElm(profile, { can: o.simulateElmCan }), this.log);
     }
@@ -114,7 +114,7 @@ export class Runtime {
       throw new UserError(`${profile.name} needs ${allowed.includes("kkl") ? "a KKL cable" : "an ELM327-type adapter"}, but this is ${kind === "kkl" ? "a KKL cable (or nothing answered)" : "an ELM327 adapter"}.`);
     return kind === "elm327"
       ? new ElmLink(new NodeSerialTransport({ path, baudRate, echo: false }), this.log)
-      : new KlineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate }), this.log);
+      : kLineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate }), this.log);
   }
 
   async disconnect() {
@@ -187,7 +187,7 @@ export class Runtime {
   /** Send one raw request. Read-only requests only, unless started with the unsafe flag. */
   async request(o: { hex: string; many?: boolean }) {
     const payload = parseHex(o.hex);
-    const verdict = checkReadOnly(payload);
+    const verdict = checkReadOnly(payload, this.s.profile.link.protocol);
     if (!verdict.ok && !this.opts.unsafe) throw new UserError(`Refused: ${verdict.reason}`);
     const answers = await this.s.rawRequest(payload, o.many);
     return { request: hex(payload), answers: answers.map((a) => hex(a)) };

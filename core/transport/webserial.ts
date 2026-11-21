@@ -142,4 +142,11 @@ export class WebSerialTransport implements Transport, ByteStream {
   flush() {
     this.rx.clear();
   }
+
+  /** Web Serial can't change speed on an open port, so close and open it again. */
+  async setBaudRate(baudRate: number) {
+    await this.close();
+    this.opts = { ...this.opts, baudRate };
+    await this.open();
+  }
 }

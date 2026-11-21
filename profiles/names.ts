@@ -13,7 +13,7 @@
  */
 export const VEHICLE_NAMES: Record<string, string[]> = {
   "Alfa Romeo": [],
-  Audi: [],
+  Audi: ["80", "A3", "A4", "A6"],
   BMW: [],
   Citroën: [],
   Fiat: [],
@@ -37,11 +37,11 @@ export const VEHICLE_NAMES: Record<string, string[]> = {
   Rover: [],
   Saab: [],
   SEAT: [],
-  Škoda: [],
+  Škoda: ["Octavia"],
   Subaru: [],
   Suzuki: [],
   Toyota: [],
   Vauxhall: [],
-  Volkswagen: [],
+  Volkswagen: ["Golf", "Passat", "Polo"],
   Volvo: [],
 };

@@ -7,7 +7,7 @@ adapter, and the car's profile decides which one works:
 | --- | --- | --- |
 | What it is | A small adapter with its own chip that speaks every standard OBD protocol | A plain USB cable that passes the K-line straight through |
 | Cars | Any car with standard OBD-II: petrol from about 2001 and diesel from about 2004 in Europe, 1996 in the US, CAN cars included | K-line cars only, mostly up to about 2008 |
-| Reads | Standard fault codes and live data | Standard codes **and** manufacturer-specific profiles (like the Land Rover Td5) |
+| Reads | Standard fault codes and live data | Standard codes **and** manufacturer-specific profiles (like the Land Rover Td5 and older VW and Audi engines) |
 | Connects by | USB, or Bluetooth | USB |
 | Price | About €20 to €40 | About €20 |
 
@@ -52,7 +52,11 @@ A "dumb" **KKL cable**, sold as **VAG-COM KKL 409.1**, with an **FTDI FT232RL** 
 - Look for "FT232RL" in the title, and only that chip.
 - Get the plain version. Avoid the ones with a 4-way switch (made for Fiat ECU Scan).
 - Avoid **CH340** chips: they often can't do the timing the wake-up needs.
-- It doesn't matter that the listing says VW/Audi. The cable just passes the K-line through.
+- It doesn't matter that the listing says VW/Audi. The cable just passes the K-line through. (It is
+  also exactly the cable older VW and Audi engines need.)
+- If an older VW or Audi stops part way through a read, the cable's USB delay may be too long for
+  KWP1281, where every byte is answered. On Windows you can lower the FTDI "latency timer" to 1 ms
+  in the port's advanced settings.
 - An ELM327 adapter is not a KKL cable, even when its listing mentions FT232RL.
 
 **USB-C laptop or phone?** These cables and most USB adapters only come with USB-A. Add a small

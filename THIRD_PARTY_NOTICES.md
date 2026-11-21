@@ -31,6 +31,20 @@ https://github.com/pajacobson/td5keygen (BSD 2-Clause, Copyright (c) 2017, paul@
 It was written independently from the algorithm's description and checked against the project's
 published test vector; no source was copied.
 
+## KLineKWP1281Lib: KWP1281 protocol details, formulas and fault names
+
+`core/kwp1281/protocol.ts` ports block titles, timings, the fault and measuring block layouts and
+the measuring block formulas from https://github.com/domnulvlad/KLineKWP1281Lib (GPL-3.0, Copyright
+domnulvlad), and `profiles/vw-audi-kwp1281/names.ts` is generated from its English fault code
+descriptions. The library credits Blafusel.de for the protocol documentation, Alexander Grau for its
+base code and Mike Naberezny for commands and parameters. GPL-3.0 is Openhood's own licence.
+
+## kwp1281_tool: KWP1281 wake-up notes
+
+Facts about the KWP1281 wake-up and baud rate detection in `core/link/kwp1281.ts` are from
+https://github.com/mnaberez/vwradio (BSD 3-Clause, Copyright (c) 2016-2023, Mike Naberezny and
+contributors). No code from it is included.
+
 ## Protocol facts
 
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,

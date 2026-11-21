@@ -78,6 +78,11 @@ export class NodeSerialTransport implements Transport, ByteStream {
   read(n: number, timeoutMs: number) {
     return this.rx.take(n, timeoutMs);
   }
+
+  setBaudRate(baudRate: number) {
+    this.opts = { ...this.opts, baudRate };
+    return new Promise<void>((resolve, reject) => this.port!.update({ baudRate }, (e) => (e ? reject(e) : resolve())));
+  }
   readUntil(byte: number, timeoutMs: number) {
     return this.rx.takeUntil(byte, timeoutMs);
   }

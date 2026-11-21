@@ -1,5 +1,6 @@
 import { addressedFrame, iso9141Response, parseFrame, parseIso9141, shortFrame } from "../kwp2000/frame";
 import type { SimulatedEcu, VehicleProfile } from "../profile";
+import { SimulatedKwp1281 } from "./simulated-kwp1281";
 import { ByteQueue, sleep, type Transport } from "./types";
 
 /**
@@ -17,6 +18,7 @@ export class SimulatedTransport implements Transport {
 
   async close() {
     this.ecu = null;
+    this.kwp1281 = null;
   }
 
   /** During a 5-baud handshake: the key byte we expect back inverted, and the address to ack. */
@@ -25,15 +27,24 @@ export class SimulatedTransport implements Transport {
   async fastInit() {
     await sleep(50);
     const ecu = this.profile.simulator(); // a fresh ECU on every wake-up
+    this.kwp1281 = null;
     this.ecu = ecu.wakeup?.fast === false ? null : ecu;
   }
+
+  /** A KWP1281 ECU, which confirms every byte, is simulated byte by byte. */
+  private kwp1281: SimulatedKwp1281 | null = null;
 
   async fiveBaud(address: number) {
     await sleep(50); // the real thing takes 2 s; no need to wait in development
     const ecu = this.profile.simulator();
     this.ecu = null;
+    this.kwp1281 = null;
     const kb = ecu.wakeup?.slow;
     if (!kb) return; // doesn't do slow init: silence
+    if (this.profile.link.protocol === "kwp1281") {
+      this.kwp1281 = new SimulatedKwp1281(ecu, kb, this.rx);
+      return;
+    }
     this.handshake = { kb2: kb[1], address };
     this.pending = ecu;
     setTimeout(() => this.rx.push(Uint8Array.of(0x55)), 20);
@@ -46,6 +57,10 @@ export class SimulatedTransport implements Transport {
   }
 
   async write(bytes: Uint8Array) {
+    if (this.kwp1281) {
+      for (const b of bytes) this.kwp1281.onByte(b);
+      return;
+    }
     if (this.handshake && bytes.length === 1) {
       if (bytes[0] === (~this.handshake.kb2 & 0xff)) {
         const ack = ~this.handshake.address & 0xff;
