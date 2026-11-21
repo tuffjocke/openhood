@@ -51,8 +51,8 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           command.ts (`npx openhood` or `npm run openhood --` in messages)
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
                           every profile, only serialport at runtime. Agents and people run `npx -y openhood ...`;
-                          .github/workflows/npm.yml publishes it when package.json's version is new on npm
-                          (bump the version, push to main; NPM_TOKEN secret)
+                          .github/workflows/npm.yml stages it when package.json's version is new on npm (bump the
+                          version, push to main), and a maintainer approves it with 2FA on npmjs.com
 core/safety.ts            which raw requests tools may send: read services only
 components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: the binnacle at the top (three
                           dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a

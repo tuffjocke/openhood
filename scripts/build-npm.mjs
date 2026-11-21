@@ -4,7 +4,7 @@
  * Only serialport is installed with it (it talks to the adapter and has native parts).
  *
  *   npm run build:npm        → dist/npm
- *   npm publish ./dist/npm     (a maintainer, or the release workflow)
+ *   npm publish ./dist/npm     (a maintainer; the release workflow stages it for approval instead)
  */
 import { build } from "esbuild";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

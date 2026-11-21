@@ -1,6 +1,8 @@
-# Publishes the `openhood` npm package (the CLI and MCP server) when package.json's version isn't on
-# npm yet. To release: bump "version" in package.json and push to main. Pushing a v* tag works too.
-# Needs the NPM_TOKEN secret (an npm token that can publish the openhood package).
+# Stages the `openhood` npm package (the CLI and MCP server) when package.json's version isn't on npm
+# yet. To release: bump "version" in package.json and push to main, then approve the staged version
+# on npmjs.com (Staged Packages) or with `npm stage list openhood` and `npm stage approve <id>`.
+# Nothing reaches npm without a maintainer's 2FA. Needs the NPM_TOKEN secret (a granular token that
+# can publish openhood; it doesn't need to bypass 2FA, since staging defers 2FA to the approval).
 name: Publish to npm
 on:
   push:
@@ -33,7 +35,10 @@ jobs:
         run: npm run check
       - if: steps.version.outputs.new == 'true'
         run: npm run build:npm
+      # Staged publishing needs npm 11.15 or newer.
       - if: steps.version.outputs.new == 'true'
-        run: npm publish ./dist/npm --provenance --access public
+        run: npm install -g npm@latest
+      - if: steps.version.outputs.new == 'true'
+        run: npm stage publish ./dist/npm --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
