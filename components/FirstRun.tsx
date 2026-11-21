@@ -16,6 +16,7 @@ import { GUIDE_URL } from "./CarChooser";
 import { profileIn, valuesIn } from "@/core/units";
 import { reportsFor } from "@/profiles/car-reports";
 import { useUnits } from "./useUnits";
+import { labelsIn, useT } from "./useLang";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
 import type { ConnectVia } from "@/core/link/open";
@@ -95,18 +96,19 @@ function Callout({ name, role }: { name: string; role?: string }) {
 
 /** One fault from the demo car, opened, the way Openhood explains a real one. */
 function DemoFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }) {
+  const t = useT();
   const info = profile.faults?.explanations?.[fault.id];
   return (
     <article className="showcase-fault">
       <p className="showcase-fault-head">
-        {info && <span className={`urgency urgency-${info.urgency}`}>{URGENCY[info.urgency]}</span>}
+        {info && <span className={`urgency urgency-${info.urgency}`}>{t(URGENCY[info.urgency])}</span>}
         {fault.code && <span className="fault-code">{fault.code}</span>}
       </p>
       <h3>{info?.title ?? fault.name}</h3>
       {info && (
         <>
           <p>{info.plain}</p>
-          <p className="fault-label">Common causes</p>
+          <p className="fault-label">{t("Common causes")}</p>
           <ul>
             {info.causes.slice(0, 3).map((c) => (
               <li key={c}>{c}</li>
@@ -114,7 +116,7 @@ function DemoFault({ fault, profile }: { fault: Fault; profile: VehicleProfile }
           </ul>
           {info.check && (
             <p>
-              <strong>Check first </strong>
+              <strong>{t("Check first")} </strong>
               {info.check}
             </p>
           )}
@@ -158,13 +160,14 @@ export function FirstRun({
   onBluetooth: () => void;
   onSimulator: () => void;
 }) {
+  const t = useT();
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
   // The demo runs on the start page while nothing else is connecting.
   // A profile without live readings (an airbag module) has nothing to show off: use standard OBD-II then.
   const showcase = profile.channels.length ? profile : (PROFILES.find((p) => p.generic) ?? profile);
   const demo = useDemoCar(showcase, page === "home" && !connecting);
   const [units] = useUnits();
-  const shownCar = profileIn(showcase, units);
+  const shownCar = labelsIn(profileIn(showcase, units), t);
   const shownValues = valuesIn(showcase, demo.values, units);
   const shownPoints = (key: string) =>
     (demo.history.points[key] ?? []).map((p) => ({ t: p.t, v: valuesIn(showcase, { [key]: p.v }, units)[key] }));
@@ -214,6 +217,7 @@ export function FirstRun({
   const buy = useFirstPick((profile.adapters ?? ["kkl"])[0]);
   const kinds = profile.adapters ?? ["kkl"];
   const thing = kinds[0] === "kkl" ? "KKL cable" : "ELM327 adapter";
+  const deviceWord = t(device);
   const ble = bluetoothOk && kinds.includes("elm327");
   const canRead = serialOk || ble;
   // KKL cables are always USB. An ELM327 can be either, so step 1 asks which one they have.
@@ -235,15 +239,15 @@ export function FirstRun({
     );
   const readWay = (
     <div className="way">
-      <h3>Read the codes</h3>
-      <p>See every fault here, in plain words.</p>
+      <h3>{t("Read the codes")}</h3>
+      <p>{t("See every fault here, in plain words.")}</p>
       {!canRead && (
         <p className="hero-note" role="note">
-          <strong>This browser can&rsquo;t read a car.</strong> Use Chrome or Edge on a computer, or Chrome on Android.
+          <strong>{t("This browser can’t read a car.")}</strong> {t("Use Chrome or Edge on a computer, or Chrome on Android.")}
         </p>
       )}
       {canRead && !readBle && !serialOk && (
-        <p className="link-hint">This browser only reaches Bluetooth adapters.</p>
+        <p className="link-hint">{t("This browser only reaches Bluetooth adapters.")}</p>
       )}
       {(readBle || serialOk) && (
         <div className="chooser-actions">
@@ -252,7 +256,7 @@ export function FirstRun({
             onClick={readBle ? onBluetooth : onConnect}
             disabled={!!connecting}
           >
-            {busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car"}
+            {t(busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car")}
           </button>
         </div>
       )}
@@ -260,15 +264,15 @@ export function FirstRun({
         <p className="link-hint">
           {readBle && serialOk ? (
             <>
-              Not found?{" "}
+              {t("Not found?")}{" "}
               <button className="link-button" onClick={onConnect} disabled={!!connecting}>
-                Pair it in your settings, then read it here
+                {t("Pair it in your settings, then read it here")}
               </button>
             </>
           ) : readBle ? (
-            "Turn the adapter on. No pairing needed."
+            t("Turn the adapter on. No pairing needed.")
           ) : (
-            `Pair it in your ${device}\u2019s Bluetooth settings first.`
+            t("Pair it in your {device}\u2019s Bluetooth settings first.", { device: deviceWord })
           )}
         </p>
       )}
@@ -276,11 +280,13 @@ export function FirstRun({
   );
   const aiWay = (
     <div className="way">
-      <h3>Ask an AI</h3>
+      <h3>{t("Ask an AI")}</h3>
       <p>
-        {untried
-          ? "Not tried on this car yet. An AI agent on your computer can read it, fix what goes wrong and add it for others."
-          : "An AI agent on your computer reads the car and tells you what to fix."}
+        {t(
+          untried
+            ? "Not tried on this car yet. An AI agent on your computer can read it, fix what goes wrong and add it for others."
+            : "An AI agent on your computer reads the car and tells you what to fix.",
+        )}
       </p>
       <div className="chooser-actions">
         <AgentButton car={carText} primary untried={untried} />
@@ -297,37 +303,43 @@ export function FirstRun({
         <div className="step-body">
           {done ? (
             <p className="step-title">
-              {elm ? `Got a ${link === "usb" ? "USB" : "Bluetooth"} ELM327` : `Got the ${thing}`}
+              {elm
+                ? t(link === "usb" ? "Got a USB ELM327" : "Got a Bluetooth ELM327")
+                : t("Got the {thing}", { thing: t(thing) })}
               <button className="link-button" onClick={() => gotAdapter(false)}>
-                Change
+                {t("Change")}
               </button>
             </p>
           ) : (
             <>
-              <h2 className="step-title">{elm ? "Get the adapter" : "Get the cable"}</h2>
+              <h2 className="step-title">{t(elm ? "Get the adapter" : "Get the cable")}</h2>
               <p className="step-line">
                 {/* Sure for a car Openhood knows; a good guess for any other car. */}
-                {profile.generic ? "We think you" : "You"} need {thing.startsWith("ELM") ? "an" : "a"} {thing} to connect your {selection.make || "car"} to your{" "}
-                {device}.
+                {t(
+                  profile.generic
+                    ? "We think you need {a} {thing} to connect your {make} to your {device}."
+                    : "You need {a} {thing} to connect your {make} to your {device}.",
+                  { a: thing.startsWith("ELM") ? "an" : "a", thing: t(thing), make: selection.make || t("car"), device: deviceWord },
+                )}
               </p>
               {elm ? (
                 // How it connects decides how step 2 reads it: people know cable or Bluetooth.
                 <>
                   <div className="chooser-actions">
                     <button className="primary big" onClick={() => gotAdapter(true, "usb")}>
-                      I have a USB one
+                      {t("I have a USB one")}
                     </button>
                     <button className="primary big" onClick={() => gotAdapter(true, "bluetooth")}>
-                      I have a Bluetooth one
+                      {t("I have a Bluetooth one")}
                     </button>
                   </div>
                   {buy && (
                     <p className="step-foot">
-                      None yet?{" "}
+                      {t("None yet?")}{" "}
                       <a href={buy.link.url} target="_blank" rel="noreferrer">
-                        {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+                        {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}
                       </a>
-                      . Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+                      . {t("Our pick:")} {buy.pick.name}, {t(buy.pick.connects)}. {t(buy.pick.why)}
                     </p>
                   )}
                 </>
@@ -335,17 +347,17 @@ export function FirstRun({
                 <>
                   <div className="chooser-actions">
                     <button className="primary big" onClick={() => gotAdapter(true)}>
-                      I have one
+                      {t("I have one")}
                     </button>
                     {buy && (
                       <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
-                        {buy.link.product ? "Buy on Amazon" : "Find on Amazon"}
+                        {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}
                       </a>
                     )}
                   </div>
                   {buy && (
                     <p className="step-foot">
-                      Our pick: {buy.pick.name}, {buy.pick.connects}. {buy.pick.why}
+                      {t("Our pick:")} {buy.pick.name}, {t(buy.pick.connects)}. {t(buy.pick.why)}
                     </p>
                   )}
                 </>
@@ -359,15 +371,15 @@ export function FirstRun({
           2
         </span>
         <div className="step-body">
-          <h2 className="step-title">Plug in, ignition on</h2>
+          <h2 className="step-title">{t("Plug in, ignition on")}</h2>
           {done && (
             <>
-              <p className="step-line">The socket is under the dashboard, near your knee. Then pick one:</p>
+              <p className="step-line">{t("The socket is under the dashboard, near your knee. Then pick one:")}</p>
               <div className="ways">
                 {aiWay}
                 {readWay}
               </div>
-              <p className="step-foot">Only reads. Nothing in your car changes.</p>
+              <p className="step-foot">{t("Only reads. Nothing in your car changes.")}</p>
             </>
           )}
         </div>
@@ -379,7 +391,7 @@ export function FirstRun({
     return (
       <section className="first-run read-page" aria-labelledby="read-title">
         <h1 id="read-title" className="sr-only">
-          Read your car
+          {t("Read your car")}
         </h1>
         {carText && (
           <div className="start">
@@ -392,7 +404,7 @@ export function FirstRun({
                   {selection.year}
                 </span>
                 <Link className="link-button" href="/">
-                  Change car
+                  {t("Change car")}
                 </Link>
               </p>
               {steps}
@@ -401,19 +413,19 @@ export function FirstRun({
         )}
         <p className="read-demo">
           <button className="link-button" onClick={onSimulator} disabled={!!connecting}>
-            {connecting === "simulator" ? "Starting the demo…" : "Or try a demo car first"}
+            {t(connecting === "simulator" ? "Starting the demo…" : "Or try a demo car first")}
           </button>
         </p>
       </section>
     );
 
   return (
-    <section className="first-run" aria-label="Getting started">
+    <section className="first-run" aria-label={t("Getting started")}>
       <div className="hero">
         <div className="hero-text">
-          <h1>Engine light on? Find out why.</h1>
+          <h1>{t("Engine light on? Find out why.")}</h1>
           <p className="lede">
-            A free, open source fault code reader in your browser. Plug in a cheap adapter and see what&rsquo;s wrong, in plain words.
+            {t("A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words.")}
           </p>
         </div>
         <div className="start home">
@@ -424,7 +436,7 @@ export function FirstRun({
             keepOpen
             actions={() => (
               <Link className="button big continue" href="/read">
-                Continue
+                {t("Continue")}
               </Link>
             )}
           />
@@ -435,13 +447,13 @@ export function FirstRun({
         <DialRow profile={shownCar} values={shownValues} />
         <div className="callouts">
           {layout.dials.map(({ channel, big }) => (
-            <Callout key={channel.key} name={big && layout.battery ? `${channel.label} and battery` : channel.label} />
+            <Callout key={channel.key} name={big && layout.battery ? t("{reading} and battery", { reading: channel.label }) : channel.label} />
           ))}
         </div>
-        <p className="showcase-line">Your car&rsquo;s own readings, live, the way a good dash shows them.</p>
+        <p className="showcase-line">{t("Your car’s own readings, live, the way a good dash shows them.")}</p>
         <p className="showcase-action">
           <button className="quiet big" onClick={onSimulator} disabled={!!connecting}>
-            {connecting === "simulator" ? "Starting the demo…" : "Try a demo car"}
+            {t(connecting === "simulator" ? "Starting the demo…" : "Try a demo car")}
           </button>
         </p>
       </div>
@@ -449,7 +461,7 @@ export function FirstRun({
       {showcaseCharts.length > 0 && (
         <section className="showcase light" aria-labelledby="trace-title">
           <h2 id="trace-title" className="giant long">
-            Last 30 seconds
+            {t("Last 30 seconds")}
           </h2>
           <div className="showcase-charts">
             {showcaseCharts.map((c) => (
@@ -458,26 +470,26 @@ export function FirstRun({
           </div>
           <div className="callouts">
             {showcaseCharts.map((c) =>
-              c.group ? <Callout key={c.key} name={GROUP_NAMES[c.group]} role={GROUP_COLOUR_WORDS[c.group]} /> : <Callout key={c.key} name={c.label} />,
+              c.group ? <Callout key={c.key} name={t(GROUP_NAMES[c.group])} role={t(GROUP_COLOUR_WORDS[c.group])} /> : <Callout key={c.key} name={c.label} />,
             )}
           </div>
-          <p className="showcase-line">Every other reading as a line, coloured by what it&rsquo;s about.</p>
+          <p className="showcase-line">{t("Every other reading as a line, coloured by what it’s about.")}</p>
         </section>
       )}
 
       {demo.fault && (
         <section className="showcase dark" aria-labelledby="faults-title">
           <h2 id="faults-title" className="giant">
-            Faults
+            {t("Faults")}
           </h2>
           <DemoFault fault={demo.fault} profile={showcase} />
-          <p className="showcase-line">Every code in plain words: what it means, what usually causes it, what to check first.</p>
+          <p className="showcase-line">{t("Every code in plain words: what it means, what usually causes it, what to check first.")}</p>
         </section>
       )}
 
       <section className="showcase light" aria-labelledby="cars-title">
         <h2 id="cars-title" className="giant">
-          Any car
+          {t("Any car")}
         </h2>
         <p className="showcase-chips">
           {EXAMPLE_MAKES.map((m) => (
@@ -485,11 +497,10 @@ export function FirstRun({
           ))}
         </p>
         <p className="showcase-line">
-          Every petrol car from 2001 and diesel from 2004 speaks the standard. Cars with their own language get a profile, added
-          by people like you.
+          {t("Every petrol car from 2001 and diesel from 2004 speaks the standard. Cars with their own language get a profile, added by people like you.")}
         </p>
         <p className="showcase-action">
-          <a href={GUIDE_URL}>Add your car with an AI agent</a>
+          <a href={GUIDE_URL}>{t("Add your car with an AI agent")}</a>
         </p>
       </section>
     </section>

@@ -7,6 +7,7 @@ import { allMakes, allModels, genericProfile, matches, tidyName } from "@/core/c
 import type { VehicleProfile } from "@/core/profile";
 import { VEHICLE_NAMES } from "@/profiles/names";
 import type { Selection } from "./VehiclePicker";
+import { useT } from "./useLang";
 
 const THIS_YEAR = new Date().getFullYear();
 // Any year a person might own. Not a claim about what was sold: that's checked against the profiles.
@@ -17,10 +18,11 @@ export const GUIDE_URL = "https://github.com/tuffjocke/openhood/blob/main/docs/a
 /** What to buy for this car, decided by what its profile can run on. */
 /** Which adapter, in a few words. The one link goes to what to buy. */
 export function AdapterAdvice({ profile }: { profile: VehicleProfile }) {
+  const t = useT();
   const kkl = (profile.adapters ?? ["kkl"])[0] === "kkl";
   return (
     <>
-      Get {kkl ? "a KKL cable" : "an ELM327 adapter"}. <Link href="/adapters">What to buy</Link>
+      {t(kkl ? "Get a KKL cable." : "Get an ELM327 adapter.")} <Link href="/adapters">{t("What to buy")}</Link>
     </>
   );
 }
@@ -28,6 +30,7 @@ export function AdapterAdvice({ profile }: { profile: VehicleProfile }) {
 function CopyPrompt({ car }: { car: CarDetails }) {
   const [copied, setCopied] = useState(false);
   const [showText, setShowText] = useState(false);
+  const t = useT();
   const text = addCarPrompt(car);
 
   async function copy() {
@@ -44,10 +47,10 @@ function CopyPrompt({ car }: { car: CarDetails }) {
     <>
       <div className="copy-row">
         <button className="quiet" onClick={copy}>
-          {copied ? "Copied" : "Copy message"}
+          {t(copied ? "Copied" : "Copy message")}
         </button>
         <span className="copy-hint" aria-live="polite">
-          {copied ? "Now paste it into an AI chat." : ""}
+          {copied ? t("Now paste it into an AI chat.") : ""}
         </span>
       </div>
       {/* Only shown if copying failed, so the message can be selected by hand. */}
@@ -61,14 +64,15 @@ function CopyPrompt({ car }: { car: CarDetails }) {
  * codes. The one moment the request makes sense.
  */
 export function HelpAddCar({ car }: { car: CarDetails }) {
+  const t = useT();
   return (
     <details className="more">
-      <summary>Want the maker&rsquo;s own codes too? Help add this car</summary>
-      <p>No coding. Paste this into an AI chat and it walks you through it. Takes an evening.</p>
+      <summary>{t("Want the maker’s own codes too? Help add this car")}</summary>
+      <p>{t("No coding. Paste this into an AI chat and it walks you through it. Takes an evening.")}</p>
       <CopyPrompt car={car} />
       <p className="path-foot">
-        Or <a href={requestCarUrl(car)}>just tell us about your car</a> (needs a GitHub account).{" "}
-        <a href={GUIDE_URL}>Guide</a>
+        {t("Or")} <a href={requestCarUrl(car)}>{t("just tell us about your car")}</a> {t("(needs a GitHub account).")}{" "}
+        <a href={GUIDE_URL}>{t("Guide")}</a>
       </p>
     </details>
   );
@@ -103,6 +107,7 @@ export function CarChooser({
   /** Shown between the fields and the answer (the "this browser can't" warning). */
   notice?: ReactNode;
 }) {
+  const t = useT();
   const [make, setMake] = useState(selection.make ?? "");
   const [model, setModel] = useState(selection.model ?? "");
   const [year, setYear] = useState(selection.year ? String(selection.year) : "");
@@ -161,12 +166,12 @@ export function CarChooser({
       {!folded && (
       <div className="car-fields">
         <label>
-          <span className="sr-only">Make</span>
+          <span className="sr-only">{t("Make")}</span>
           {makeTyped ? (
             <input
               value={make}
               onChange={(e) => setMake(e.target.value)}
-              placeholder="Make"
+              placeholder={t("Make")}
               autoFocus={typeMake}
               autoComplete="off"
               spellCheck={false}
@@ -186,17 +191,17 @@ export function CarChooser({
               }}
             >
               <option value="" disabled>
-                Make
+                {t("Make")}
               </option>
               {makeList.map((m) => (
                 <option key={m}>{m}</option>
               ))}
-              <option value={OTHER}>Another make</option>
+              <option value={OTHER}>{t("Another make")}</option>
             </select>
           )}
         </label>
         <label>
-          <span className="sr-only">Model</span>
+          <span className="sr-only">{t("Model")}</span>
           {modelList.length > 0 && !typeModel ? (
             <select
               value={modelList.includes(model) ? model : ""}
@@ -212,12 +217,12 @@ export function CarChooser({
               }}
             >
               <option value="" disabled>
-                Model
+                {t("Model")}
               </option>
               {modelList.map((m) => (
                 <option key={m}>{m}</option>
               ))}
-              <option value={OTHER}>Another model</option>
+              <option value={OTHER}>{t("Another model")}</option>
             </select>
           ) : (
             <input
@@ -226,7 +231,7 @@ export function CarChooser({
               onChange={(e) => setModel(e.target.value)}
               onBlur={() => complete && setEditing(false)}
               onKeyDown={(e) => e.key === "Enter" && complete && setEditing(false)}
-              placeholder="Model"
+              placeholder={t("Model")}
               autoFocus={typeModel}
               autoComplete="off"
               spellCheck={false}
@@ -235,7 +240,7 @@ export function CarChooser({
           )}
         </label>
         <label>
-          <span className="sr-only">Year</span>
+          <span className="sr-only">{t("Year")}</span>
           <select
             value={year}
             disabled={!make.trim()}
@@ -245,7 +250,7 @@ export function CarChooser({
             }}
           >
             <option value="" disabled>
-              Year
+              {t("Year")}
             </option>
             {YEARS.map((y) => (
               <option key={y}>{y}</option>
@@ -264,7 +269,7 @@ export function CarChooser({
               setModel("");
             }}
           >
-            Back to the list of makes
+            {t("Back to the list of makes")}
           </button>
         </p>
       )}
@@ -282,7 +287,7 @@ export function CarChooser({
                 {car.year}
               </span>
               <button className="link-button" onClick={() => setEditing(true)}>
-                Change car
+                {t("Change car")}
               </button>
             </p>
           )}
@@ -290,7 +295,7 @@ export function CarChooser({
             <>
                 {found.length > 1 && (
                   <div className="engines">
-                    <span>{found.some((m) => m.system) ? "What to read?" : "Which engine?"}</span>
+                    <span>{t(found.some((m) => m.system) ? "What to read?" : "Which engine?")}</span>
                     {found.map((m) => (
                       <button
                         key={m.profile.id + m.engine}
@@ -298,7 +303,7 @@ export function CarChooser({
                         aria-pressed={engineChosen === m}
                         onClick={() => onSelect({ ...car, profileId: m.profile.id, engine: m.engine, chosen: true })}
                       >
-                        {m.system ?? m.engine}
+                        {m.system ? t(m.system) : m.engine}
                       </button>
                     ))}
                   </div>

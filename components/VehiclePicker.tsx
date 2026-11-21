@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { VehicleProfile } from "@/core/profile";
 import { CarChooser } from "./CarChooser";
+import { useT } from "./useLang";
 
 export interface Selection {
   profileId: string;
@@ -33,6 +34,7 @@ export function VehiclePicker({
   disabled: boolean;
   onSelect: (s: Selection) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -59,19 +61,19 @@ export function VehiclePicker({
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={selection.chosen ? `Your car: ${label.title}. Change` : "Choose your car"}
+        aria-label={selection.chosen ? t("Your car: {car}. Change", { car: label.title }) : t("Choose your car")}
       >
         {!selection.chosen && <i className="vp-dot" aria-hidden />}
         <span className="vp-title">
-          {selection.chosen ? label.title : "Choose your car"}
-          {selection.chosen && label.detail && <span className="vp-detail">{label.detail}</span>}
+          {selection.chosen ? t(label.title) : t("Choose your car")}
+          {selection.chosen && label.detail && <span className="vp-detail">{t(label.detail)}</span>}
         </span>
         {!disabled && <span className="vp-chevron" aria-hidden />}
       </button>
 
       {open && (
-        <div className="vp-panel" role="dialog" aria-label="Choose your car">
-          <p className="vp-head">Which car is it?</p>
+        <div className="vp-panel" role="dialog" aria-label={t("Choose your car")}>
+          <p className="vp-head">{t("Which car is it?")}</p>
           <CarChooser
             profiles={profiles}
             selection={selection}
@@ -80,7 +82,7 @@ export function VehiclePicker({
             brief
             actions={() => (
               <div className="chooser-actions">
-                <button onClick={() => setOpen(false)}>Done</button>
+                <button onClick={() => setOpen(false)}>{t("Done")}</button>
               </div>
             )}
           />

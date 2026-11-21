@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { readCarPrompt } from "@/core/add-car";
+import { useT } from "../useLang";
 
 const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
 
@@ -12,6 +13,7 @@ const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
  * The main button on the steps page.
  */
 export function AgentButton({ car, primary, untried }: { car: string; primary?: boolean; untried?: boolean }) {
+  const t = useT();
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
   const text = readCarPrompt(car, untried);
 
@@ -27,13 +29,13 @@ export function AgentButton({ car, primary, untried }: { car: string; primary?: 
   return (
     <>
       <button className={primary ? "primary big" : "ghost big"} onClick={copy}>
-        {state === "copied" ? "Copied" : "Copy the message"}
+        {t(state === "copied" ? "Copied" : "Copy the message")}
       </button>
       {state !== "idle" && (
         <p className="actions-hint" aria-live="polite">
-          {state === "copied" ? "Paste it" : "Copy this"} into a new chat in the{" "}
-          <a href="https://claude.com/download">Claude</a> or <a href="https://openai.com/codex">Codex</a> desktop app, on
-          the computer you plugged in. Not the web version. <a href={CLI_DOCS}>How it works</a>
+          {t(state === "copied" ? "Paste it into a new chat in the" : "Copy this into a new chat in the")}{" "}
+          <a href="https://claude.com/download">Claude</a> {t("or")} <a href="https://openai.com/codex">Codex</a>{" "}
+          {t("desktop app, on the computer you plugged in. Not the web version.")} <a href={CLI_DOCS}>{t("How it works")}</a>
         </p>
       )}
       {state === "manual" && <pre className="prompt-fallback">{text}</pre>}

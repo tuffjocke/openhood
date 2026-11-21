@@ -22,6 +22,8 @@ import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
 import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { useUnits } from "./useUnits";
+import { labelsIn, useLang, useT } from "./useLang";
+import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
 import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units";
 import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
@@ -104,7 +106,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
   // Readings are kept in metric, as the profile gives them, and converted only to show and log.
   const [units, setUnits] = useUnits();
-  const shown = useMemo(() => profileIn(profile, units), [profile, units]);
+  const [lang, setLang] = useLang();
+  const t = useT();
+  const shown = useMemo(() => labelsIn(profileIn(profile, units), t), [profile, units, t]);
   const show = useCallback((v: Values) => valuesIn(profile, v, units), [profile, units]);
 
   const session = useRef<Session | null>(null);
@@ -408,11 +412,11 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       )}
       {unsavedDrive && (
         <button className="link-button" onClick={() => setUnsavedDrive(null)}>
-          Discard
+          {t("Discard")}
         </button>
       )}
       <button className={recording ? "rec" : "quiet"} disabled={!live && !recording && !unsavedDrive} onClick={toggleRecording}>
-        {recording ? "Stop and save" : unsavedDrive ? "Save the drive" : "Log a drive"}
+        {t(recording ? "Stop and save" : unsavedDrive ? "Save the drive" : "Log a drive")}
       </button>
     </span>
   );
@@ -421,7 +425,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     <main className={`shell${showFirstRun ? " is-first-run" : ""}`}>
       <header className="top">
         <div className="mark">
-          <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title="Back to start">
+          <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title={t("Back to start")}>
             Openhood
           </button>
           {!showFirstRun && !demo && (
@@ -437,10 +441,10 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
         {!showFirstRun && demo && (
           <div className="actions">
             <span className="demo-name">
-              Demo<span className="demo-more">car, made-up faults</span>
+              {t("Demo")}<span className="demo-more">{t("car, made-up faults")}</span>
             </span>
             <button onClick={disconnect} disabled={status === "connecting"}>
-              Back to start
+              {t("Back to start")}
             </button>
             {profile.channels.length > 0 && logTools}
           </div>
@@ -450,26 +454,26 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
             <span className={`status status-${status}`}>
               <i />
               <span className="status-text">
-                {status === "idle" && "Not connected"}
-                {status === "connecting" && "Waking the car…"}
-                {status === "live" && "Connected"}
-                {status === "error" && "Stopped"}
+                {status === "idle" && t("Not connected")}
+                {status === "connecting" && t("Waking the car…")}
+                {status === "live" && t("Connected")}
+                {status === "error" && t("Stopped")}
               </span>
             </span>
             {status === "idle" || status === "error" ? (
               <span className="action-buttons">
                 {bluetoothOk && (profile.adapters ?? ["kkl"]).includes("elm327") && (
                   <button className="quiet" onClick={() => connect("bluetooth")}>
-                    Bluetooth
+                    {t("Bluetooth")}
                   </button>
                 )}
-                <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : "Not available in this browser"}>
-                  Read my car
+                <button onClick={() => connect("serial")} disabled={!serialOk} title={serialOk ? "" : t("Not available in this browser")}>
+                  {t("Read my car")}
                 </button>
               </span>
             ) : (
               <button onClick={disconnect} disabled={status === "connecting"}>
-                Disconnect
+                {t("Disconnect")}
               </button>
             )}
             {/* Nothing to log for a profile without live readings. */}
@@ -480,13 +484,13 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
       {error && (
         <p className="notice" role="alert">
-          {error}{" "}
+          {t(error)}{" "}
           {source && source !== "simulator" && (
             <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink}>
-              Send us what happened
+              {t("Send us what happened")}
             </a>
           )}
-          {source && source !== "simulator" && " (public, on GitHub)"}
+          {source && source !== "simulator" && ` ${t("(public, on GitHub)")}`}
         </p>
       )}
 
@@ -514,17 +518,17 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
         <>
           {/* Profiles for parts like the airbag have faults but no live readings: no binnacle then. */}
           {profile.channels.length > 0 && (
-          <section className="binnacle" aria-label="Live data">
+          <section className="binnacle" aria-label={t("Live data")}>
             <div className="binnacle-corners">
               <span className="binnacle-lamp">
                 {!!faults?.length && (
                   <>
                     <EngineLight lit />
-                    {faults.length} {faults.length === 1 ? "fault" : "faults"}
+                    {faults.length} {t(faults.length === 1 ? "fault" : "faults")}
                   </>
                 )}
               </span>
-              <span className="binnacle-link">{session.current ? linkLine(session.current) : ""}</span>
+              <span className="binnacle-link">{session.current ? t(linkLine(session.current)) : ""}</span>
             </div>
             <DialRow profile={shown} values={shownLatest} unavailable={unavailable} />
             {chartChannels.length > 0 && (
@@ -534,7 +538,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                     {chartGroups.map((g) => (
                       <span key={g} className={`group-${g}`}>
                         <i />
-                        {GROUP_NAMES[g]}
+                        {t(GROUP_NAMES[g])}
                       </span>
                     ))}
                   </p>
@@ -553,7 +557,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 </div>
                 {chartChannels.length > 2 && (
                   <button className="quiet show-all" aria-expanded={allReadings} onClick={() => setAllReadings(!allReadings)}>
-                    {allReadings ? "Show fewer" : "Show all"}
+                    {t(allReadings ? "Show fewer" : "Show all")}
                   </button>
                 )}
               </>
@@ -586,16 +590,16 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       {/* Asked once, right after a real read: the only moment the answer is known. */}
       {!demo && live && faults !== null && asked === null && selection.make && selection.model && selection.year && (
         <p className="ask">
-          <span>Did this match your car?</span>
+          <span>{t("Did this match your car?")}</span>
           <a className="button" href="#" target="_blank" rel="noreferrer" onClick={(e) => (fillCarReport(e), setAsked("yes"))}>
-            Yes
+            {t("Yes")}
           </a>
           <a className="button quiet" href="#" target="_blank" rel="noreferrer" onClick={(e) => (fillReportLink(e), setAsked("no"))}>
-            No
+            {t("No")}
           </a>
         </p>
       )}
-      {asked && <p className="ask">Thanks. Post what opened on GitHub and it helps the next person.</p>}
+      {asked && <p className="ask">{t("Thanks. Post what opened on GitHub and it helps the next person.")}</p>}
 
       {!demo && live && faults !== null && profile.generic && selection.make && selection.model && selection.year && (
         <HelpAddCar car={{ make: selection.make, model: selection.model, year: selection.year }} />
@@ -612,18 +616,18 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 document.getElementById("faults")?.scrollIntoView({ block: "nearest" });
               }}
             >
-              Clear all
+              {t("Clear all")}
             </button>
           )}
           <button className="quiet" disabled={!live || busy} onClick={() => faultAction(false)}>
-            Read again
+            {t("Read again")}
           </button>
         </span>
       <details className="more-data">
-        <summary>More</summary>
+        <summary>{t("More")}</summary>
       {!demo && <HistoryFile onExport={exportHistory} onImport={importHistory} />}
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
-        <summary>Traffic with the car</summary>
+        <summary>{t("Traffic with the car")}</summary>
         {logOpen && (
           <pre>
             {traffic.current
@@ -632,14 +636,14 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 (e) =>
                   `${(e.t / 1000).toFixed(3).padStart(9)}  ${e.dir === "tx" ? "→" : "←"}  ${e.text ?? hex(e.bytes)}${e.note ? `   ${e.note}` : ""}`,
               )
-              .join("\n") || "Nothing yet."}
+              .join("\n") || t("Nothing yet.")}
           </pre>
         )}
       </details>
         <p className="profile-info">
-          Reading as: {profile.name}, {profile.ecu}
-          {profile.status === "experimental" && <span className="tag">experimental</span>}{" "}
-          <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>How sure is this?</a>
+          {t("Reading as:")} {profile.name}, {profile.ecu}
+          {profile.status === "experimental" && <span className="tag">{t("experimental")}</span>}{" "}
+          <a href={`https://github.com/tuffjocke/openhood/tree/main/profiles/${profile.id}`}>{t("How sure is this?")}</a>
         </p>
       </details>
       </div>
@@ -648,27 +652,34 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
       <footer className="foot">
         <span>
-          Provided as is. Use at your own risk, car parked. <Link href="/disclaimer">Disclaimer</Link>
+          {t("Provided as is. Use at your own risk, car parked.")} <Link href="/disclaimer">{t("Disclaimer")}</Link>
         </span>
         <span className="foot-links">
           {!showFirstRun && !demo && (
-            <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title="Opens a pre-filled GitHub issue">
-              Send test report
+            <a href="#" target="_blank" rel="noreferrer" onClick={fillReportLink} title={t("Opens a pre-filled GitHub issue")}>
+              {t("Send test report")}
             </a>
           )}
           {showFirstRun && (
             <button className="link-button" onClick={() => connect("simulator")}>
-              Demo car
+              {t("Demo car")}
             </button>
           )}
-          <select className="units" value={units} onChange={(e) => setUnits(e.target.value as Units)} aria-label="Units">
+          <select className="units" value={lang} onChange={(e) => setLang(e.target.value as Lang)} aria-label={t("Language")}>
+            {LANGS.map((l) => (
+              <option key={l} value={l}>
+                {LANG_NAMES[l]}
+              </option>
+            ))}
+          </select>
+          <select className="units" value={units} onChange={(e) => setUnits(e.target.value as Units)} aria-label={t("Units")}>
             {UNITS.map((u) => (
               <option key={u} value={u}>
                 {UNIT_NAMES[u]}
               </option>
             ))}
           </select>
-          <a href="https://github.com/tuffjocke/openhood/blob/main/CONTRIBUTING.md">Contribute</a>
+          <a href="https://github.com/tuffjocke/openhood/blob/main/CONTRIBUTING.md">{t("Contribute")}</a>
           <a href="https://github.com/tuffjocke/openhood">GitHub</a>
         </span>
       </footer>
