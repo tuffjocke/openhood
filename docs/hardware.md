@@ -7,7 +7,7 @@ adapter, and the car's profile decides which one works:
 | --- | --- | --- |
 | What it is | A small adapter with its own chip that speaks every standard OBD protocol | A plain USB cable that passes the K-line straight through |
 | Cars | Any car with standard OBD-II: petrol from about 2001 and diesel from about 2004 in Europe, 1996 in the US, CAN cars included | K-line cars only, mostly up to about 2008 |
-| Reads | Standard fault codes and live data, plus the Volvo 850, S70, V70 and C70 ABS, airbag and instruments, and every module on 2004 and newer Volvos | Standard codes **and** manufacturer-specific profiles (like the Land Rover Td5 and older VW and Audi engines) |
+| Reads | Standard fault codes and live data, plus the Volvo 850, S70, V70 and C70 ABS, airbag and instruments, every module on 2004 and newer Volvos, and the Saab Trionic 7 and 8 engines | Standard codes **and** manufacturer-specific profiles (like the Land Rover Td5 and SLABS, older VW and Audi engines, Saab Trionic 7 and BMW DS2 modules) |
 | Connects by | USB, or Bluetooth | USB |
 | Price | About €20 to €40 | About €20 |
 
