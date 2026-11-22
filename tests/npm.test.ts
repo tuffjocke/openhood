@@ -27,5 +27,6 @@ describe("npm package", () => {
     assert.match(run("explain", "P0171"), /too much air/);
     const faults = run("faults", "--profile", "vw-audi-kwp1281");
     assert.match(faults, /00522/, "the fault names table loads inside the bundle");
+    assert.throws(() => run("mcp", "--unsafe-allow-any-request"), "the published package never lifts the read-only limit");
   });
 });

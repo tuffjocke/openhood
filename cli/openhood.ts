@@ -15,12 +15,12 @@
  *           [--adapter-model "Vgate iCar Pro 2S"] [--engine ..] [--notes ..]
  *                                    read the car and add what worked to profiles/car-reports.json
  *                                    (from npm: prints a link to send it in instead)
- *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio
+ *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio (the flag only in a clone)
  *
  * [car] is --port <path> for real hardware (adapter detected, or --adapter kkl|elm327),
  * or nothing for the simulator (--elm can|kline to simulate an ELM327).
  */
-import { CMD } from "./command";
+import { CMD, FROM_NPM } from "./command";
 import { serve } from "./mcp";
 import { recordCar, Runtime, UserError, type ConnectOptions } from "./runtime";
 
@@ -49,7 +49,13 @@ const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   const { flags, rest } = parse(args);
-  if (command === "mcp") return serve({ unsafe: flags["unsafe-allow-any-request"] === true });
+  if (command === "mcp") {
+    const unsafe = flags["unsafe-allow-any-request"] === true;
+    // Lifting the read-only limit is for maintainers working in a clone, never for the published package.
+    if (unsafe && FROM_NPM)
+      throw new UserError("--unsafe-allow-any-request isn't available in the npm package. Use a clone of the repository.");
+    return serve({ unsafe });
+  }
 
   const rt = new Runtime();
   const print = (x: unknown) => console.log(typeof x === "string" ? x : JSON.stringify(x, null, 2));

@@ -353,6 +353,12 @@ export function FaultPanel({
       {confirming && (
         <div className="confirm" role="alertdialog" aria-label={t("Clear fault codes?")}>
           <p>{t("Clearing only erases the codes, it doesn’t fix anything. If a code comes back, the fault is still there.")}</p>
+          {f?.safetySystem && (
+            <p>
+              <strong>{t("This is a safety system.")}</strong>{" "}
+              {t("Clearing turns its warning light off until the fault is found again, so the car can look fine when it isn’t. Clear only after the fault is fixed.")}
+            </p>
+          )}
           {f?.clearResetsReadiness && (
             <p>
               {t("It also resets the car’s emissions self-tests. Until they have run again, which usually takes a few days of mixed driving, the car can fail an emissions inspection.")}

@@ -49,6 +49,8 @@ function d3b0Profile(o: {
   address: number;
   ecu: string;
   codes: ModuleCodes;
+  /** Brakes or airbag: clearing hides the warning light until the fault is found again. */
+  safetySystem?: boolean;
 }): VehicleProfile {
   return {
     id: o.id,
@@ -109,6 +111,7 @@ function d3b0Profile(o: {
       },
       explanations: o.codes.explanations,
       confidence: "community",
+      ...(o.safetySystem ? { safetySystem: true } : {}),
     },
     simulator: () => createD3b0Simulator(o.id),
   };
@@ -122,6 +125,7 @@ export const volvo850Abs = d3b0Profile({
   address: 0x01,
   ecu: "ABS and traction control unit (address 01)",
   codes: ABS_CODES,
+  safetySystem: true,
 });
 
 export const volvo850Srs = d3b0Profile({
@@ -132,6 +136,7 @@ export const volvo850Srs = d3b0Profile({
   address: 0x58,
   ecu: "Airbag computer, SRS (address 58)",
   codes: SRS_CODES,
+  safetySystem: true,
 });
 
 export const volvo850Combi = d3b0Profile({

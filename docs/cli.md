@@ -98,6 +98,6 @@ The agent gets these tools:
   KWP2000 read services, see `core/safety.ts`). Writing, security access, programming sessions and
   clearing are refused. Clearing has its own tool that needs a confirmation.
 - Profile code is not limited by this: a reviewed profile may unlock its ECU in `connect`.
-- `npm run openhood -- mcp --unsafe-allow-any-request` (in a clone) lifts the limit, for maintainers working on
+- `npm run openhood -- mcp --unsafe-allow-any-request` lifts the limit, only in a clone: the npm package refuses the flag, for maintainers working on
   something approved in an issue. Don't use it to modify a car.
 - Test with the car parked. If you test while driving, someone else drives.

@@ -1624,6 +1624,14 @@ body:has(.shell.is-first-run) {
   color: var(--cl-muted);
 }
 
+/* Shown while a real car is moving: one calm line, the readings stay. */
+.moving {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--sign);
+}
+
 /* Flex, not a fixed grid, so a car with one or two dials still looks right. */
 .dials {
   display: flex;

@@ -401,6 +401,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   // The profile picks its dials; the rest of its readings become charts, grouped by colour.
   const { charts: chartChannels, groups: chartGroups } = dialLayout(shown);
   const shownLatest = show(latest.current);
+  // A real car that is moving: whoever watches the screen shouldn't be the driver. Readings stay as they are.
+  const speedKey = profile.channels.find((c) => c.unit === "km/h")?.key;
+  const moving = !demo && status === "live" && speedKey !== undefined && (latest.current[speedKey] ?? 0) > 8;
 
   // Logging a drive sits with the other header actions, after Back to start or Disconnect.
   const logTools = (
@@ -530,6 +533,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
               </span>
               <span className="binnacle-link">{session.current ? t(linkLine(session.current)) : ""}</span>
             </div>
+            {moving && <p className="moving">{t("Moving. Let a passenger watch the screen.")}</p>}
             <DialRow profile={shown} values={shownLatest} unavailable={unavailable} />
             {chartChannels.length > 0 && (
               <>

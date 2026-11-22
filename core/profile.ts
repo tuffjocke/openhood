@@ -315,6 +315,11 @@ export interface VehicleProfile {
     explanations?: Record<string, FaultInfo>;
     /** Clearing also resets emissions self-tests (true for OBD-II cars). Shown as a warning. */
     clearResetsReadiness?: boolean;
+    /**
+     * True for modules that run a safety system (brakes, airbag). Clearing their codes turns the
+     * warning light off until the fault is found again, so the clear dialog says so plainly.
+     */
+    safetySystem?: boolean;
     /** Optional: read the warning light and emissions self-test status. */
     readiness?(ecu: EcuLink): Promise<Readiness>;
     /** Optional: faults the ECU has noticed but not yet confirmed (no warning light yet). */

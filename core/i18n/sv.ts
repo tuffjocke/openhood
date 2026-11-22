@@ -132,6 +132,7 @@ export const SV: Record<string, string> = {
   "Send us what happened": "Skicka oss vad som hände",
   "(public, on GitHub)": "(offentligt, på GitHub)",
   "Live data": "Livevärden",
+  "Moving. Let a passenger watch the screen.": "Bilen rullar. Låt en passagerare titta på skärmen.",
   fault: "fel",
   faults: "fel",
   "Demo car": "Demobil",
@@ -219,6 +220,9 @@ export const SV: Record<string, string> = {
   "It also resets the car’s emissions self-tests. Until they have run again, which usually takes a few days of mixed driving, the car can fail an emissions inspection.":
     "Det nollställer också bilens egna avgastester. Tills de har körts igen, vilket brukar ta några dagars blandad körning, kan bilen bli underkänd på avgaskontrollen.",
   "Clear codes": "Radera koderna",
+  "This is a safety system.": "Det här är ett säkerhetssystem.",
+  "Clearing turns its warning light off until the fault is found again, so the car can look fine when it isn’t. Clear only after the fault is fixed.":
+    "Att radera släcker varningslampan tills felet hittas igen, så bilen kan se felfri ut fast den inte är det. Radera bara när felet är åtgärdat.",
   Cancel: "Avbryt",
   "Engine light": "Motorlampa",
   on: "tänd",

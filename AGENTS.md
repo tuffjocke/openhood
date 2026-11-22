@@ -58,7 +58,8 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
                           dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
                           drive" sits in the header, and asks where to save the file), the faults panel below, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
-                          fault history export/import, traffic and profile details behind "More"
+                          fault history export/import, traffic and profile details behind "More". A real car moving faster than walking
+                          pace gets one line, "Moving. Let a passenger watch the screen."; the readings stay
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Several
                           engines: "Which engine?". Profiles for other parts (`system`: ABS, airbag): "What to read?",
                           with standard engine codes offered next to them. Once filled
