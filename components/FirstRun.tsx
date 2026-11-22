@@ -425,7 +425,7 @@ export function FirstRun({
         <div className="hero-text">
           <h1>{t("Engine light on? Find out why.")}</h1>
           <p className="lede">
-            {t("A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words.")}
+            {t("A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words, or let your AI read the car for you.")}
           </p>
         </div>
         <div className="start home">

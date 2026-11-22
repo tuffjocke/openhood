@@ -5,8 +5,8 @@
 export const SV: Record<string, string> = {
   // Start page
   "Engine light on? Find out why.": "Motorlampan tänd? Ta reda på varför.",
-  "A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words.":
-    "En gratis felkodsläsare med öppen källkod, direkt i webbläsaren. Koppla in en billig adapter och se vad som är fel, på vanlig svenska.",
+  "A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words, or let your AI read the car for you.":
+    "En gratis felkodsläsare med öppen källkod, direkt i webbläsaren. Koppla in en billig adapter och se vad som är fel, på vanlig svenska, eller låt din AI läsa av bilen åt dig.",
   "Getting started": "Kom igång",
   Continue: "Fortsätt",
   "{reading} and battery": "{reading} och batteri",
