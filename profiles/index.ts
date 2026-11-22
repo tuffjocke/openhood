@@ -10,9 +10,10 @@ import { volvoD2 } from "./volvo-d2";
 import { saabTrionic7 } from "./saab-trionic7";
 import { saabTrionic8 } from "./saab-trionic8";
 import { bmwDs2 } from "./bmw-ds2";
+import { landRoverSlabs } from "./land-rover-slabs";
 import { vwAudiKwp1281 } from "./vw-audi-kwp1281";
 
-export const PROFILES: VehicleProfile[] = [genericObd2, landRoverTd5, volvo850Abs, volvo850Combi, volvo850Srs, volvoD2, saabTrionic7, saabTrionic8, bmwDs2, vwAudiKwp1281];
+export const PROFILES: VehicleProfile[] = [genericObd2, landRoverTd5, landRoverSlabs, volvo850Abs, volvo850Combi, volvo850Srs, volvoD2, saabTrionic7, saabTrionic8, bmwDs2, vwAudiKwp1281];
 
 export const getProfile = (id: string) => PROFILES.find((p) => p.id === id);
 

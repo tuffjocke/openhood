@@ -196,6 +196,8 @@ export interface RequestOptions {
   addressed?: boolean;
   /** Shown next to the request in the traffic log. */
   note?: string;
+  /** How long to wait for the answer, for ECUs known to be slow at something (K-line links). */
+  timeoutMs?: number;
 }
 
 export interface SimulatedEcu {

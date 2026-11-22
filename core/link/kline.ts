@@ -140,7 +140,7 @@ export class KlineLink implements Link {
   async request(payload: number[], opts: RequestOptions = {}) {
     await this.send(payload, opts);
     try {
-      return await this.awaitResponse(payload[0], RESPONSE_TIMEOUT_MS);
+      return await this.awaitResponse(payload[0], opts.timeoutMs ?? RESPONSE_TIMEOUT_MS);
     } finally {
       await sleep(this.profile.link.interMessageMs ?? 30);
     }
