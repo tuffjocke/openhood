@@ -1,4 +1,4 @@
-import type { ElmRoute, SimulatedEcu, VehicleProfile } from "../profile";
+import type { CanRaw, ElmRoute, SimulatedEcu, VehicleProfile } from "../profile";
 import { d2AnswerFrames, parseD2Frame } from "../volvo-d2/frame";
 import { ByteQueue, sleep, type ByteStream } from "./types";
 
@@ -106,6 +106,7 @@ export class SimulatedElm implements ByteStream {
     if (!/^([0-9A-F]{2})+$/.test(cmd)) return ["?"];
 
     if (this.profile.link.protocol === "volvo-d2") return this.answerD2(cmd);
+    if (this.profile.link.protocol === "gmlan" && this.profile.link.can) return this.answerRaw(this.profile.link.can, cmd);
     const route = this.profile.link.elm;
     if (route) return this.answerRoute(route, cmd);
 
@@ -141,6 +142,36 @@ export class SimulatedElm implements ByteStream {
     if (!res) return [...prefix, "NO DATA"];
     const frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     return [...prefix, ...frames.map((f) => f.map(h2).join(""))];
+  }
+
+  /**
+   * Raw CAN: only answers a single frame sent with ATSP6, ATCAF0 and headers on, to the profile's
+   * request id. The simulator's answers are frames: [id, ...8 bytes] each, or a payload, which goes
+   * out as a single frame from request id + 8. Frames the receive filter would drop are dropped.
+   */
+  private answerRaw(c: CanRaw, cmd: string): string[] {
+    const { sp, caf, sh, cf, cm } = this.set;
+    const h3 = (n: number) => n.toString(16).toUpperCase().padStart(3, "0");
+    if (sp !== "6" || caf !== "0" || sh !== h3(c.request) || !this.headers) return ["NO DATA"];
+    const bytes: number[] = [];
+    for (let i = 0; i < cmd.length; i += 2) bytes.push(parseInt(cmd.slice(i, i + 2), 16));
+    const n = bytes[0];
+    if (bytes.length !== 8 || n < 1 || n > 7) return ["NO DATA"];
+    this.ecu ??= this.profile.simulator();
+    const res = this.ecu.handle(Uint8Array.from(bytes.slice(1, 1 + n)));
+    if (!res) return ["NO DATA"];
+    const frames: [number, number[]][] = Array.isArray(res[0])
+      ? (res as number[][]).map((f) => [f[0], f.slice(1)])
+      : [[c.request + 8, [(res as number[]).length, ...(res as number[])]]];
+    const pass = (id: number) => cf === undefined || cm === undefined || (id & parseInt(cm, 16)) === (parseInt(cf, 16) & parseInt(cm, 16));
+    const out = frames
+      .filter(([id]) => pass(id))
+      .map(([id, d]) => {
+        const f = [...d];
+        while (f.length < 8) f.push(0);
+        return h3(id) + f.map(h2).join("");
+      });
+    return out.length ? out : ["NO DATA"];
   }
 
   /** Volvo D2: one raw request frame in, the module's answer frames out, with their CAN id. */

@@ -35,7 +35,7 @@ export const VEHICLE_NAMES: Record<string, string[]> = {
   Porsche: [],
   Renault: [],
   Rover: [],
-  Saab: [],
+  Saab: ["9-3", "9-5"],
   SEAT: [],
   Škoda: ["Octavia"],
   Subaru: [],

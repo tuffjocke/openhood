@@ -1,5 +1,5 @@
 import { hex, NegativeResponse, positive, SID } from "../kwp2000/frame";
-import type { EcuLink, ElmRoute, InitResult, RequestOptions, VehicleProfile } from "../profile";
+import type { CanRaw, EcuLink, ElmRoute, InitResult, RequestOptions, VehicleProfile } from "../profile";
 import { D2_RANGE_MASK, D2_RANGES, d2Frame, reassembleD2 } from "../volvo-d2/frame";
 import { TimeoutError, type ByteStream } from "../transport/types";
 import { identifies, type Link, type Traffic } from "./types";
@@ -17,8 +17,9 @@ import { identifies, type Link, type Traffic } from "./types";
  */
 
 /** What an ELM327 needs to know about a profile's protocol: a K-line route, Volvo D2, or nothing (OBD-II). */
-export type ElmMode = ElmRoute | "volvo-d2" | undefined;
-export const elmModeFor = (p: VehicleProfile): ElmMode => (p.link.protocol === "volvo-d2" ? "volvo-d2" : p.link.elm);
+export type ElmMode = ElmRoute | "volvo-d2" | { can: CanRaw } | undefined;
+export const elmModeFor = (p: VehicleProfile): ElmMode =>
+  p.link.protocol === "volvo-d2" ? "volvo-d2" : p.link.protocol === "gmlan" && p.link.can ? { can: p.link.can } : p.link.elm;
 
 const PROMPT = 0x3e; // ">"
 const enc = new TextEncoder();
@@ -148,6 +149,7 @@ export class ElmLink implements Link {
   private woken = false;
   private route?: ElmRoute;
   private d2: boolean;
+  private raw?: CanRaw;
   /** Volvo D2: the receive filter set now, and the answer ranges that worked, most recent first. */
   private filter = -1;
   private worked: number[] = [];
@@ -159,7 +161,8 @@ export class ElmLink implements Link {
     opts: { demo?: boolean } = {},
   ) {
     this.d2 = mode === "volvo-d2";
-    this.route = mode === "volvo-d2" ? undefined : mode;
+    this.raw = typeof mode === "object" && "can" in mode ? mode.can : undefined;
+    this.route = mode === "volvo-d2" || this.raw ? undefined : (mode as ElmRoute | undefined);
     this.adapter = opts.demo ? "simulator" : "elm327";
   }
 
@@ -194,6 +197,7 @@ export class ElmLink implements Link {
     if (!this.version) throw new AdapterError("This doesn't look like an ELM327 adapter.");
     if (this.route) return this.openRoute(this.route, connect);
     if (this.d2) return this.openD2(connect);
+    if (this.raw) return this.openRaw(this.raw, connect);
     // Echo off, no linefeeds, no spaces, no headers, adaptive timing, automatic protocol.
     for (const c of ["ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0"]) await this.command(c);
     // The first OBD request makes the adapter search for the car's protocol (up to ~10 s).
@@ -243,6 +247,49 @@ export class ElmLink implements Link {
     this.worked = [];
     this.init = { kind: "adapter", can: true, protocol: "Volvo D2, CAN 29 bit 500 kbit/s" };
     await connect(this, this.init);
+  }
+
+  /**
+   * Raw CAN: ISO 15765-4 CAN with 11-bit ids at 500 kbit/s (ATSP6), formatting off (ATCAF0) so
+   * frames go out and come in as they are, headers on to see who answered. As Trionic CAN Flasher
+   * drives an ELM327 for the Saab Trionic 8.
+   */
+  private async openRaw(c: CanRaw, connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
+    const h = (n: number, w: number) => n.toString(16).toUpperCase().padStart(w, "0");
+    const st = Math.min(0xff, Math.max(1, Math.round((c.waitMs ?? 200) / 4)));
+    for (const cmd of ["ATE0", "ATL0", "ATS0", "ATH1", "ATSP6", "ATCAF0", `ATSH${h(c.request, 3)}`, `ATCF${h(c.filter, 3)}`, `ATCM${h(c.mask, 3)}`, `ATST${h(st, 2)}`])
+      await this.command(cmd);
+    this.init = { kind: "adapter", can: true, protocol: "CAN 11 bit 500 kbit/s, raw frames" };
+    await connect(this, this.init);
+  }
+
+  /** Every frame that answered one raw request: single frames from the answer id unwrapped, others raw. */
+  private async askRaw(c: CanRaw, payload: number[], opts: RequestOptions): Promise<Uint8Array[]> {
+    if (payload.length > 7) throw new Error("A raw CAN request is at most 7 bytes.");
+    const frame = [payload.length, ...payload];
+    while (frame.length < 8) frame.push(0);
+    const lines = await this.command(frame.map((b) => b.toString(16).toUpperCase().padStart(2, "0")).join(""), 5000, opts.note);
+    const out: Uint8Array[] = [];
+    for (const l of dataLines(lines)) {
+      if (!/^[0-9A-F]{5,19}$/.test(l)) continue;
+      const id = parseInt(l.slice(0, 3), 16);
+      const data = hexBytes(l.slice(3));
+      if (id === c.request + 8) {
+        const n = data[0] & 0x0f;
+        if (data[0] >> 4 === 0 && n > 0) out.push(Uint8Array.from(data.slice(1, 1 + n)));
+      } else out.push(Uint8Array.from(data));
+    }
+    return out;
+  }
+
+  /** The first positive answer to a raw request; waits past "response pending". */
+  private async requestRaw(c: CanRaw, payload: number[], opts: RequestOptions): Promise<Uint8Array> {
+    const sid = payload[0];
+    for (const a of await this.askRaw(c, payload, opts)) {
+      if (a[0] === sid + 0x40) return a;
+      if (a[0] === 0x7f && a[1] === sid && a[2] !== 0x78) throw new NegativeResponse(sid, a[2]);
+    }
+    throw new TimeoutError(0, 0, "No answer from the engine computer. Is the ignition on?");
   }
 
   /** One D2 request: try the answer ranges that worked first, then the rest. */
@@ -298,11 +345,13 @@ export class ElmLink implements Link {
 
   async request(payload: number[], opts: RequestOptions = {}) {
     if (this.d2) return this.askD2(payload, opts);
+    if (this.raw) return this.requestRaw(this.raw, payload, opts);
     return (await this.ask(payload, opts))[0];
   }
 
   async requestMany(payload: number[], opts: RequestOptions & { windowMs?: number } = {}) {
     if (this.d2) return [await this.askD2(payload, opts)];
+    if (this.raw) return this.askRaw(this.raw, payload, opts);
     return this.ask(payload, opts);
   }
 }

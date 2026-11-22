@@ -45,11 +45,22 @@ const KWP1281_READ = new Set([
  */
 const D2_READ = new Set([0xa1, 0xa6, 0xac, 0xad, 0xae, 0xb9]);
 
+/**
+ * GMLAN (Saab, Opel) services that read: readDiagnosticInformation A9 (trouble codes), returnToNormal
+ * 20, readDataByIdentifier 1A, readDataByParameterIdentifier 22, testerPresent 3E, plus the standard
+ * OBD-II read modes.
+ */
+const GMLAN_READ = new Set([0xa9, 0x20, 0x1a, 0x22, 0x3e]);
+
 export type Verdict = { ok: true } | { ok: false; reason: string };
 
-export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" | "volvo-d2" = "kwp2000"): Verdict {
+export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan" = "kwp2000"): Verdict {
   const sid = payload[0];
   if (sid === undefined) return { ok: false, reason: "Empty request." };
+  if (protocol === "gmlan") {
+    if (GMLAN_READ.has(sid) || OBD_READ.has(sid)) return { ok: true };
+    return { ok: false, reason: `Request ${sid.toString(16).toUpperCase().padStart(2, "0")} isn't a read. Openhood only sends read requests.` };
+  }
   if (protocol === "volvo-d2") {
     const service = payload[1];
     if (service !== undefined && D2_READ.has(service)) return { ok: true };

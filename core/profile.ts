@@ -150,6 +150,16 @@ export type AdapterKind = "kkl" | "elm327";
  * the protocol (ATSP), the 5-baud wake-up address (ATIIA), the tester address (ATTA), the header for
  * each request (ATSH) and a keep-alive message the adapter repeats on its own (ATWM).
  */
+export interface CanRaw {
+  /** The id requests go to, e.g. 0x7E0. */
+  request: number;
+  /** Receive filter (ATCF) and mask (ATCM) for the answers. */
+  filter: number;
+  mask: number;
+  /** How long to keep listening after the last frame, in ms (ATST). Default 200. */
+  waitMs?: number;
+}
+
 export interface ElmRoute {
   /** ELM327 protocol number: 3 = ISO 9141-2 (5-baud wake-up), 4 = ISO 14230 5-baud, 5 = ISO 14230 fast. */
   protocol: 3 | 4 | 5;
@@ -261,8 +271,16 @@ export interface VehicleProfile {
      * "volvo-d2": Volvo's own messages on CAN (core/volvo-d2), through an ELM327 only. Requests are
      * a module address, a service and its data, e.g. [0x58, 0xAE, 0x11] reads the airbag's codes,
      * and answers start with the module and the service + 0x40: [0x58, 0xEE, 0x11, ...].
+     * "gmlan": GM's diagnostics on CAN (Saab, Opel), through an ELM327 only, set up by `can`.
      */
-    protocol?: "kwp2000" | "kwp1281" | "volvo-d2";
+    protocol?: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan";
+    /**
+     * Raw CAN through an ELM327 (protocol "gmlan"): 11-bit ids at 500 kbit/s, requests sent as one
+     * single frame to `request`, every frame whose id passes `filter` and `mask` comes back.
+     * Frames from `request` + 8 are single-frame answers and come back unwrapped ([0x50] for
+     * [0x10, 0x02]); frames from any other id come back as their 8 raw bytes.
+     */
+    can?: CanRaw;
     /** Other speeds to try if the ECU doesn't answer the wake-up at `baudRate` (some KWP1281 ECUs use 9600). */
     altBaudRates?: number[];
     /**

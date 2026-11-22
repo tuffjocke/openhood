@@ -56,6 +56,10 @@ Volvo D2 frame layouts, module addresses and ELM327 settings in `core/volvo-d2/`
 martonn98/VolvoP2_CAN (AGPL-3.0), OBDb/Volvo-V50, Alfaa123/Volvo-CAN-Gauge, and blog and forum
 posts listed in `profiles/volvo-d2/README.md`. No code or text from them is included.
 
+Saab Trionic 7 and 8 request bytes, answer layouts and ELM327 settings in `profiles/saab-trionic7/`
+and `profiles/saab-trionic8/` are facts from Trionic CAN Flasher (github.com/mattiasclaesson/Trionic),
+which has no licence file. No code or text from it is included.
+
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
 TD5-Dash and discotd5.com are used as facts about the ECU's protocol, with credit in
 `profiles/land-rover-td5/README.md`. No code from those projects is included.

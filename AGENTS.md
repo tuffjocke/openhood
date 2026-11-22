@@ -47,6 +47,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   volvo-850/              850, S70, V70, C70 ABS, airbag and instruments (keyword D3 B0): three profiles, faults only
   volvo-d2/               S40, V50, C30, C70 and 2005+ S60, V70, XC70, S80, XC90: every module's codes (Volvo D2 on
                           CAN, ELM327 only), read only
+  saab-trionic7/          9-5 1998 to 2010 and 9-3 2000 to 2002 engine (KWP2000 on the K-line, KKL or ELM327)
+  saab-trionic8/          9-3 2003 to 2011 engine (GMLAN on CAN, ELM327 only, raw frames via `link.can`)
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
@@ -131,6 +133,7 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
+tests/saab.test.ts        Saab Trionic 7 and 8 known answers (Trionic CAN Flasher's examples) and sessions
 tests/volvo-d2.test.ts    Volvo D2 on CAN known answers (published frames) and a session through the ELM327
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
                           car), architecture.md, k-line-primer.md
@@ -240,6 +243,9 @@ Follow docs/adding-a-vehicle.md. In short:
   and answers start with the module: [0x58, 0xAE, 0x11] → [0x58, 0xEE, 0x11, ...codes]. The ELM327 link sends
   raw frames (ATCAF0) and tries answer ranges with ATCF/ATCM until the module answers. With no K-line to
   simulate, the demo for such a profile is ElmLink over SimulatedElm, with adapter "simulator".
+- GMLAN (`link.protocol: "gmlan"`, Saab Trionic 8) runs on CAN through an ELM327 only, set up by `link.can`: raw
+  frames (ATCAF0) to one id, answers from that id + 8 come back unwrapped, frames from other ids (like 5E8 code
+  frames) come back as their 8 raw bytes. Its simulator answers either a payload or frames as [id, ...bytes].
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.
