@@ -1,4 +1,5 @@
 import type { ElmRoute, SimulatedEcu, VehicleProfile } from "../profile";
+import { d2AnswerFrames, parseD2Frame } from "../volvo-d2/frame";
 import { ByteQueue, sleep, type ByteStream } from "./types";
 
 const enc = new TextEncoder();
@@ -21,6 +22,10 @@ const h2 = (b: number) => b.toString(16).toUpperCase().padStart(2, "0");
  * For a profile with an ELM327 route (link.elm) it plays a K-line adapter set up by hand: it only
  * answers once ATSP, ATIIA and ATSH match the route, prints "BUS INIT: ...OK" on the first request,
  * and strips headers and checksum as ATH0 does.
+ *
+ * For Volvo D2 (link.protocol "volvo-d2") it plays the CAN set-up a V50 owner published: it only
+ * answers raw 8-byte frames once ATSP7, ATCAF0, ATCP00, ATSH0FFFFE and ATH1 are set, and only when
+ * the answer's id passes the receive filter (ATCF, ATCM). Answers come split into D2 frames.
  */
 export interface ElmQuirks {
   can: boolean;
@@ -37,7 +42,7 @@ export class SimulatedElm implements ByteStream {
   private headers = false;
   private line = "";
   /** What a manufacturer route set: protocol, wake-up address and header. */
-  private set: { sp?: string; iia?: string; sh?: string } = {};
+  private set: { sp?: string; iia?: string; sh?: string; cp?: string; caf?: string; cf?: string; cm?: string } = {};
 
   constructor(
     private profile: VehicleProfile,
@@ -82,6 +87,10 @@ export class SimulatedElm implements ByteStream {
     if (cmd.startsWith("ATSP")) this.set.sp = cmd.slice(4);
     if (cmd.startsWith("ATIIA")) this.set.iia = cmd.slice(5);
     if (cmd.startsWith("ATSH")) this.set.sh = cmd.slice(4);
+    if (cmd.startsWith("ATCP")) this.set.cp = cmd.slice(4);
+    if (cmd.startsWith("ATCAF")) this.set.caf = cmd.slice(5);
+    if (cmd.startsWith("ATCF")) this.set.cf = cmd.slice(4);
+    if (cmd.startsWith("ATCM")) this.set.cm = cmd.slice(4);
     if (cmd === "ATH1" || cmd === "ATH0") {
       if (!this.opts.ignoresHeaders) this.headers = cmd === "ATH1";
       return ["OK"];
@@ -96,6 +105,7 @@ export class SimulatedElm implements ByteStream {
     if (cmd.startsWith("AT")) return ["OK"];
     if (!/^([0-9A-F]{2})+$/.test(cmd)) return ["?"];
 
+    if (this.profile.link.protocol === "volvo-d2") return this.answerD2(cmd);
     const route = this.profile.link.elm;
     if (route) return this.answerRoute(route, cmd);
 
@@ -131,6 +141,25 @@ export class SimulatedElm implements ByteStream {
     if (!res) return [...prefix, "NO DATA"];
     const frames = (Array.isArray(res[0]) ? res : [res]) as number[][];
     return [...prefix, ...frames.map((f) => f.map(h2).join(""))];
+  }
+
+  /** Volvo D2: one raw request frame in, the module's answer frames out, with their CAN id. */
+  private answerD2(cmd: string): string[] {
+    const { sp, caf, cp, sh, cf, cm } = this.set;
+    if (sp !== "7" || caf !== "0" || cp !== "00" || sh !== "0FFFFE" || !this.headers) return ["NO DATA"];
+    const bytes: number[] = [];
+    for (let i = 0; i < cmd.length; i += 2) bytes.push(parseInt(cmd.slice(i, i + 2), 16));
+    const payload = parseD2Frame(bytes);
+    if (!payload) return ["NO DATA"];
+    this.ecu ??= this.profile.simulator();
+    const req = Uint8Array.from(payload);
+    const res = this.ecu.handle(req);
+    if (!res) return ["NO DATA"];
+    const id = this.ecu.responseId?.(req) ?? 0x00400000;
+    const mask = cm === undefined ? 0 : parseInt(cm, 16);
+    if (cf !== undefined && ((id & mask) >>> 0) !== ((parseInt(cf, 16) & mask) >>> 0)) return ["NO DATA"];
+    const flat = (Array.isArray(res[0]) ? (res as number[][]).flat() : res) as number[];
+    return d2AnswerFrames(flat).map((f) => id.toString(16).toUpperCase().padStart(8, "0") + f.map(h2).join(""));
   }
 
   private print(f: number[]): string[] {

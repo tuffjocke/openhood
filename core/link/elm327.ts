@@ -1,5 +1,6 @@
 import { hex, NegativeResponse, positive, SID } from "../kwp2000/frame";
-import type { EcuLink, ElmRoute, InitResult, RequestOptions } from "../profile";
+import type { EcuLink, ElmRoute, InitResult, RequestOptions, VehicleProfile } from "../profile";
+import { D2_RANGE_MASK, D2_RANGES, d2Frame, reassembleD2 } from "../volvo-d2/frame";
 import { TimeoutError, type ByteStream } from "../transport/types";
 import { identifies, type Link, type Traffic } from "./types";
 
@@ -11,8 +12,13 @@ import { identifies, type Link, type Traffic } from "./types";
  *
  * Standard OBD-II by default: profiles opt in with adapters: ["elm327"]. A profile can also give an
  * ElmRoute (link.elm) for a manufacturer K-line protocol: the adapter is then set to that protocol,
- * wake-up address and headers instead of searching for OBD-II.
+ * wake-up address and headers instead of searching for OBD-II. Or "volvo-d2": Volvo's own messages
+ * on CAN (core/volvo-d2), sent as raw frames.
  */
+
+/** What an ELM327 needs to know about a profile's protocol: a K-line route, Volvo D2, or nothing (OBD-II). */
+export type ElmMode = ElmRoute | "volvo-d2" | undefined;
+export const elmModeFor = (p: VehicleProfile): ElmMode => (p.link.protocol === "volvo-d2" ? "volvo-d2" : p.link.elm);
 
 const PROMPT = 0x3e; // ">"
 const enc = new TextEncoder();
@@ -129,7 +135,8 @@ export function isCanProtocol(dpn: string): boolean {
 }
 
 export class ElmLink implements Link {
-  readonly adapter = "elm327" as const;
+  /** "simulator" when this is the demo: a pretend adapter in front of a pretend car. */
+  readonly adapter: "elm327" | "simulator";
   init: InitResult = { kind: "adapter", can: false, protocol: "" };
   /** The adapter's own name, e.g. "ELM327 v1.5". */
   version = "";
@@ -139,12 +146,22 @@ export class ElmLink implements Link {
   private header = "";
   /** The first request of a manufacturer route wakes the ECU, which takes a few seconds. */
   private woken = false;
+  private route?: ElmRoute;
+  private d2: boolean;
+  /** Volvo D2: the receive filter set now, and the answer ranges that worked, most recent first. */
+  private filter = -1;
+  private worked: number[] = [];
 
   constructor(
     private stream: ByteStream,
     private onTraffic: Traffic = () => {},
-    private route?: ElmRoute,
-  ) {}
+    mode?: ElmMode,
+    opts: { demo?: boolean } = {},
+  ) {
+    this.d2 = mode === "volvo-d2";
+    this.route = mode === "volvo-d2" ? undefined : mode;
+    this.adapter = opts.demo ? "simulator" : "elm327";
+  }
 
   /** Send one line, return the lines printed before the ">" prompt. */
   async command(cmd: string, timeoutMs = 2000, note?: string, priv = false): Promise<string[]> {
@@ -176,6 +193,7 @@ export class ElmLink implements Link {
     if (!this.version) this.version = name(await this.command("ATI", 2000, "adapter name"));
     if (!this.version) throw new AdapterError("This doesn't look like an ELM327 adapter.");
     if (this.route) return this.openRoute(this.route, connect);
+    if (this.d2) return this.openD2(connect);
     // Echo off, no linefeeds, no spaces, no headers, adaptive timing, automatic protocol.
     for (const c of ["ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0"]) await this.command(c);
     // The first OBD request makes the adapter search for the car's protocol (up to ~10 s).
@@ -213,6 +231,47 @@ export class ElmLink implements Link {
     await connect(this, this.init);
   }
 
+  /**
+   * Volvo D2 on the fast CAN bus (OBD pins 6 and 14): ISO 15765-4 CAN with 29-bit ids at 500 kbit/s
+   * (ATSP7), raw frames without the ISO-TP byte (ATCAF0), sent to 000FFFFE (ATCP00, ATSH0FFFFE),
+   * headers on to see who answered, and a short wait for absent modules (ATST40, about 256 ms).
+   * The settings are the ones a 2010 V50 owner published (README).
+   */
+  private async openD2(connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
+    for (const c of ["ATE0", "ATL0", "ATS0", "ATH1", "ATSP7", "ATCAF0", "ATCP00", "ATSH0FFFFE", "ATST40"]) await this.command(c);
+    this.filter = -1;
+    this.worked = [];
+    this.init = { kind: "adapter", can: true, protocol: "Volvo D2, CAN 29 bit 500 kbit/s" };
+    await connect(this, this.init);
+  }
+
+  /** One D2 request: try the answer ranges that worked first, then the rest. */
+  private async askD2(payload: number[], opts: RequestOptions): Promise<Uint8Array> {
+    const h8 = (n: number) => n.toString(16).toUpperCase().padStart(8, "0");
+    const order = [...this.worked, ...D2_RANGES.filter((r) => !this.worked.includes(r))];
+    const [module, service] = payload;
+    for (const range of order) {
+      if (range !== this.filter) {
+        await this.command(`ATCF${h8(range)}`);
+        await this.command(`ATCM${h8(D2_RANGE_MASK)}`);
+        this.filter = range;
+      }
+      const lines = await this.command(d2Frame(payload).map((b) => b.toString(16).toUpperCase().padStart(2, "0")).join(""), 3000, opts.note);
+      const frames = dataLines(lines)
+        .filter((l) => /^[0-9A-F]{10,24}$/.test(l))
+        .map((l) => ({ id: parseInt(l.slice(0, 8), 16), data: hexBytes(l.slice(8)) }));
+      for (const { payload: res } of reassembleD2(frames)) {
+        if (res[0] !== module) continue;
+        if (res[1] === service + 0x40) {
+          this.worked = [range, ...this.worked.filter((r) => r !== range)];
+          return Uint8Array.from(res);
+        }
+        if (res[1] === 0x7f && res[2] === service) throw new NegativeResponse(service, res[3]);
+      }
+    }
+    throw new TimeoutError(0, 0, "No answer from this module.");
+  }
+
   close() {
     return this.stream.close();
   }
@@ -238,10 +297,12 @@ export class ElmLink implements Link {
   }
 
   async request(payload: number[], opts: RequestOptions = {}) {
+    if (this.d2) return this.askD2(payload, opts);
     return (await this.ask(payload, opts))[0];
   }
 
-  requestMany(payload: number[], opts: RequestOptions & { windowMs?: number } = {}) {
+  async requestMany(payload: number[], opts: RequestOptions & { windowMs?: number } = {}) {
+    if (this.d2) return [await this.askD2(payload, opts)];
     return this.ask(payload, opts);
   }
 }

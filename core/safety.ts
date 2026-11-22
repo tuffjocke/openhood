@@ -38,11 +38,26 @@ const KWP1281_READ = new Set([
   0x29, // read group
 ]);
 
+/**
+ * Volvo D2 services that read (requests are module, service, data): keep-alive A1, values by id
+ * A6, freeze frames AC and AD, trouble codes AE, identification blocks B9. Service names from the
+ * list in profiles/volvo-d2/README.md.
+ */
+const D2_READ = new Set([0xa1, 0xa6, 0xac, 0xad, 0xae, 0xb9]);
+
 export type Verdict = { ok: true } | { ok: false; reason: string };
 
-export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" = "kwp2000"): Verdict {
+export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" | "volvo-d2" = "kwp2000"): Verdict {
   const sid = payload[0];
   if (sid === undefined) return { ok: false, reason: "Empty request." };
+  if (protocol === "volvo-d2") {
+    const service = payload[1];
+    if (service !== undefined && D2_READ.has(service)) return { ok: true };
+    if (service === 0xaf) return { ok: false, reason: "Clearing faults isn't supported for this car yet." };
+    if (service === 0xa7 || service === 0xbb)
+      return { ok: false, reason: "Reading raw module memory is not allowed: it can hold immobiliser and key data." };
+    return { ok: false, reason: "A Volvo D2 request is a module address, then a read service (A6, AE, B9). Openhood only sends read requests." };
+  }
   if (protocol === "kwp1281") {
     if (KWP1281_READ.has(sid)) return { ok: true };
     if (sid === 0x05) return { ok: false, reason: "Clearing faults has its own tool, with a confirmation." };

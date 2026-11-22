@@ -3,7 +3,7 @@ import { BluetoothTransport } from "../transport/bluetooth";
 import { SimulatedTransport } from "../transport/simulated";
 import { sleep, TimeoutError, type ByteStream } from "../transport/types";
 import { WebSerialTransport } from "../transport/webserial";
-import { ElmLink } from "./elm327";
+import { ElmLink, elmModeFor } from "./elm327";
 import { kLineLink } from "./kline";
 import type { Link, Traffic } from "./types";
 
@@ -61,7 +61,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
 
   if (via === "bluetooth") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
-    return new ElmLink(new BluetoothTransport(), onTraffic, profile.link.elm);
+    return new ElmLink(new BluetoothTransport(), onTraffic, elmModeFor(profile));
   }
 
   const port = await WebSerialTransport.choosePort();
@@ -86,7 +86,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   const found = await detectAdapter((baudRate) => new WebSerialTransport({ baudRate, echo: false, port }), onTraffic);
   if (found?.kind === "elm327") {
     if (!allowed.includes("elm327")) throw new WrongAdapterError(needsKkl(profile));
-    return new ElmLink(new WebSerialTransport({ baudRate: found.baudRate, echo: false, port }), onTraffic, profile.link.elm);
+    return new ElmLink(new WebSerialTransport({ baudRate: found.baudRate, echo: false, port }), onTraffic, elmModeFor(profile));
   }
   // A KKL cable, or nothing answered yet: try the K-line, which is all a silent cable can be.
   if (!allowed.includes("kkl"))

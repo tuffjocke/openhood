@@ -85,6 +85,8 @@ export class Session {
     const schedule = this.profile.schedule.filter((id) => this.activeGroups.has(id));
     const slowGroups = (this.profile.slowGroups ?? []).filter((id) => this.activeGroups.has(id));
     if (!schedule.length) {
+      // Fault readers with no live data (and no keep-alive to send) have nothing to poll.
+      if (!this.profile.channels.length) return;
       onError(new Error("The ECU doesn't support any of the values this profile reads."));
       return;
     }

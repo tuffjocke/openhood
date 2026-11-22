@@ -12,6 +12,9 @@ import {
 } from "../kwp2000/frame";
 import type { EcuLink, InitResult, RequestOptions, VehicleProfile } from "../profile";
 import { sleep, TimeoutError, type Transport } from "../transport/types";
+import { SimulatedElm } from "../transport/simulated-elm";
+import { SimulatedTransport } from "../transport/simulated";
+import { ElmLink } from "./elm327";
 import { Kwp1281Link } from "./kwp1281";
 import { identifies, type Link, type Traffic } from "./types";
 
@@ -164,6 +167,11 @@ export class KlineLink implements Link {
 
 /** The right raw K-line link for a profile: KWP1281 (core/link/kwp1281) or KWP2000 / ISO 9141-2. */
 export function kLineLink(profile: VehicleProfile, transport: Transport, onTraffic?: Traffic): Link {
+  // Volvo D2 is on CAN, so there is no K-line to simulate: the demo is a pretend ELM327 instead.
+  if (profile.link.protocol === "volvo-d2") {
+    if (!(transport instanceof SimulatedTransport)) throw new Error(`${profile.name} needs an ELM327 adapter, not a KKL cable.`);
+    return new ElmLink(new SimulatedElm(profile), onTraffic, "volvo-d2", { demo: true });
+  }
   return profile.link.protocol === "kwp1281"
     ? new Kwp1281Link(profile, transport, onTraffic)
     : new KlineLink(profile, transport, onTraffic);

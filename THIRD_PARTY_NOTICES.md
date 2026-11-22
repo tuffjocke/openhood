@@ -51,6 +51,11 @@ Volvo keyword D3 B0 bytes, module addresses and the raw-to-Volvo fault code tabl
 `profiles/volvo-850/` are facts from jonesrh.info (and a copy of its code list on stonis-world.com),
 which give no licence. No code or text from them is included; see `profiles/volvo-850/README.md`.
 
+Volvo D2 frame layouts, module addresses and ELM327 settings in `core/volvo-d2/` and
+`profiles/volvo-d2/` are facts from logs published by Volvo owners: Tigo2000/Volvo-VIDA (GPL-3.0),
+martonn98/VolvoP2_CAN (AGPL-3.0), OBDb/Volvo-V50, Alfaa123/Volvo-CAN-Gauge, and blog and forum
+posts listed in `profiles/volvo-d2/README.md`. No code or text from them is included.
+
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
 TD5-Dash and discotd5.com are used as facts about the ECU's protocol, with credit in
 `profiles/land-rover-td5/README.md`. No code from those projects is included.

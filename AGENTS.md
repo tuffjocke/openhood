@@ -34,6 +34,7 @@ core/                     vehicle independent, change rarely
                           kwp1281.ts (VW Group: every byte confirmed, keep-alive), elm327.ts (adapter text
                           commands), open.ts (pick the device, detect KKL or ELM327, check the profile allows it)
   kwp2000/frame.ts        framing, checksums, SIDs, NRCs, byte helpers (u16, be16, hex)
+  volvo-d2/frame.ts       Volvo D2 on CAN: request frames to 000FFFFE, multi-frame answers, codes, answer ranges
   kwp1281/protocol.ts     KWP1281 block titles, timings, fault codes, measuring block formulas
   transport/              webserial.ts (USB/paired Bluetooth), bluetooth.ts (BLE adapters),
                           simulated.ts (fake ECU on a K-line), simulated-kwp1281.ts (its KWP1281 byte handshake),
@@ -44,6 +45,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   generic-obd2/           standard OBD-II: functional addressing, supported PIDs, DTCs, pending, freeze frame, self-tests
   vw-audi-kwp1281/        older VW Group engines: finds readings by formula at connect, VAG fault names and explanations
   volvo-850/              850, S70, V70, C70 ABS, airbag and instruments (keyword D3 B0): three profiles, faults only
+  volvo-d2/               S40, V50, C30, C70 and 2005+ S60, V70, XC70, S80, XC90: every module's codes (Volvo D2 on
+                          CAN, ELM327 only), read only
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
@@ -128,6 +131,7 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
+tests/volvo-d2.test.ts    Volvo D2 on CAN known answers (published frames) and a session through the ELM327
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
                           car), architecture.md, k-line-primer.md
 ```
@@ -232,6 +236,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - Volvo's keyword D3 B0 is ISO 14230 framing with `lengthOffset: 1` (the format byte counts one more than the
   data) after a 5-baud wake-up. Profiles with no live data have `channels: []` and a keep-alive group; the
   dashboard then shows no binnacle and the start page demo uses standard OBD-II instead.
+- Volvo D2 (`link.protocol: "volvo-d2"`) runs on CAN through an ELM327 only. Requests are [module, service, ...]
+  and answers start with the module: [0x58, 0xAE, 0x11] → [0x58, 0xEE, 0x11, ...codes]. The ELM327 link sends
+  raw frames (ATCAF0) and tries answer ranges with ATCF/ATCM until the module answers. With no K-line to
+  simulate, the demo for such a profile is ElmLink over SimulatedElm, with adapter "simulator".
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { VehicleProfile } from "@/core/profile";
 import { Session } from "@/core/session";
-import { ElmLink } from "@/core/link/elm327";
+import { ElmLink, elmModeFor } from "@/core/link/elm327";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { SimulatedElm } from "@/core/transport/simulated-elm";
 import { templateProfile } from "@/profiles/_template";
@@ -81,7 +81,7 @@ for (const p of all) {
     for (const can of [true, false]) {
       it(`runs through an ELM327 adapter (${can ? "CAN" : "K-line"}) if it says it can`, async () => {
         if (!(p.adapters ?? ["kkl"]).includes("elm327")) return;
-        const s = new Session(p, new ElmLink(new SimulatedElm(p, { can }), undefined, p.link.elm));
+        const s = new Session(p, new ElmLink(new SimulatedElm(p, { can }), undefined, elmModeFor(p)));
         await s.connect();
         assert.equal(s.init.kind, "adapter");
         for (const id of p.schedule) if (s.isActive(id)) await s.readGroup(id);

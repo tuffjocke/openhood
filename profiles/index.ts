@@ -6,9 +6,10 @@ import type { VehicleProfile } from "@/core/profile";
 import { genericObd2 } from "./generic-obd2";
 import { landRoverTd5 } from "./land-rover-td5";
 import { volvo850Abs, volvo850Combi, volvo850Srs } from "./volvo-850";
+import { volvoD2 } from "./volvo-d2";
 import { vwAudiKwp1281 } from "./vw-audi-kwp1281";
 
-export const PROFILES: VehicleProfile[] = [genericObd2, landRoverTd5, volvo850Abs, volvo850Combi, volvo850Srs, vwAudiKwp1281];
+export const PROFILES: VehicleProfile[] = [genericObd2, landRoverTd5, volvo850Abs, volvo850Combi, volvo850Srs, volvoD2, vwAudiKwp1281];
 
 export const getProfile = (id: string) => PROFILES.find((p) => p.id === id);
 

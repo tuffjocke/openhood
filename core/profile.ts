@@ -189,6 +189,8 @@ export interface RequestOptions {
 }
 
 export interface SimulatedEcu {
+  /** Volvo D2 only: the CAN id the module answering this request sends from. */
+  responseId?(request: Uint8Array): number;
   /**
    * Which wake-ups this ECU answers. Default: fast init only.
    * `slow` gives the two key bytes it sends after a 5-baud init
@@ -256,8 +258,11 @@ export interface VehicleProfile {
      * "kwp1281": VW Group's older protocol, every byte confirmed by the other side (core/kwp1281).
      * Needs init "slow". Requests are a block title and its data, e.g. [0x29, 1] reads group 1,
      * and answers start with the ECU's block title, e.g. [0xE7, ...].
+     * "volvo-d2": Volvo's own messages on CAN (core/volvo-d2), through an ELM327 only. Requests are
+     * a module address, a service and its data, e.g. [0x58, 0xAE, 0x11] reads the airbag's codes,
+     * and answers start with the module and the service + 0x40: [0x58, 0xEE, 0x11, ...].
      */
-    protocol?: "kwp2000" | "kwp1281";
+    protocol?: "kwp2000" | "kwp1281" | "volvo-d2";
     /** Other speeds to try if the ECU doesn't answer the wake-up at `baudRate` (some KWP1281 ECUs use 9600). */
     altBaudRates?: number[];
     /**

@@ -39,6 +39,7 @@ export const SV: Record<string, string> = {
   "ABS brakes": "ABS-bromsar",
   Airbag: "Krockkudde",
   Instruments: "Instrument",
+  "All modules": "Alla styrenheter",
   "Get a KKL cable.": "Skaffa en KKL-kabel.",
   "Get an ELM327 adapter.": "Skaffa en ELM327-adapter.",
   "What to buy": "Vad ska jag köpa?",
