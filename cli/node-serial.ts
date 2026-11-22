@@ -10,7 +10,7 @@ export class NodeSerialTransport implements Transport, ByteStream {
   private port: SerialPort | null = null;
   private rx = new ByteQueue();
 
-  constructor(private opts: { path: string; baudRate: number; echo?: boolean }) {}
+  constructor(private opts: { path: string; baudRate: number; echo?: boolean; parity?: "none" | "even" }) {}
 
   static async list() {
     try {
@@ -22,7 +22,7 @@ export class NodeSerialTransport implements Transport, ByteStream {
 
   async open() {
     if (this.port?.isOpen) return;
-    const port = new SerialPort({ path: this.opts.path, baudRate: this.opts.baudRate, autoOpen: false });
+    const port = new SerialPort({ path: this.opts.path, baudRate: this.opts.baudRate, parity: this.opts.parity ?? "none", autoOpen: false });
     await new Promise<void>((resolve, reject) => port.open((e) => (e ? reject(e) : resolve())));
     port.on("data", (d: Buffer) => this.rx.push(new Uint8Array(d)));
     this.port = port;

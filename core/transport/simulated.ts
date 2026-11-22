@@ -1,5 +1,6 @@
 import { addressedFrame, iso9141Response, parseFrame, parseIso9141, shortFrame } from "../kwp2000/frame";
 import type { SimulatedEcu, VehicleProfile } from "../profile";
+import { ds2Frame, parseDs2Frame } from "../link/ds2";
 import { SimulatedKwp1281 } from "./simulated-kwp1281";
 import { ByteQueue, sleep, type Transport } from "./types";
 
@@ -57,6 +58,15 @@ export class SimulatedTransport implements Transport {
   }
 
   async write(bytes: Uint8Array) {
+    // BMW DS2: no wake-up, every module always listening, answers from its own address.
+    if (this.profile.link.protocol === "ds2") {
+      const req = parseDs2Frame(bytes);
+      if (!req) return;
+      this.ecu ??= this.profile.simulator();
+      const res = this.ecu.handle(Uint8Array.from(req));
+      if (res) setTimeout(() => this.rx.push(ds2Frame(res as number[])), 8 + Math.random() * 12);
+      return;
+    }
     if (this.kwp1281) {
       for (const b of bytes) this.kwp1281.onByte(b);
       return;

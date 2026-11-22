@@ -60,6 +60,10 @@ Saab Trionic 7 and 8 request bytes, answer layouts and ELM327 settings in `profi
 and `profiles/saab-trionic8/` are facts from Trionic CAN Flasher (github.com/mattiasclaesson/Trionic),
 which has no licence file. No code or text from it is included.
 
+BMW DS2 framing, fault memory requests and module addresses in `core/link/ds2.ts` and
+`profiles/bmw-ds2/` are facts from E46M3-Monitoring (MIT, Copyright (c) 2026 TSUNAGI) and BMW Scanner
+1.4 over WebUSB (MIT, Copyright (c) 2026 Szabó Máté). No code is copied.
+
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
 TD5-Dash and discotd5.com are used as facts about the ECU's protocol, with credit in
 `profiles/land-rover-td5/README.md`. No code from those projects is included.

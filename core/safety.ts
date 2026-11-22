@@ -52,11 +52,23 @@ const D2_READ = new Set([0xa1, 0xa6, 0xac, 0xad, 0xae, 0xb9]);
  */
 const GMLAN_READ = new Set([0xa9, 0x20, 0x1a, 0x22, 0x3e]);
 
+/**
+ * BMW DS2 controls that read (requests are module address, control, data): identification 00,
+ * fault memory 04, shadow fault memory 14. Not 06: raw module memory.
+ */
+const DS2_READ = new Set([0x00, 0x04, 0x14]);
+
 export type Verdict = { ok: true } | { ok: false; reason: string };
 
-export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan" = "kwp2000"): Verdict {
+export function checkReadOnly(payload: number[], protocol: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan" | "ds2" = "kwp2000"): Verdict {
   const sid = payload[0];
   if (sid === undefined) return { ok: false, reason: "Empty request." };
+  if (protocol === "ds2") {
+    const control = payload[1];
+    if (control !== undefined && DS2_READ.has(control)) return { ok: true };
+    if (control === 0x06) return { ok: false, reason: "Reading raw module memory is not allowed: it can hold immobiliser and key data." };
+    return { ok: false, reason: "A DS2 request is a module address, then a read (00, 04, 14). Openhood only sends read requests." };
+  }
   if (protocol === "gmlan") {
     if (GMLAN_READ.has(sid) || OBD_READ.has(sid)) return { ok: true };
     return { ok: false, reason: `Request ${sid.toString(16).toUpperCase().padStart(2, "0")} isn't a read. Openhood only sends read requests.` };

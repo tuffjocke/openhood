@@ -31,7 +31,7 @@ core/                     vehicle independent, change rarely
   profile.ts              THE CONTRACT: VehicleProfile and friends. Read this first.
   session.ts              profile.connect, polling, faults, one-at-a-time queue; talks through a Link
   link/                   kline.ts (KKL/simulator: wake-up, framing; kLineLink picks it or KWP1281),
-                          kwp1281.ts (VW Group: every byte confirmed, keep-alive), elm327.ts (adapter text
+                          kwp1281.ts (VW Group: every byte confirmed, keep-alive), ds2.ts (BMW), elm327.ts (adapter text
                           commands), open.ts (pick the device, detect KKL or ELM327, check the profile allows it)
   kwp2000/frame.ts        framing, checksums, SIDs, NRCs, byte helpers (u16, be16, hex)
   volvo-d2/frame.ts       Volvo D2 on CAN: request frames to 000FFFFE, multi-frame answers, codes, answer ranges
@@ -49,6 +49,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
                           CAN, ELM327 only), read only
   saab-trionic7/          9-5 1998 to 2010 and 9-3 2000 to 2002 engine (KWP2000 on the K-line, KKL or ELM327)
   saab-trionic8/          9-3 2003 to 2011 engine (GMLAN on CAN, ELM327 only, raw frames via `link.can`)
+  bmw-ds2/                E36, E38, E39, E46, E53, Z3: every DS2 module's codes (KKL only, 9600 8E1), read only
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
@@ -133,6 +134,7 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
+tests/bmw.test.ts         BMW DS2 frames (E46M3-Monitoring's FS_LESEN), fault entry splitting, a session
 tests/saab.test.ts        Saab Trionic 7 and 8 known answers (Trionic CAN Flasher's examples) and sessions
 tests/volvo-d2.test.ts    Volvo D2 on CAN known answers (published frames) and a session through the ELM327
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
@@ -246,6 +248,9 @@ Follow docs/adding-a-vehicle.md. In short:
 - GMLAN (`link.protocol: "gmlan"`, Saab Trionic 8) runs on CAN through an ELM327 only, set up by `link.can`: raw
   frames (ATCAF0) to one id, answers from that id + 8 come back unwrapped, frames from other ids (like 5E8 code
   frames) come back as their 8 raw bytes. Its simulator answers either a payload or frames as [id, ...bytes].
+- BMW DS2 (`link.protocol: "ds2"`, `link.parity: "even"`) has no wake-up and no tester address: requests are
+  [module address, control, ...data], answers [status, ...data] with A0 for done; other statuses throw
+  NegativeResponse. Every module listens on the same line, so a profile asks them one by one.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.

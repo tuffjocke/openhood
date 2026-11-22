@@ -272,8 +272,12 @@ export interface VehicleProfile {
      * a module address, a service and its data, e.g. [0x58, 0xAE, 0x11] reads the airbag's codes,
      * and answers start with the module and the service + 0x40: [0x58, 0xEE, 0x11, ...].
      * "gmlan": GM's diagnostics on CAN (Saab, Opel), through an ELM327 only, set up by `can`.
+     * "ds2": BMW DS2 (core/link/ds2), KKL cable only, no wake-up: requests are [module address,
+     * control, ...data] and answers [status, ...data] (A0 = done).
      */
-    protocol?: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan";
+    protocol?: "kwp2000" | "kwp1281" | "volvo-d2" | "gmlan" | "ds2";
+    /** Serial parity on the cable. Default "none"; DS2 needs "even". */
+    parity?: "none" | "even";
     /**
      * Raw CAN through an ELM327 (protocol "gmlan"): 11-bit ids at 500 kbit/s, requests sent as one
      * single frame to `request`, every frame whose id passes `filter` and `mask` comes back.

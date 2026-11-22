@@ -68,7 +68,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
   if (!allowed.includes("elm327")) {
     // KKL only: don't send probe text onto the car's data line. If the car stays silent, check
     // whether an ELM327 was plugged in by mistake, to give a useful message.
-    const link = kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
+    const link = kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port, parity: profile.link.parity }), onTraffic);
     const open = link.open.bind(link);
     link.open = async (connect) => {
       try {
@@ -93,7 +93,7 @@ export async function openLink(profile: VehicleProfile, via: ConnectVia, onTraff
     throw new WrongAdapterError(
       "This looks like a plain KKL cable, or the adapter didn't answer. This car needs an ELM327-type adapter.",
     );
-  return kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port }), onTraffic);
+  return kLineLink(profile, new WebSerialTransport({ baudRate: profile.link.baudRate, port, parity: profile.link.parity }), onTraffic);
 }
 
 const needsKkl = (p: VehicleProfile) =>

@@ -14,6 +14,7 @@ import type { EcuLink, InitResult, RequestOptions, VehicleProfile } from "../pro
 import { sleep, TimeoutError, type Transport } from "../transport/types";
 import { SimulatedElm } from "../transport/simulated-elm";
 import { SimulatedTransport } from "../transport/simulated";
+import { Ds2Link } from "./ds2";
 import { ElmLink, elmModeFor } from "./elm327";
 import { Kwp1281Link } from "./kwp1281";
 import { identifies, type Link, type Traffic } from "./types";
@@ -172,6 +173,7 @@ export function kLineLink(profile: VehicleProfile, transport: Transport, onTraff
     if (!(transport instanceof SimulatedTransport)) throw new Error(`${profile.name} needs an ELM327 adapter, not a KKL cable.`);
     return new ElmLink(new SimulatedElm(profile), onTraffic, elmModeFor(profile), { demo: true });
   }
+  if (profile.link.protocol === "ds2") return new Ds2Link(transport, onTraffic);
   return profile.link.protocol === "kwp1281"
     ? new Kwp1281Link(profile, transport, onTraffic)
     : new KlineLink(profile, transport, onTraffic);

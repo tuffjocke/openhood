@@ -21,7 +21,7 @@ export class WebSerialTransport implements Transport, ByteStream {
   private reading = false;
 
   /** Pass a port already chosen by the person, or let open() ask for one. */
-  constructor(private opts: { baudRate: number; echo?: boolean; port?: SerialPort }) {
+  constructor(private opts: { baudRate: number; echo?: boolean; port?: SerialPort; parity?: "none" | "even" }) {
     this.port = opts.port ?? null;
   }
 
@@ -41,7 +41,7 @@ export class WebSerialTransport implements Transport, ByteStream {
       baudRate: this.opts.baudRate,
       dataBits: 8,
       stopBits: 1,
-      parity: "none",
+      parity: this.opts.parity ?? "none",
       bufferSize: 4096,
     });
     this.opened = true;

@@ -116,7 +116,7 @@ export class Runtime {
       throw new UserError(`${profile.name} needs ${allowed.includes("kkl") ? "a KKL cable" : "an ELM327-type adapter"}, but this is ${kind === "kkl" ? "a KKL cable (or nothing answered)" : "an ELM327 adapter"}.`);
     return kind === "elm327"
       ? new ElmLink(new NodeSerialTransport({ path, baudRate, echo: false }), this.log, elmModeFor(profile))
-      : kLineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate }), this.log);
+      : kLineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate, parity: profile.link.parity }), this.log);
   }
 
   async disconnect() {
