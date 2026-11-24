@@ -65,6 +65,18 @@ describe("Land Rover Td5", () => {
     assert.equal(m.maf.toFixed(1), "47.8");
   });
 
+  it("decodes idle speed error and fuel per stroke as discovery2-diag does", () => {
+    const at = (h: string) => Uint8Array.from(h.split(" ").map((b) => parseInt(b, 16)));
+    const idle = groups.find((g) => g.id === "idle")!;
+    assert.equal(idle.decode(at("61 21 FF F6"), {}).idleError, -10); // signed: 0xFFF6 is 10 rpm over target
+    assert.equal(idle.decode(at("61 21 00 0C"), {}).idleError, 12);
+    const fuelling = groups.find((g) => g.id === "fuelling")!;
+    // 0x0348 = 840 → 8.40 mg per stroke at data offset 6
+    const r = at("61 1D 00 00 00 00 00 00 03 48 00 00 00 00 00 00 00 00 00 00");
+    assert.equal(fuelling.decode(r, {}).fuel.toFixed(2), "8.40");
+    assert.deepEqual(fuelling.decode(at("61 1D 00 00"), {}), {}); // too short: nothing, not garbage
+  });
+
   // Read on a 1999 Defender, engine idling, about 0 °C outside (GitHub issue #1).
   const frame = (h: string) => Uint8Array.from(h.split(" ").map((b) => parseInt(b, 16)));
   const decode = (id: string, h: string, state = {}) => groups.find((g) => g.id === id)!.decode(frame(h), state);

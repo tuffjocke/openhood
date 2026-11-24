@@ -3,14 +3,15 @@
  *
  * All groups use service 0x21 readDataByLocalIdentifier. Response payload looks like
  * [0x61, localId, ...data]. All values are big-endian. Each layout below is backed by at least
- * one open project or a Nanocom log format (sources in README.md), and was checked against the
- * raw bytes on a 1999 Defender with the engine idling (GitHub issue #1, tests/td5.test.ts).
+ * one open project or a Nanocom log format (sources in README.md). The "verified" ones were checked
+ * against the raw bytes on a 1999 Defender with the engine idling (GitHub issue #1, tests/td5.test.ts);
+ * idle speed error and fuel per stroke ("community") haven't been read on a car by us yet.
  *
  * Each group carries an `encode` used only by the simulator, kept next to `decode`
  * so the two can never drift apart.
  */
-import { be16, u16 } from "@/core/kwp2000/frame";
-import type { Channel, Group } from "@/core/profile";
+import { be16, s16, u16 } from "@/core/kwp2000/frame";
+import type { Channel, Group, Values } from "@/core/profile";
 import type { SimSnapshot } from "./simulator";
 
 export const channels: Channel[] = [
@@ -23,6 +24,9 @@ export const channels: Channel[] = [
   { key: "maf", label: "Air mass", unit: "kg/h", decimals: 0, min: 0, max: 600, group: "air", confidence: "verified" },
   { key: "pedal", label: "Pedal sensor", unit: "V", decimals: 2, min: 0, max: 5, group: "engine", confidence: "verified" },
   { key: "battery", label: "Battery", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "verified" },
+  { key: "ambientKpa", label: "Air pressure", unit: "kPa", decimals: 0, min: 70, max: 105, group: "air", confidence: "verified" },
+  { key: "idleError", label: "Idle speed error", unit: "rpm", decimals: 0, min: -150, max: 150, group: "engine", confidence: "community" },
+  { key: "fuel", label: "Injected", unit: "mg", decimals: 1, min: 0, max: 60, group: "fuel", confidence: "community" },
 ];
 
 type SimGroup = Group & { encode(s: SimSnapshot): number[] };
@@ -96,5 +100,22 @@ export const groups: SimGroup[] = [
     decode: (r) => ({ ambientKpa: u16(r, 2) / 100 }),
     encode: (s) => [0x61, 0x23, ...be16(s.ambientKpa * 100), ...be16(0x0800)],
     confidence: "verified",
+  },
+  {
+    id: "idle",
+    request: [0x21, 0x21],
+    // signed rpm, target idle minus actual (discovery2-diag, Ekaitza_Itzali, SimonRafferty)
+    decode: (r) => ({ idleError: s16(r, 2) }),
+    encode: (s) => [0x61, 0x21, ...be16(s.idleError & 0xffff)],
+    confidence: "community",
+  },
+  {
+    id: "fuelling",
+    request: [0x21, 0x1d],
+    // a block of fuelling values; injected fuel is at data offset 6, in 0.01 mg per stroke
+    // (discovery2-diag). The block is at least 18 data bytes; the rest isn't shown.
+    decode: (r): Values => (r.length >= 10 ? { fuel: u16(r, 8) / 100 } : {}),
+    encode: (s) => [0x61, 0x1d, 0, 0, 0, 0, 0, 0, ...be16(s.fuel * 100), ...new Array(10).fill(0)],
+    confidence: "community",
   },
 ];

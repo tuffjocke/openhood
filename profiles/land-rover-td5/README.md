@@ -6,7 +6,7 @@ Not standard OBD-II: generic scanners and ELM327 adapters don't work.
 
 ## Status
 
-Connect, unlock, fault read and every live value have been checked on a 1999 Defender (below).
+Connect, unlock, fault read and the live values marked verified have been checked on a 1999 Defender (below).
 Every part is also backed by at least one independent open project; the ones marked "known
 answer" are checked byte for byte in `tests/td5.test.ts` against published values or the car's frames.
 
@@ -21,7 +21,9 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | RPM `21 09`, road speed `21 0D` | verified | SimonRafferty, Nanocom log format |
 | Temperatures `21 1A` (coolant, intake, ambient, fuel; 0.1 K + sensor mV) | verified, known answer | Nanocom log format, SimonRafferty |
 | MAP and MAF `21 1C` (MAP 0.01 kPa, MAF 0.1 kg/h at offset 4) | verified, known answer | Nanocom log format, discovery2-diag (MAF proven on a car) |
-| Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient | verified | SimonRafferty, discotd5 |
+| Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient, also shown as air pressure | verified | SimonRafferty, discotd5 |
+| Idle speed error `21 21` (signed rpm, target minus actual) | community | discovery2-diag (`rpm_error`), Ekaitza_Itzali (`get_rpm_error`), SimonRafferty |
+| Injected fuel per stroke `21 1D`, data offset 6 (0.01 mg), shown as "Injected" | community | discovery2-diag (`injection_qty`, marked proven there); the rest of the block isn't read |
 | Battery `21 10` (mV) | verified | SimonRafferty |
 | Accelerator tracks `21 1B` (mV, track 1 shown) | verified | SimonRafferty |
 | Fault memory `21 3B`: 35-byte block, one bit per fault | verified, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
@@ -71,8 +73,11 @@ the CLI's `NodeSerialTransport` does that. The browser still uses BREAK (not tri
   (early Defender), so it isn't shown.
 - **Pedal as a percentage.** The ECU reports track voltages; the conversion to percent isn't sourced
   yet, so we show track 1 in volts.
+- **Not tried on a car yet:** idle speed error (`21 21`) and fuel per stroke (`21 1D`). A car that
+  refuses either one leaves that chart empty; the other readings carry on.
 - **Not read yet:** injector balance (`21 40`, five signed cylinder trims), input switches
   (`21 1E`: brake, clutch, cruise), EGR (`21 37`) and wastegate (`21 38`) positions.
+  Ekaitza_Itzali's sign handling for `21 40` and `21 21` subtracts 65537, one off: use 65536.
 - **Avoid** `21 07`, `0A`, `0B`, `0F`, `17`, `20`, `2B`, `2C`: reported as rejected or unreliable.
 
 ## Sources

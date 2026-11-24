@@ -19,6 +19,8 @@ export interface SimSnapshot {
   fuelTemp: number;
   airTemp: number;
   battery: number;
+  idleError: number;
+  fuel: number;
 }
 
 export function createTd5Simulator(): SimulatedEcu {
@@ -149,6 +151,10 @@ class EngineModel {
       fuelTemp: this.fuelTemp,
       airTemp: 16 + (this.mapKpa - AMBIENT) * 0.18 + n(0.2),
       battery: 13.8 + 0.3 * Math.min(1, this.rpm / 1800) + n(0.02),
+      // The idle governor only works with the car standing still; it reads 0 the rest of the time.
+      idleError: this.v < 4 ? Math.round(idle - this.rpm + n(10)) : 0,
+      // About 7 mg at idle, up to the mid-50s with the pedal down and the turbo spooled.
+      fuel: 7 + load * (18 + 32 * spool) + n(0.3),
     };
   }
 }
