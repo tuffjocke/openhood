@@ -21,7 +21,7 @@ export const landRoverTd5: VehicleProfile = {
   // Land Rover's own K-line session and security unlock: an ELM327 can't do these.
   adapters: ["kkl"],
   hardware: "Into the diagnostic socket under the dashboard, below the steering wheel, then into your computer or phone.",
-  status: "experimental",
+  status: "tested",
 
   link: {
     baudRate: 10400,
@@ -32,18 +32,31 @@ export const landRoverTd5: VehicleProfile = {
   },
 
   async connect(ecu) {
+    const oldSession = (e: unknown) => e instanceof NegativeResponse && e.code === 0x10;
     try {
       await ecu.request([0x81], { addressed: true, note: "start communication" });
     } catch (e) {
-      // 7F 81 10: the ECU still has an old session open. Close it and try once more.
-      if (!(e instanceof NegativeResponse && e.code === 0x10)) throw e;
-      await ecu.request([0x82], { addressed: true, note: "stop old session" }).catch(() => {});
-      await ecu.request([0x81], { addressed: true, note: "start communication" });
+      // 7F 81 10: the ECU still has an old session open. Close it with the short, unaddressed
+      // StopCommunication `01 82 83` (the addressed one is refused, see README) and try once more.
+      if (!oldSession(e)) throw e;
+      await ecu.request([0x82], { note: "stop old session" }).catch(() => {});
+      try {
+        await ecu.request([0x81], { addressed: true, note: "start communication" });
+      } catch (e) {
+        // Each refused start keeps the old session alive, so retrying at once can't work.
+        if (oldSession(e)) throw new Error("The engine ECU still has the last session open. Wait 15 seconds and connect again.");
+        throw e;
+      }
     }
     await ecu.request([0x10, 0xa0], { note: "diagnostic session" });
     const seed = await ecu.request([0x27, 0x01], { note: "request seed" });
     const key = td5Key((seed[2] << 8) | seed[3]);
     await ecu.request([0x27, 0x02, key >> 8, key & 0xff], { note: "send key" });
+  },
+
+  // End the session so the next connect isn't refused with 7F 81 10.
+  async disconnect(ecu) {
+    await ecu.request([0x82], { note: "stop communication" });
   },
 
   channels,

@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "make": "Land Rover",
+    "model": "Defender",
+    "year": 1999,
+    "engine": "2.5 Td5",
+    "profile": "land-rover-td5",
+    "date": "2026-11-24",
+    "adapter": "kkl",
+    "adapterModel": "VAG-COM KKL 409.1 USB",
+    "protocol": "KWP2000 fast init",
+    "result": "worked",
+    "values": 9,
+    "notes": "macOS: BREAK fast init got no answer (15 to 25 ms tried). Worked with the wake-up sent as one 0x00 byte at 360 baud, now the CLI default."
+  }
+]

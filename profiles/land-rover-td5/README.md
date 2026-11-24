@@ -6,35 +6,39 @@ Not standard OBD-II: generic scanners and ELM327 adapters don't work.
 
 ## Status
 
-Nothing in this profile has been checked on a car by us yet. Every part below is backed by at
-least one independent open project; the ones marked "known answer" are also checked byte for
-byte in `tests/td5.test.ts` against values those projects published.
+Connect, unlock, fault read and every live value have been checked on a 1999 Defender (below).
+Every part is also backed by at least one independent open project; the ones marked "known
+answer" are checked byte for byte in `tests/td5.test.ts` against published values or the car's frames.
 
 | Part | Confidence | Backed by |
 | --- | --- | --- |
-| Fast init, `81 13 F7 81 0C`, answer `03 C1 57 8F AA` | community, known answer | Ekaitza_Itzali, SimonRafferty, TD5-Dash |
-| Diagnostic session `02 10 A0 B2` → `01 50 51` | community, known answer | Ekaitza_Itzali, SimonRafferty |
-| Security key (`keygen.ts`), big-endian seed and key | community, known answer (34A5 → 54D3) | td5keygen, LR4x4 ESP32 thread |
+| Fast init, `81 13 F7 81 0C`, answer `03 C1 57 8F AA` | verified, known answer | Ekaitza_Itzali, SimonRafferty, TD5-Dash |
+| Diagnostic session `02 10 A0 B2` → `01 50 51` | verified, known answer | Ekaitza_Itzali, SimonRafferty |
+| Security key (`keygen.ts`), big-endian seed and key | verified, known answer (34A5 → 54D3, 8972 → 4511 on the car) | td5keygen, LR4x4 ESP32 thread |
 | 55 ms between messages with the engine running | community | TD5-Dash |
-| `7F 81 10` = old session still open: send `82`, retry | community | TD5-Dash |
-| RPM `21 09`, road speed `21 0D` | community | SimonRafferty, Nanocom log format |
-| Temperatures `21 1A` (coolant, intake, ambient, fuel; 0.1 K + sensor mV) | community, known answer | Nanocom log format, SimonRafferty |
-| MAP and MAF `21 1C` (MAP 0.01 kPa, MAF 0.1 kg/h at offset 4) | community, known answer | Nanocom log format, discovery2-diag (MAF proven on a car) |
-| Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient | community | SimonRafferty, discotd5 |
-| Battery `21 10` (mV) | community | SimonRafferty |
-| Accelerator tracks `21 1B` (mV, track 1 shown) | community | SimonRafferty |
-| Fault memory `21 3B`: 35-byte block, one bit per fault | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
+| `7F 81 10` = old session still open: send `01 82 83`, retry | community | TD5-Dash (§7, §11); the addressed `81 13 F7 82 0D` is refused (`7F 82 10`) on the car |
+| StopCommunication `01 82 83` on disconnect | community | TD5-Dash |
+| RPM `21 09`, road speed `21 0D` | verified | SimonRafferty, Nanocom log format |
+| Temperatures `21 1A` (coolant, intake, ambient, fuel; 0.1 K + sensor mV) | verified, known answer | Nanocom log format, SimonRafferty |
+| MAP and MAF `21 1C` (MAP 0.01 kPa, MAF 0.1 kg/h at offset 4) | verified, known answer | Nanocom log format, discovery2-diag (MAF proven on a car) |
+| Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient | verified | SimonRafferty, discotd5 |
+| Battery `21 10` (mV) | verified | SimonRafferty |
+| Accelerator tracks `21 1B` (mV, track 1 shown) | verified | SimonRafferty |
+| Fault memory `21 3B`: 35-byte block, one bit per fault | verified, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
 | Fault names, 210 bits (`fault-map.ts`) | community | discovery2-diag, cross-checked with Ekaitza_Itzali and a reference tool |
+| Nanocom codes: byte + 1, bit + 1 (`13.5` = `14-6`) | community | Ekaitza_Itzali (`fault_code_GG_SS`), TD5-Dash (`dtc_lookup.py`) |
+| A/C fan, A/C clutch, tacho and gearbox/ABS open load (bytes 9 and 13) are normal on a Defender | community, seen on the car | TD5-Dash (`_DEFENDER_EXPECTED`) |
 | Clear faults `31 DD` + 18 zeros → `71 DD` | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (cleared on a car) |
 | Plain-language explanations (`fault-explanations.ts`) | community | Written for Openhood, grouped by fault family |
 
-Tested on: nothing yet. When you test on a car, add a line here:
-`- 2026-12-01 · Defender 90 1999 · NNN ECU · connect + live data OK (@yourname)`
+Tested on (add a line when you test on a car):
+- 2026-11-24 · Defender 1999 · early MSB ECU, EU2 · VAG-COM KKL 409.1 (FTDI) on macOS · connect, unlock,
+  fault read and all live values at idle OK; clearing not tried (@tuffjocke, GitHub issue #1)
 
 ## Connect sequence
 
 ```
-fast init (25 ms low, 25 ms high)
+fast init (25 ms low, 25 ms high; sent as one 0x00 byte at 360 baud)
 → 81 13 F7 81 0C          start communication (addressed)
 ← 03 C1 57 8F AA
 → 02 10 A0 B2             diagnostic session
@@ -50,12 +54,21 @@ fast init (25 ms low, 25 ms high)
 ```
 
 Bytes are sent 5 ms apart and requests 55 ms after each answer. Continuous polling keeps the
-session alive.
+session alive. On disconnect we send `01 82 83` (StopCommunication). If a session is still open,
+the ECU refuses `81` with `7F 81 10`, and every refused start keeps the old session alive: after
+`01 82 83` and one retry, stay silent for about 15 s before connecting again.
+
+**Fast init on macOS:** a serial BREAK never woke the ECU (each BREAK call takes 3 to 5 ms; 15 to
+25 ms waits were tried). One `0x00` byte at 360 baud (start bit + 8 zero bits = 25.0 ms) works, so
+the CLI's `NodeSerialTransport` does that. The browser still uses BREAK (not tried on a car yet).
 
 ## Known gaps
 
-- **Fault codes as Nanocom shows them** (like `28-7`) aren't mapped to the bit positions yet; we show
-  names instead. A capture with both visible at once would bridge them.
+- **Unnamed bits** `15.6`, `23.7`, `25.5` (Nanocom 16-7, 24-8, 26-6) are set on an early MSB Defender
+  and named by no source. A Nanocom or Testbook reading of that car would name them.
+- `14.1` and `15.1` are both "high speed crank (Logged)" in every source.
+- **External air temperature** (`21 1A`, third pair) reads -50 °C at 5000 mV when no sensor is fitted
+  (early Defender), so it isn't shown.
 - **Pedal as a percentage.** The ECU reports track voltages; the conversion to percent isn't sourced
   yet, so we show track 1 in volts.
 - **Not read yet:** injector balance (`21 40`, five signed cylinder trims), input switches
