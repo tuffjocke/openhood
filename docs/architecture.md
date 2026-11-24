@@ -10,8 +10,8 @@
    ▼
  Link (core/link)                         openLink() picks the device and detects which kind it is
    ├─ KlineLink   KKL cable or simulator: fast / 5-baud wake-up, KWP2000 or ISO 9141-2 frames
-   │     └─ Transport: WebSerialTransport (BREAK for fast init, strips echo), NodeSerialTransport (CLI and
-   │                   MCP: 0x00 at 360 baud for fast init, strips echo) or SimulatedTransport
+   │     └─ Transport: WebSerialTransport or NodeSerialTransport (CLI and MCP): fast init as 0x00 at
+   │                   360 baud, strips echo. Or SimulatedTransport
    └─ ElmLink     ELM327-type adapter: hex requests as text, answers parsed back to payloads, CAN too
          └─ ByteStream: WebSerialTransport (USB, paired Bluetooth), BluetoothTransport (BLE), SimulatedElm
 ```
