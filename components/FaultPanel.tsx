@@ -349,7 +349,6 @@ export function FaultPanel({
 
   return (
     <div className="panel" id="faults">
-      <h2 className="section-title">{t("Fault codes")}</h2>
       {confirming && (
         <div className="confirm" role="alertdialog" aria-label={t("Clear fault codes?")}>
           <p>{t("Clearing only erases the codes, it doesn’t fix anything. If a code comes back, the fault is still there.")}</p>

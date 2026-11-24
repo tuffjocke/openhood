@@ -405,6 +405,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const speedKey = profile.channels.find((c) => c.unit === "km/h")?.key;
   const moving = !demo && status === "live" && speedKey !== undefined && (latest.current[speedKey] ?? 0) > 8;
 
+  // The demo with live readings shows no header: its two buttons sit in the binnacle instead.
+  const bare = !showFirstRun && demo && profile.channels.length > 0;
+
   // Logging a drive sits with the other header actions, after Back to start or Disconnect.
   const logTools = (
     <span className="log-tools">
@@ -426,6 +429,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
 
   return (
     <main className={`shell${showFirstRun ? " is-first-run" : " dense"}`}>
+      {/* The demo needs no header: Back to start and Log a drive sit in the binnacle's corners. */}
+      {!bare && (
       <header className="top">
         <div className="mark">
           <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title={t("Back to start")}>
@@ -484,6 +489,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           </div>
         )}
       </header>
+      )}
 
       {error && (
         <p className="notice" role="alert">
@@ -524,15 +530,21 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           {profile.channels.length > 0 && (
           <section className="binnacle" aria-label={t("Live data")}>
             <div className="binnacle-corners">
-              <span className="binnacle-lamp">
-                {!!faults?.length && (
-                  <>
-                    <EngineLight lit />
-                    {faults.length} {t(faults.length === 1 ? "fault" : "faults")}
-                  </>
+              <span className="binnacle-start">
+                {bare && (
+                  <button className="quiet" onClick={disconnect} disabled={status === "connecting"}>
+                    {t("Back to start")}
+                  </button>
                 )}
               </span>
-              <span className="binnacle-link">{session.current ? t(linkLine(session.current)) : ""}</span>
+              {faults?.length ? (
+                <span className="binnacle-lamp" role="img" aria-label={`${faults.length} ${t(faults.length === 1 ? "fault" : "faults")}`}>
+                  <EngineLight lit />
+                </span>
+              ) : (
+                <span />
+              )}
+              <span className="binnacle-link">{bare ? logTools : session.current ? t(linkLine(session.current)) : ""}</span>
             </div>
             {moving && <p className="moving">{t("Moving. Let a passenger watch the screen.")}</p>}
             <DialRow profile={shown} values={shownLatest} unavailable={unavailable} />

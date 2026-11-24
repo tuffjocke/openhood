@@ -154,7 +154,6 @@ export function Watch() {
           <section className="lower">
             {view.faults === null && profile.faults ? (
               <div className="panel" id="faults">
-                <h2 className="section-title">{t("Fault codes")}</h2>
                 <p className="muted">{t("The agent hasn’t read the fault codes yet.")}</p>
               </div>
             ) : (
@@ -238,14 +237,14 @@ function Cluster({
   return (
     <section className="binnacle" aria-label={t("Live data")}>
       <div className="binnacle-corners">
-        <span className="binnacle-lamp">
-          {faultCount > 0 && (
-            <>
-              <EngineLight lit />
-              {faultCount} {t(faultCount === 1 ? "fault" : "faults")}
-            </>
-          )}
-        </span>
+        <span className="binnacle-start" />
+        {faultCount > 0 ? (
+          <span className="binnacle-lamp" role="img" aria-label={`${faultCount} ${t(faultCount === 1 ? "fault" : "faults")}`}>
+            <EngineLight lit />
+          </span>
+        ) : (
+          <span />
+        )}
         <span className="binnacle-link">{corner}</span>
       </div>
       <DialRow profile={profile} values={latest} unavailable={unavailable} />
