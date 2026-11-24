@@ -23,6 +23,8 @@ export const channels: Channel[] = [
   { key: "airTemp", label: "Intake air", unit: "°C", decimals: 0, min: -20, max: 80, warnAbove: 60, group: "air", confidence: "verified" },
   { key: "maf", label: "Air mass", unit: "kg/h", decimals: 0, min: 0, max: 600, group: "air", confidence: "verified" },
   { key: "pedal", label: "Pedal sensor", unit: "V", decimals: 2, min: 0, max: 5, group: "engine", confidence: "verified" },
+  // Should sit at 5.0 V; a dip means a short in the pedal wiring (discovery2-diag).
+  { key: "pedalSupply", label: "Pedal supply", unit: "V", decimals: 2, min: 4, max: 5.5, warnBelow: 4.9, warnAbove: 5.1, group: "engine", confidence: "community" },
   { key: "battery", label: "Battery", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "verified" },
   { key: "ambientKpa", label: "Air pressure", unit: "kPa", decimals: 0, min: 70, max: 105, group: "air", confidence: "verified" },
   { key: "idleError", label: "Idle speed error", unit: "rpm", decimals: 0, min: -150, max: 150, group: "engine", confidence: "community" },
@@ -78,8 +80,10 @@ export const groups: SimGroup[] = [
   {
     id: "pedal",
     request: [0x21, 0x1b],
-    // accelerator tracks 1 to 4 and the 5 V supply, in mV; we show track 1 in volts
-    decode: (r) => ({ pedal: u16(r, 2) / 1000 }),
+    // accelerator tracks and the 5 V supply, in mV. Track 1 at data offset 0. In the 10-byte answer
+    // (the 1999 Defender's) the supply is at offset 8 (td5-carplay-gauge; 13 A3 = 5.03 V on the car);
+    // a shorter answer has no supply, so none is shown.
+    decode: (r): Values => ({ pedal: u16(r, 2) / 1000, ...(r.length >= 12 ? { pedalSupply: u16(r, 10) / 1000 } : {}) }),
     encode: (s) => {
       const v = 500 + s.pedal * 40; // simulator only: about 0.5 V released to 4.5 V floored
       return [0x61, 0x1b, ...be16(v), ...be16(5000 - v), ...be16(v / 2), ...be16(2500 - v / 2), ...be16(5000)];

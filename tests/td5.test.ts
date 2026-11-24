@@ -85,7 +85,10 @@ describe("Land Rover Td5", () => {
     assert.equal(decode("rpm", "61 09 02 F1").rpm, 753);
     assert.equal(decode("speed", "61 0D 00").speed, 0);
     assert.equal(decode("battery", "61 10 38 18 38 74").battery.toFixed(1), "14.4");
-    assert.equal(decode("pedal", "61 1B 03 63 10 50 13 88 00 00 13 A3").pedal.toFixed(2), "0.87");
+    const pedal = decode("pedal", "61 1B 03 63 10 50 13 88 00 00 13 A3");
+    assert.equal(pedal.pedal.toFixed(2), "0.87");
+    assert.equal(pedal.pedalSupply.toFixed(2), "5.03"); // the 5 V supply, at data offset 8
+    assert.equal(decode("pedal", "61 1B 03 63 10 50 13 88 00 00").pedalSupply, undefined); // short answer: no supply
     const ambient = decode("ambient", "61 23 26 C6 26 FD");
     assert.equal(ambient.ambientKpa.toFixed(2), "99.26");
     const m = decode("manifold", "61 1C 26 AB 26 E2 02 BD 08 96", ambient);

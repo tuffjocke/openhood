@@ -31,6 +31,20 @@ The readings and the polling keep the session open, so no tester present (`3E`) 
 SLABS stops answering as soon as the car moves, and stays silent until the ignition is turned off
 and on again (discovery2-diag): read it standing still.
 
+## If SLABS doesn't answer the wake-up
+
+The Td5 engine ECU forgives a sloppy wake-up; SLABS doesn't. discovery2-diag found that the high
+period after the 25 ms low pulse decides it: at about 32 ms SLABS answered 9 % of tries, at
+25.00 ms 55 %. Whether `81` or `C1` and tester `F7` or `F1` are used made no difference once that
+was fixed (td5-carplay-gauge switched to `C1 29 F1 81` on a Defender that didn't answer `81 29 F7
+81`, most likely the same timing problem).
+
+Our low pulse is exact (one `0x00` byte at 360 baud), but the high period is "reopen the port at
+10400 baud, then wait 20 ms" (`core/transport/webserial.ts`, `cli/node-serial.ts`), so it is 20 ms
+plus however long the reopen takes. It can't be measured from software (the cable's USB latency
+hides the line), so if SLABS stays silent: wait 30 seconds between tries, then look at that pause
+first, ideally with a logic analyser on the K-line.
+
 Tested on: nothing yet. When you test on a car, add a line here:
 `- 2026-12-01 · Discovery 2 Td5 2001 · faults, clear and heights OK (@yourname)`
 
@@ -42,3 +56,5 @@ Tested on: nothing yet. When you test on a car, add a line here:
 - Leijoma/discovery2-diag (MIT), `src/d2diag/signals/slabs.json`, `references/slabs_protocol.md`:
   https://github.com/Leijoma/discovery2-diag. Heights, battery, polling pace and the silence before
   a new wake-up, as facts.
+- turetax/td5-carplay-gauge (GPL-3.0): https://github.com/turetax/td5-carplay-gauge. Its Defender
+  didn't answer the physical wake-up; it waits 28 s of silence before talking to SLABS. Facts only.

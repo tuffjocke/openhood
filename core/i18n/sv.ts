@@ -207,6 +207,7 @@ export const SV: Record<string, string> = {
   "Mixture correction": "Blandningskorrigering",
   "Module voltage": "Modulspänning",
   "Pedal sensor": "Pedalgivare",
+  "Pedal supply": "Pedalmatning",
   "Road speed": "Hastighet",
   "Short fuel trim": "Korttidstrim",
   Throttle: "Gasspjäll",
