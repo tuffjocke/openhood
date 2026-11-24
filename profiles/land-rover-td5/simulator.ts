@@ -21,6 +21,8 @@ export interface SimSnapshot {
   battery: number;
   idleError: number;
   fuel: number;
+  /** Cylinder balance 1 to 5. */
+  balance: number[];
 }
 
 export function createTd5Simulator(): SimulatedEcu {
@@ -155,6 +157,8 @@ class EngineModel {
       idleError: this.v < 4 ? Math.round(idle - this.rpm + n(10)) : 0,
       // About 7 mg at idle, up to the mid-50s with the pedal down and the turbo spooled.
       fuel: 7 + load * (18 + 32 * spool) + n(0.3),
+      // A healthy engine: each cylinder a few counts either side of 0, number 3 a little high.
+      balance: [-2, 1, 4, -1, -2].map((b) => Math.round(b + n(2))),
     };
   }
 }

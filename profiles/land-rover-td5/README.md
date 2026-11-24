@@ -24,8 +24,10 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient, also shown as air pressure | verified | SimonRafferty, discotd5 |
 | Idle speed error `21 21` (signed rpm, target minus actual) | community | discovery2-diag (`rpm_error`), Ekaitza_Itzali (`get_rpm_error`), SimonRafferty |
 | Injected fuel per stroke `21 1D`, data offset 6 (0.01 mg), shown as "Injected" | community | discovery2-diag (`injection_qty`, marked proven there); the rest of the block isn't read |
+| Cylinder balance `21 40`: five signed numbers, cylinders 1 to 5, no unit published | community | discovery2-diag (`balance_1..5`, marked proven on a Discovery 2 NNN; its notes say BinOwl_Td5Gauge reads it the same way). Not read on an MSB ECU yet |
 | Battery `21 10` (mV) | verified | SimonRafferty |
 | Accelerator tracks `21 1B` (mV, track 1 shown) | verified | SimonRafferty |
+| Pedal 5 V supply in `21 1B` | not shown | the layout differs by ECU: discovery2-diag's NNN has it at data offset 6, the 1999 Defender (MSB) answered `03 63 10 50 13 88 00 00 13 A3`, 0 at offset 6 |
 | Fault memory `21 3B`: 35-byte block, one bit per fault | verified, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
 | Fault names, 210 bits (`fault-map.ts`) | community | discovery2-diag, cross-checked with Ekaitza_Itzali and a reference tool |
 | Nanocom codes: byte + 1, bit + 1 (`13.5` = `14-6`) | community | Ekaitza_Itzali (`fault_code_GG_SS`), TD5-Dash (`dtc_lookup.py`) |

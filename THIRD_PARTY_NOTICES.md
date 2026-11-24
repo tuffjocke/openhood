@@ -2,10 +2,13 @@
 
 Openhood is GPL-3.0. Parts of it come from, or are based on, the work below.
 
-## discovery2-diag: Td5 fault memory map
+## discovery2-diag: Td5 fault memory map, Td5 and SLABS readings
 
 `profiles/land-rover-td5/fault-map.ts` is ported from `src/d2diag/td5/faultmap.json` in
-https://github.com/Leijoma/discovery2-diag, published under the MIT licence:
+https://github.com/Leijoma/discovery2-diag. The Td5 cylinder balance in `profiles/land-rover-td5/`
+and the SLABS ride heights, battery and polling pace in `profiles/land-rover-slabs/` are facts from
+its signal stores (`src/d2diag/signals/`) and `references/slabs_protocol.md`. It is published under
+the MIT licence:
 
 > Copyright (c) the discovery2-diag authors
 >

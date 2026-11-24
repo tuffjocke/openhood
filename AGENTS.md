@@ -49,7 +49,8 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
                           CAN, ELM327 only), read only
   saab-trionic7/          9-5 1998 to 2010 and 9-3 2000 to 2002 engine (KWP2000 on the K-line, KKL or ELM327)
   saab-trionic8/          9-3 2003 to 2011 engine (GMLAN on CAN, ELM327 only, raw frames via `link.can`)
-  land-rover-slabs/       Discovery 2 ABS and ride height (Wabco SLABS, KWP2000, KKL): one bit per fault
+  land-rover-slabs/       Discovery 2 ABS and ride height (Wabco SLABS, KWP2000, KKL): one bit per fault, rear
+                          heights and battery, polled once a second (faster and SLABS drops the session)
   land-rover-srs/         Discovery 2 airbag (TRW SPS, 5-baud wake-up at 5B, addressed frames, KKL): read only
   bmw-ds2/                E36, E38, E39, E46, E53, Z3: every DS2 module's codes (KKL only, 9600 8E1), read only
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes

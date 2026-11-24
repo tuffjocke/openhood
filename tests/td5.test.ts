@@ -112,4 +112,10 @@ describe("Land Rover Td5", () => {
     }
     assert.equal(explanations["td5-23.6"].title, "Problem reported by the automatic gearbox");
   });
+  it("reads cylinder balance as five signed numbers from 21 40", () => {
+    const balance = groups.find((g) => g.id === "balance")!;
+    const v = balance.decode(Uint8Array.from([0x61, 0x40, 0xff, 0xfa, 0x00, 0x02, 0x00, 0x00, 0xff, 0xff, 0x00, 0x01]), {});
+    assert.deepEqual([1, 2, 3, 4, 5].map((n) => v[`balance${n}`]), [-6, 2, 0, -1, 1]);
+    assert.deepEqual(balance.decode(Uint8Array.from([0x61, 0x40, 0xff]), {}), {}); // too short: nothing
+  });
 });

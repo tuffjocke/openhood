@@ -1,8 +1,10 @@
 /**
  * A pretend SLABS with the two faults from the published sniff (21 11 with byte 3 bit 4 and
- * byte 10 bit 4 set), one of them current. Proves self-consistency only.
+ * byte 10 bit 4 set), one of them current, rear heights and the battery. Proves self-consistency only.
  */
 import type { SimulatedEcu } from "@/core/profile";
+
+const wobble = () => Math.round(Math.random() * 2 - 1);
 
 export function createSlabsSimulator(): SimulatedEcu {
   let logged = [0, 0, 0, 0x10, 0, 0, 0, 0, 0, 0, 0x10, 0, 0, 0, 0, 0];
@@ -19,6 +21,9 @@ export function createSlabsSimulator(): SimulatedEcu {
         case 0x3e:
           return [0x7e];
         case 0x21:
+          // Heights near the published 91 9C; battery 12.6 V in 1/16 V at data byte 12.
+          if (p[1] === 0x54) return [0x61, 0x54, 0x91 + wobble(), 0x9c + wobble(), 0x0f, 0x0f];
+          if (p[1] === 0x44) return [0x61, 0x44, 1, 2, 1, 3, 2, 1, 2, 1, 0, 0, 0, 0, 202, 201];
           if (p[1] === 0x11) return [0x61, 0x11, ...logged];
           if (p[1] === 0x47) return [0x61, 0x47, ...current];
           return [0x7f, 0x21, 0x12];
