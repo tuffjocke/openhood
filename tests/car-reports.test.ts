@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { ADAPTER_PICKS, isPick } from "@/core/adapters";
 import { getProfile } from "@/profiles";
 import { CAR_REPORTS, reportsFor, summarise, type CarReport } from "@/profiles/car-reports";
 import { VEHICLE_NAMES } from "@/profiles/names";
@@ -35,6 +36,16 @@ describe("car reports", () => {
     assert.equal(found.length, 3);
     assert.equal(summarise(found), "Read by 2 people (2002 to 2004), with an ELM327 adapter. 1 more had trouble.");
     assert.equal(summarise([]), null);
+  });
+
+  it("counts a read for the adapter pick it names, by any name it is sold as", () => {
+    const kkl = ADAPTER_PICKS.find((p) => p.kind === "kkl")!;
+    assert.ok(isPick(kkl, "vag-com kkl 409.1 usb"));
+    assert.ok(isPick(kkl, kkl.name));
+    assert.ok(!isPick(kkl, "Vgate iCar Pro 2S"));
+    assert.ok(!isPick(kkl, undefined));
+    // The Defender's read (issue #1) was with this cable, so the adapters page must say it's tested.
+    assert.ok(CAR_REPORTS.some((r) => r.result === "worked" && isPick(kkl, r.adapterModel)));
   });
 
   it("searches the shop for the person's country, by product name", async () => {

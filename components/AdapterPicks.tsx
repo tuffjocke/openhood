@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ADAPTER_PICKS, amazonLink, type AdapterPick } from "@/core/adapters";
+import { ADAPTER_PICKS, amazonLink, isPick, type AdapterPick } from "@/core/adapters";
 import { CAR_REPORTS } from "@/profiles/car-reports";
 
 /** How many working reads people have reported with this adapter. */
 const readsWith = (p: AdapterPick) =>
-  CAR_REPORTS.filter((r) => r.result === "worked" && r.adapterModel?.toLowerCase() === p.name.toLowerCase()).length;
+  CAR_REPORTS.filter((r) => r.result === "worked" && isPick(p, r.adapterModel)).length;
 
 /** The shop depends on where the person is; decided in the browser, after the static page loads. */
 function useLocale() {
