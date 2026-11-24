@@ -9,7 +9,7 @@ const SPP = "00001101-0000-1000-8000-00805f9b34fb";
  * Works in Chrome/Edge on desktop and in Chrome 148+ on Android.
  *
  * Two quirks of K-line cables handled here:
- *  - Fast init is done by holding the TX line in BREAK (= K-line low).
+ *  - Fast init is one 0x00 byte at 360 baud (25 ms K-line low), BREAK if the cable can't do 360.
  *  - K-line is a single wire, so every byte we send is echoed back. We strip it.
  */
 export class WebSerialTransport implements Transport, ByteStream {
@@ -79,16 +79,57 @@ export class WebSerialTransport implements Transport, ByteStream {
     this.opened = false;
   }
 
+  /**
+   * ISO 14230 fast init: K-line low 25 ms, then high.
+   *
+   * The low pulse is one 0x00 byte at 360 baud: start bit + 8 zero bits = 25.0 ms, timed by the
+   * cable's UART instead of JS timers. BREAK timed with timers ran long on macOS and a Td5 never
+   * woke; the 360-baud byte woke it first time (issue #1, found with the CLI, which does the same).
+   * Web Serial can't change speed on an open port, so it is reopened at 360 baud and back.
+   * A cable that can't open at 360 baud gets the BREAK pulse instead.
+   */
   async fastInit() {
     if (!this.port) throw new Error("Port not open");
+    const baudRate = this.opts.baudRate;
     // Bus must be idle (high) for at least 300 ms before the pulse.
     await this.port.setSignals({ break: false });
     await sleep(300);
-    await this.port.setSignals({ break: true });
+    try {
+      await this.setBaudRate(360);
+    } catch {
+      await this.setBaudRate(baudRate);
+      return this.breakInit();
+    }
+    try {
+      this.rx.clear();
+      await this.send(Uint8Array.of(0x00));
+      // The echo comes back once the byte is on the line, so the low pulse is over. No echo: wait it out.
+      await this.rx.take(1, 150).catch(() => sleep(30));
+    } finally {
+      await this.setBaudRate(baudRate);
+    }
+    await sleep(20); // high (TiniH): reopening already took a few ms; TD5-Dash waits 75 ms on a Td5
+    this.rx.clear();
+  }
+
+  /** Fast init by holding BREAK for 25 ms with JS timers: runs a few ms long on macOS. */
+  private async breakInit() {
+    await this.port!.setSignals({ break: true });
     await sleep(25);
-    await this.port.setSignals({ break: false });
+    await this.port!.setSignals({ break: false });
     await sleep(25);
     this.rx.clear();
+  }
+
+  /** Send bytes as they are, without waiting for the echo. */
+  private async send(bytes: Uint8Array) {
+    if (!this.port?.writable) throw new Error("Port not open");
+    const w = this.port.writable.getWriter();
+    try {
+      await w.write(bytes);
+    } finally {
+      w.releaseLock();
+    }
   }
 
   async fiveBaud(address: number) {

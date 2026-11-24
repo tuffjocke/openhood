@@ -38,7 +38,7 @@ Tested on (add a line when you test on a car):
 ## Connect sequence
 
 ```
-fast init (25 ms low, 25 ms high; the CLI sends it as one 0x00 byte at 360 baud)
+fast init (25 ms low, 25 ms high; sent as one 0x00 byte at 360 baud)
 → 81 13 F7 81 0C          start communication (addressed)
 ← 03 C1 57 8F AA
 → 02 10 A0 B2             diagnostic session
