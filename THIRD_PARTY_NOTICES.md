@@ -65,8 +65,9 @@ BMW DS2 framing, fault memory requests and module addresses in `core/link/ds2.ts
 1.4 over WebUSB (MIT, Copyright (c) 2026 Szabó Máté). No code is copied.
 
 Land Rover SLABS request bytes, the fault bit layout and the meaning of two bits in
-`profiles/land-rover-slabs/` are facts from openostler/ostler-pack-lr-d2 (code AGPL-3.0, vehicle data
-CC BY-SA 4.0). No code or text is copied.
+`profiles/land-rover-slabs/`, and the Discovery 2 airbag's wake-up, requests, fault record layout and
+code meanings in `profiles/land-rover-srs/`, are facts from openostler/ostler-pack-lr-d2 (code
+AGPL-3.0, vehicle data CC BY-SA 4.0). No code or text is copied.
 
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
 TD5-Dash and discotd5.com are used as facts about the ECU's protocol, with credit in
