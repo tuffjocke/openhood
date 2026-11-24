@@ -206,7 +206,6 @@ export const SV: Record<string, string> = {
   "Timing advance": "Förtändning",
 
   // Faults
-  "Fault codes": "Felkoder",
   "Fine to drive": "Går att köra",
   "Fix soon": "Åtgärda snart",
   "Fix now": "Åtgärda nu",

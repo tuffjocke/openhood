@@ -66,9 +66,11 @@ scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `ope
                           version, push to main), and a maintainer approves it with 2FA on npmjs.com
 core/safety.ts            which raw requests tools may send: read services only
 components/Dashboard.tsx  the whole UI, driven by the selected profile. While running it is dense like the MCP live view
-                          (`.shell.dense`, shared CSS): a slim header row, then the binnacle on the left (three
-                          dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
-                          drive" sits in the header, and asks where to save the file) and beside it (`.live-side`,
+                          (`.shell.dense`, shared CSS): a slim header row (none in the demo), then the binnacle on the
+                          left (the engine lamp centred in its top edge when there are faults; in the demo "Back to
+                          start" and "Log a drive" sit in its top corners, for a real car "Log a drive" is in the
+                          header and asks where to save the file; three dials from the profile's `dials`, every
+                          other reading as a chart, grouped by colour) and beside it (`.live-side`,
                           stacked under 900px) the faults panel, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
                           fault history export/import, traffic and profile details behind "More". A real car moving faster than walking
