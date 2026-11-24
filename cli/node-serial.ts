@@ -3,7 +3,7 @@ import { ByteQueue, sleep, type ByteStream, type Transport } from "../core/trans
 
 /**
  * A serial port from Node (the CLI and MCP server), the counterpart of WebSerialTransport:
- * a KKL cable (BREAK for the wake-up, echo stripped) or an ELM327 adapter (echo: false).
+ * a KKL cable (wake-ups on the K-line, echo stripped) or an ELM327 adapter (echo: false).
  */
 export class NodeSerialTransport implements Transport, ByteStream {
   readonly kind = "serial" as const;
@@ -38,15 +38,29 @@ export class NodeSerialTransport implements Transport, ByteStream {
     return new Promise<void>((resolve, reject) => this.port!.set({ brk }, (e) => (e ? reject(e) : resolve())));
   }
 
+  /**
+   * The 25 ms low pulse is sent as one 0x00 byte at 360 baud (start bit + 8 zero bits = 25.0 ms),
+   * not as a BREAK: on macOS each BREAK call takes 3 to 5 ms, and a Td5 never answered any BREAK
+   * length tried (GitHub issue #1). The port is reopened at each speed because changing the speed
+   * of an open port fails on macOS.
+   */
   async fastInit() {
     if (!this.port) throw new Error("Port not open");
-    await this.set(false);
-    await sleep(300);
-    await this.set(true);
-    await sleep(25);
-    await this.set(false);
-    await sleep(25);
+    const baudRate = this.opts.baudRate;
+    await sleep(300); // bus idle (high) before the pulse
+    await this.reopen(360);
     this.rx.clear();
+    await this.send(Uint8Array.of(0x00));
+    await this.rx.take(1, 150); // the echo is back: the low phase is over
+    await this.reopen(baudRate);
+    await sleep(20); // with the reopen, about 25 ms high before the first request
+    this.rx.clear();
+  }
+
+  private async reopen(baudRate: number) {
+    await this.close();
+    this.opts = { ...this.opts, baudRate };
+    await this.open();
   }
 
   async fiveBaud(address: number) {
@@ -62,16 +76,20 @@ export class NodeSerialTransport implements Transport, ByteStream {
     this.rx.clear();
   }
 
+  private send(b: Uint8Array) {
+    return new Promise<void>((resolve, reject) =>
+      this.port!.write(Buffer.from(b), (e) => (e ? reject(e) : this.port!.drain(() => resolve()))),
+    );
+  }
+
   async write(bytes: Uint8Array, interByteMs = 0) {
     if (!this.port) throw new Error("Port not open");
-    const send = (b: Uint8Array) =>
-      new Promise<void>((resolve, reject) => this.port!.write(Buffer.from(b), (e) => (e ? reject(e) : this.port!.drain(() => resolve()))));
     if (interByteMs > 0) {
       for (let i = 0; i < bytes.length; i++) {
-        await send(bytes.subarray(i, i + 1));
+        await this.send(bytes.subarray(i, i + 1));
         if (i < bytes.length - 1) await sleep(interByteMs);
       }
-    } else await send(bytes);
+    } else await this.send(bytes);
     if (this.opts.echo !== false) await this.rx.take(bytes.length, 50 + bytes.length * 2);
   }
 

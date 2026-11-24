@@ -15,6 +15,7 @@ const SLOW_EVERY = 150; // poll cycles between slow group reads
 export class Session {
   private queue: Promise<unknown> = Promise.resolve();
   private polling = false;
+  private connected = false;
   readonly state: Values = {};
   /** Group ids the ECU supports, decided after connect. */
   private activeGroups = new Set<string>();
@@ -46,9 +47,11 @@ export class Session {
   async connect() {
     try {
       await this.exclusive(() => this.link.open((ecu, init) => this.profile.connect(ecu, this.state, init)));
+      this.connected = true;
       this.decideAvailability();
       for (const id of this.profile.slowGroups ?? []) if (this.activeGroups.has(id)) await this.readGroup(id);
     } catch (e) {
+      this.connected = false;
       await this.link.close();
       throw e;
     }
@@ -156,6 +159,9 @@ export class Session {
 
   async disconnect() {
     this.stop();
+    const end = this.profile.disconnect;
+    if (this.connected && end) await this.exclusive(() => end(this.link)).catch(() => {});
+    this.connected = false;
     await this.queue;
     await this.link.close();
   }

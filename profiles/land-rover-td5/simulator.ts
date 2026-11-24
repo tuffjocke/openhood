@@ -38,6 +38,10 @@ export function createTd5Simulator(): SimulatedEcu {
       switch (sid) {
         case 0x81: // startCommunication
           return [0xc1, 0x57, 0x8f];
+        case 0x82: // stopCommunication
+          session = false;
+          unlocked = false;
+          return [0xc2];
         case 0x10: // startDiagnosticSession
           session = true;
           return [0x50];
