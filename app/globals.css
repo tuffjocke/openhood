@@ -107,8 +107,9 @@ a {
   padding: calc(28px + env(safe-area-inset-top)) 32px 72px;
 }
 
-/* The live view (components/Watch): no header, wider and tighter, for watching an agent work. */
-.shell.watch {
+/* Dense: the live screen of the website and the MCP live view (components/Watch). Wider and tighter,
+   the binnacle with faults beside it. */
+.shell.dense {
   max-width: 1440px;
   padding: calc(14px + env(safe-area-inset-top)) 20px 20px;
 }
@@ -341,6 +342,28 @@ button.rec {
 .mark-name {
   font: 700 23px/1 var(--sans);
   letter-spacing: -0.035em;
+}
+
+/* Dense: the header is one slim row over the binnacle. Not on phones, where its buttons sit in the
+   bottom bar at thumb size. */
+@media (min-width: 761px) {
+  .dense .top,
+  .dense .mark {
+    gap: 14px;
+  }
+
+  .dense .mark-name {
+    font-size: 19px;
+  }
+
+  .dense .vp-button {
+    height: 34px;
+    padding: 0 14px;
+  }
+
+  .dense .top .actions button {
+    padding: 8px 14px;
+  }
 }
 
 button.mark-name,
@@ -1639,33 +1662,38 @@ body:has(.shell.is-first-run) {
   color: var(--cl-muted);
 }
 
-/* The live view: the binnacle on the left, faults and traffic beside it. */
-.watch-body {
+/* Dense: the binnacle on the left, faults and the rest beside it. Alone (no live readings), full width. */
+.live-body {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
   gap: 20px;
   align-items: start;
+  margin-top: 12px;
 }
 
-.watch .binnacle {
+.live-body > :only-child {
+  grid-column: 1 / -1;
+}
+
+.dense .binnacle {
   margin-top: 0;
   padding: 14px 20px 20px;
   border-radius: 36px;
 }
 
-.watch .binnacle-link {
+.dense .binnacle-link {
   display: inline-flex;
   align-items: center;
   gap: 16px;
 }
 
-.watch .binnacle .status {
+.dense .binnacle .status {
   margin: 0;
   font: inherit;
   color: var(--cl-muted);
 }
 
-.watch .binnacle .status-live i {
+.dense .binnacle .status-live i {
   box-shadow: none;
 }
 
@@ -1906,7 +1934,7 @@ body:has(.shell.is-first-run) {
   margin-top: 20px;
 }
 
-.watch .charts {
+.dense .charts {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px 20px;
   margin-top: 8px;
@@ -2013,7 +2041,7 @@ body:has(.shell.is-first-run) {
 }
 
 @media (max-width: 900px) {
-  .watch-body {
+  .live-body {
     grid-template-columns: 1fr;
   }
 }
@@ -2076,15 +2104,19 @@ body:has(.shell.is-first-run) {
   margin-top: 28px;
 }
 
-.lower.watch-side {
+.dense .lower {
   margin-top: 0;
 }
 
-.watch .faults {
+.dense .tool-row {
+  margin-top: 12px;
+}
+
+.dense .faults {
   gap: 8px;
 }
 
-.watch #faults .section-title {
+.dense #faults .section-title {
   margin: 2px 0 10px;
 }
 
@@ -2454,11 +2486,11 @@ span.fault-label {
   margin-top: 48px;
 }
 
-.watch .log {
+.dense .log {
   margin-top: 20px;
 }
 
-.watch .log pre {
+.dense .log pre {
   max-height: 280px;
   overflow: auto;
 }
@@ -2500,6 +2532,10 @@ span.fault-label {
   background: var(--surface);
   box-shadow: inset 4px 0 0 var(--alarm);
   font-size: 15px;
+}
+
+.dense .notice {
+  margin-top: 12px;
 }
 
 .notice a {
@@ -2562,11 +2598,11 @@ span.fault-label {
   margin-top: 16px;
 }
 
-.watch .profile-info {
+.dense .profile-info {
   margin-top: 12px;
 }
 
-.watch .foot {
+.dense .foot {
   margin-top: 20px;
   padding-top: 12px;
 }

@@ -104,7 +104,7 @@ export function Watch() {
   const linkLine = view.adapter ? t(LINK_LINES[view.adapter] ?? view.adapter) : "";
 
   return (
-    <main className="shell watch">
+    <main className="shell dense">
       {(!shown || shown.channels.length === 0) && (
         <p className="watch-status">
           {t("Live view")} {statusLight}
@@ -128,7 +128,7 @@ export function Watch() {
       {!profile || !shown ? (
         stream === "open" && <p className="muted">{t("The agent hasn’t connected to a car yet.")}</p>
       ) : (
-        <div className="watch-body">
+        <div className="live-body">
           {shown.channels.length > 0 && (
             <Cluster
               profile={shown}
@@ -151,7 +151,7 @@ export function Watch() {
             />
           )}
 
-          <section className="lower watch-side">
+          <section className="lower">
             {view.faults === null && profile.faults ? (
               <div className="panel" id="faults">
                 <h2 className="section-title">{t("Fault codes")}</h2>

@@ -58,15 +58,17 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           command.ts (`npx openhood` or `npm run openhood --` in messages)
                           watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
 core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
-components/Watch          the live view page (app/watch): what an agent reads, no header, dense, read-only
+components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, read-only
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
                           every profile, only serialport at runtime. Agents and people run `npx -y openhood ...`;
                           .github/workflows/npm.yml stages it when package.json's version is new on npm (bump the
                           version, push to main), and a maintainer approves it with 2FA on npmjs.com
 core/safety.ts            which raw requests tools may send: read services only
-components/Dashboard.tsx  the whole UI, driven by the selected profile. While running: the binnacle at the top (three
+components/Dashboard.tsx  the whole UI, driven by the selected profile. While running it is dense like the MCP live view
+                          (`.shell.dense`, shared CSS): a slim header row, then the binnacle on the left (three
                           dials from the profile's `dials`, every other reading as a chart, grouped by colour; "Log a
-                          drive" sits in the header, and asks where to save the file), the faults panel below, one ask after a real read ("Did this match your
+                          drive" sits in the header, and asks where to save the file) and beside it (`.live-side`,
+                          stacked under 900px) the faults panel, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
                           fault history export/import, traffic and profile details behind "More". A real car moving faster than walking
                           pace gets one line, "Moving. Let a passenger watch the screen."; the readings stay

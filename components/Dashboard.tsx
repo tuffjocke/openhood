@@ -425,7 +425,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   );
 
   return (
-    <main className={`shell${showFirstRun ? " is-first-run" : ""}`}>
+    <main className={`shell${showFirstRun ? " is-first-run" : " dense"}`}>
       <header className="top">
         <div className="mark">
           <button className="mark-name" onClick={goHome} disabled={status === "live" || status === "connecting"} title={t("Back to start")}>
@@ -518,7 +518,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       )}
 
       {!showFirstRun && (
-        <>
+        // Dense, as in the MCP live view: the binnacle on the left, faults and the rest beside it.
+        <div className="live-body">
           {/* Profiles for parts like the airbag have faults but no live readings: no binnacle then. */}
           {profile.channels.length > 0 && (
           <section className="binnacle" aria-label={t("Live data")}>
@@ -569,6 +570,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           </section>
           )}
 
+      <div className="live-side">
       <section className="lower">
         <FaultPanel
           profile={shown}
@@ -651,7 +653,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
         </p>
       </details>
       </div>
-      </>
+      </div>
+      </div>
       )}
 
       <footer className="foot">
