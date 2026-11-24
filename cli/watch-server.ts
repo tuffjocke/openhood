@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize, sep } from "node:path";
@@ -59,6 +60,23 @@ function listen(server: Server, port: number) {
     server.once("error", reject);
     server.listen(port, "127.0.0.1", () => (server.off("error", reject), resolve()));
   });
+}
+
+/** The command that opens `url` in the person's default browser on this platform. */
+export function browserCommand(platform: NodeJS.Platform, url: string): [string, string[]] {
+  if (platform === "darwin") return ["open", [url]];
+  if (platform === "win32") return ["cmd", ["/c", "start", '""', url]]; // the empty title keeps start from eating the url
+  return ["xdg-open", [url]];
+}
+
+/** Open the live view in the browser. Best effort: no browser (a server, SSH) just means no window. */
+export function openInBrowser(url: string) {
+  try {
+    const [cmd, args] = browserCommand(process.platform, url);
+    const child = spawn(cmd, args, { stdio: "ignore", detached: true, windowsVerbatimArguments: process.platform === "win32" });
+    child.on("error", () => {});
+    child.unref();
+  } catch {}
 }
 
 /** The site the live view serves: next to the bundle in the npm package, the same build in a clone. */
