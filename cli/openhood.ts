@@ -16,7 +16,7 @@
  *                                    read the car and add what worked to profiles/car-reports.json
  *                                    (from npm: prints a link to send it in instead)
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio (the flag only in a clone),
- *       [--no-watch]                 with a live view in the browser at http://127.0.0.1:4848/watch/
+ *       [--no-watch] [--no-open]     with a live view at http://127.0.0.1:4848/watch/, opened at the first connect
  *
  * [car] is --port <path> for real hardware (adapter detected, or --adapter kkl|elm327),
  * or nothing for the simulator (--elm can|kline to simulate an ELM327).
@@ -46,6 +46,7 @@ const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live 
   --elm can|kline  simulator: go through a simulated ELM327
   --seconds <n>    live: keep reading for n seconds
   --no-watch       mcp: no live view in the browser
+  --no-open        mcp: keep the live view, but don't open it at the first connect
   --make, --model, --year, --engine, --notes   record: the car, names as in profiles/names.ts`;
 
 async function main() {
@@ -56,7 +57,7 @@ async function main() {
     // Lifting the read-only limit is for maintainers working in a clone, never for the published package.
     if (unsafe && FROM_NPM)
       throw new UserError("--unsafe-allow-any-request isn't available in the npm package. Use a clone of the repository.");
-    return serve({ unsafe, watch: flags["no-watch"] !== true });
+    return serve({ unsafe, watch: flags["no-watch"] !== true, open: flags["no-open"] !== true });
   }
 
   const rt = new Runtime();

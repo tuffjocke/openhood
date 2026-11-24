@@ -272,6 +272,7 @@ Follow docs/adding-a-vehicle.md. In short:
 - The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
   `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It
   stays on 127.0.0.1, GET only, answers its own Host only and sends no CORS headers. Nothing on the watch page
-  may talk to the car: it only shows what the runtime emits (`Runtime.watch`).
+  may talk to the car: it only shows what the runtime emits (`Runtime.watch`). `serve` opens it in the browser at
+  the first `connect` (once, not if a page is open, never at start), `--no-open` keeps it closed.
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.

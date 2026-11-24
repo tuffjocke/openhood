@@ -95,15 +95,17 @@ The agent gets these tools:
 ### Live view: watch the agent in your browser
 
 While the MCP server runs, it also shows what the agent reads at **http://127.0.0.1:4848/watch/**:
-the dials and charts, the fault codes and the raw traffic, the way the website shows them. `connect`
-hands the agent this link, so it can pass it on. The next free port is used if 4848 is taken.
+the dials and charts, the fault codes and the raw traffic, the way the website shows them. It opens in
+your browser the first time the agent connects to a car (not when the server starts, since agents start
+it with every session), and `connect` also hands the agent the link. The next free port is used if 4848
+is taken.
 
 - It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`.
 - It is on this computer only (127.0.0.1) and read-only: the page can't send anything to the car,
   and the server answers only requests addressed to itself, with no access for other websites.
 - The page is the website's own build, shipped in the npm package. In a clone, run
   `npm run build:npm` once to build it.
-- Turn it off with `npx -y openhood mcp --no-watch`.
+- Keep it but don't open it by itself with `npx -y openhood mcp --no-open`; turn it off with `--no-watch`.
 
 ## Safety
 

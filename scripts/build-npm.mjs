@@ -87,7 +87,8 @@ Tools: \`connect\`, \`read_faults\`, \`read_live\`, \`request\` (read-only reque
 \`explain\`, and \`clear_faults\`, which needs the person's yes.
 
 While it runs, a live view shows what the agent reads (readings, fault codes, traffic) in your browser
-at http://127.0.0.1:4848/watch/, on this computer only. Turn it off with \`mcp --no-watch\`.
+at http://127.0.0.1:4848/watch/, on this computer only. It opens by itself at the first connect
+(\`mcp --no-open\` to stop that, \`mcp --no-watch\` to turn it off).
 
 More: https://github.com/tuffjocke/openhood/blob/main/docs/cli.md · GPL-3.0
 `,

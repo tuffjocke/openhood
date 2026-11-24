@@ -55,6 +55,11 @@ export class Runtime {
     if (this.watchers.size) this.emit({ type: "traffic", line: trafficLine(e) });
   };
 
+  /** A live view page is open. */
+  get watching() {
+    return this.watchers.size > 0;
+  }
+
   /** Follow what this runtime reads. Starts with everything so far; returns a function to stop. */
   watch(fn: (e: WatchEvent) => void) {
     this.watchers.add(fn);

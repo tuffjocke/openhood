@@ -8,15 +8,15 @@ import { Runtime, UserError } from "./runtime";
  */
 
 import { FROM_NPM, VERSION } from "./command";
-import { siteDir, startWatchServer } from "./watch-server";
+import { openInBrowser, siteDir, startWatchServer } from "./watch-server";
 
 const INSTRUCTIONS = `Openhood reads cars through a KKL cable or an ELM327 adapter, or a simulator when no car is connected.
 Typical flow: list_profiles, list_ports, connect, read_faults, read_live. Use traffic to see the raw conversation.
 It is read-only: request only sends read services, and clear_faults needs the person's yes (confirm: true).
 Values marked confidence "guess" or "community" are not proven; compare them with the car's own dashboard
 before calling them right. Remind the person to test with the car parked.
-connect returns a liveView link when there is one: give it to the person once, so they can watch the readings,
-fault codes and traffic in their browser while you work. It only shows what you read; read_live with seconds
+The first connect opens a live view in the person's browser, and connect returns its link (liveView): give the
+link to the person once, in case no window opened, so they can watch the readings, fault codes and traffic. It only shows what you read; read_live with seconds
 makes the dials move.`;
 
 type Json = Record<string, unknown>;
@@ -164,7 +164,7 @@ export async function handle(rt: Runtime, msg: Json): Promise<Json | null> {
   }
 }
 
-export async function serve(opts: { unsafe?: boolean; watch?: boolean }) {
+export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean }) {
   const rt = new Runtime({ unsafe: opts.unsafe });
   if (opts.unsafe) console.error("openhood: raw requests are NOT limited to read services (--unsafe-allow-any-request).");
   if (opts.watch !== false) {
@@ -177,6 +177,9 @@ export async function serve(opts: { unsafe?: boolean; watch?: boolean }) {
       console.error(`openhood: no live view (${e instanceof Error ? e.message : String(e)})`);
     }
   }
+  // The live view pops up the first time the agent connects to a car, not when the server starts:
+  // agents start their MCP servers with every session, car or not. Once per run, and not if a page is open.
+  let opened = opts.open === false;
   const send = (m: Json) => process.stdout.write(JSON.stringify(m) + "\n");
   const lines = createInterface({ input: process.stdin });
   // One message at a time, in order: the car can only do one thing at a time anyway.
@@ -190,6 +193,10 @@ export async function serve(opts: { unsafe?: boolean; watch?: boolean }) {
       } catch {
         send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
         return;
+      }
+      if (!opened && rt.liveView && msg.method === "tools/call" && (msg.params as Json | undefined)?.name === "connect") {
+        opened = true;
+        if (!rt.watching) openInBrowser(rt.liveView);
       }
       const out = await handle(rt, msg);
       if (out) send(out);

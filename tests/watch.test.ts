@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { Runtime } from "../cli/runtime";
-import { startWatchServer, type WatchServer } from "../cli/watch-server";
+import { browserCommand, startWatchServer, type WatchServer } from "../cli/watch-server";
 import type { WatchEvent } from "../core/watch";
 
 /** A raw HTTP request, so the test can set Host and send paths fetch would tidy up. */
@@ -113,6 +113,13 @@ describe("live view", () => {
     const idle = await s.next((e) => e.type === "state");
     assert.ok(idle.type === "state" && idle.state.status === "idle" && idle.state.faults?.length, "what was read stays on the page");
     s.close();
+  });
+
+  it("knows how to open the browser on each platform", () => {
+    const url = "http://127.0.0.1:4848/watch/";
+    assert.deepEqual(browserCommand("darwin", url), ["open", [url]]);
+    assert.deepEqual(browserCommand("linux", url), ["xdg-open", [url]]);
+    assert.deepEqual(browserCommand("win32", url), ["cmd", ["/c", "start", '""', url]], "an empty title, or start takes the url as one");
   });
 
   it("starts a late page with everything read so far", async () => {
