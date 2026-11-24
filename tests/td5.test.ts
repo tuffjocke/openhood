@@ -13,6 +13,7 @@ describe("Land Rover Td5", () => {
   it("computes the key from td5keygen's published example and a sniffed session", () => {
     assert.equal(td5Key(0x34a5), 0x54d3); // td5keygen README
     assert.equal(td5Key(0x021c), 0x4043); // Ekaitza_Itzali Read_Faults_and_clear.log
+    assert.equal(td5Key(0x8972), 0x4511); // a 1999 Defender (GitHub issue #1)
   });
 
   it("builds the sniffed fault clear request byte for byte", () => {
@@ -62,5 +63,41 @@ describe("Land Rover Td5", () => {
     const m = manifold.decode(Uint8Array.from([0x61, 0x1c, 0x27, 0x9f, 0x27, 0xae, 0x01, 0xde, 0, 0]), { ambientKpa: 101.43 });
     assert.equal(m.boost.toFixed(2), "0.00");
     assert.equal(m.maf.toFixed(1), "47.8");
+  });
+
+  // Read on a 1999 Defender, engine idling, about 0 °C outside (GitHub issue #1).
+  const frame = (h: string) => Uint8Array.from(h.split(" ").map((b) => parseInt(b, 16)));
+  const decode = (id: string, h: string, state = {}) => groups.find((g) => g.id === id)!.decode(frame(h), state);
+
+  it("decodes the live data read on a real Defender", () => {
+    assert.equal(decode("rpm", "61 09 02 F1").rpm, 753);
+    assert.equal(decode("speed", "61 0D 00").speed, 0);
+    assert.equal(decode("battery", "61 10 38 18 38 74").battery.toFixed(1), "14.4");
+    assert.equal(decode("pedal", "61 1B 03 63 10 50 13 88 00 00 13 A3").pedal.toFixed(2), "0.87");
+    const ambient = decode("ambient", "61 23 26 C6 26 FD");
+    assert.equal(ambient.ambientKpa.toFixed(2), "99.26");
+    const m = decode("manifold", "61 1C 26 AB 26 E2 02 BD 08 96", ambient);
+    assert.equal(m.boost.toFixed(2), "-0.00");
+    assert.equal(m.maf.toFixed(1), "70.1");
+    const t = decode("temperatures", "61 1A 0B DF 09 5A 0A B0 0E DF 08 B8 13 88 0B 76 0B 48");
+    // 30.7, 0.4 and 20.3 °C (the issue says 30.8, 0.5 and 20.3: it took 273.15 K), shown whole
+    assert.deepEqual([t.coolant, t.airTemp, t.fuelTemp].map((c) => Math.round(c)), [31, 0, 20]);
+  });
+
+  it("numbers faults the way a Nanocom does and calls a Defender's unwired outputs normal", () => {
+    const res = frame(
+      "61 3B 00 00 40 00 00 00 00 00 00 1D 00 00 00 1D 00 40 00 00 00 00 00 00 00 80 00 20 00 00 00 00 00 00 00 00 00",
+    );
+    const faults = decodeFaults(res);
+    const code = (id: string) => faults.find((f) => f.id === id)?.code;
+    assert.equal(code("td5-13.0"), "14-1"); // air conditioning fan drive open load (Current)
+    assert.equal(code("td5-15.6"), "16-7"); // unnamed in every source
+    assert.equal(faults.length, 12);
+    for (const key of ["9.0", "9.2", "9.3", "9.4", "13.0", "13.2", "13.3", "13.4"]) {
+      const e = explanations[`td5-${key}`];
+      assert.equal(e.urgency, "ok", key);
+      assert.match(e.plain, /Defender/, key);
+    }
+    assert.equal(explanations["td5-23.6"].title, "Problem reported by the automatic gearbox");
   });
 });

@@ -16,6 +16,12 @@ export const CLEAR_FAULTS = [0x31, 0xdd, ...new Array(18).fill(0)];
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/**
+ * The code a Nanocom shows, like "14-6": byte + 1, bit + 1. Both Ekaitza_Itzali (fault_code_GG_SS)
+ * and TD5-Dash (dtc_lookup.py) number them this way, and their names line up with fault-map.ts.
+ */
+export const nanocomCode = (offset: number, bit: number) => `${offset + 1}-${bit + 1}`;
+
 export function decodeFaults(res: Uint8Array): Fault[] {
   const block = res.subarray(2, 2 + BLOCK_LENGTH); // ignore anything trailing the block
   const out: Fault[] = [];
@@ -25,7 +31,7 @@ export function decodeFaults(res: Uint8Array): Fault[] {
       const key = `${offset}.${bit}`;
       const name = TD5_FAULT_MAP[key] ?? `unknown fault (byte ${offset}, bit ${bit})`;
       const { status } = splitStatus(name);
-      out.push({ id: `td5-${key}`, name: capitalise(name), state: status ? STATUS[status] : undefined });
+      out.push({ id: `td5-${key}`, code: nanocomCode(offset, bit), name: capitalise(name), state: status ? STATUS[status] : undefined });
     }
   });
   return out;

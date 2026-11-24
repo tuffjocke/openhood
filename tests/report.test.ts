@@ -21,7 +21,7 @@ describe("test report", () => {
     const { title, body } = buildReport(base);
     assert.match(title, /Land Rover Defender 1999.*land-rover-td5.*failed/);
     assert.match(body, /\*\*Result:\*\* failed: No answer from the ECU\./);
-    assert.match(body, /\| Engine speed \| 812 rpm \| community \|/);
+    assert.match(body, /\| Engine speed \| 812 rpm \| verified \|/);
     assert.match(body, /02 21 09 2C/);
     assert.ok(!/[–—]/.test(title + body), "no en or em dashes");
   });

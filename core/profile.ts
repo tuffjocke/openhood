@@ -327,6 +327,11 @@ export interface VehicleProfile {
    * `state` is writable here: store anything groups need later (e.g. supported PID bitmasks).
    */
   connect(ecu: EcuLink, state: Values, init: InitResult): Promise<void>;
+  /**
+   * Optional: runs before the link closes, e.g. KWP2000 StopCommunication, so an ECU that keeps
+   * a session open for a while answers the next connect at once. Errors here are ignored.
+   */
+  disconnect?(ecu: EcuLink): Promise<void>;
 
   channels: Channel[];
   /** The round dials on the live screen. See Dials. */

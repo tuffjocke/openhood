@@ -197,11 +197,20 @@ const FAMILIES: Family[] = [
     urgency: "ok",
   },
   {
-    match: /^(problem detected with auto gear box|gearbox\/abs drive)/,
-    title: () => "Problem reported by the automatic gearbox or ABS",
-    plain: "The engine computer has been told about a fault in the gearbox or ABS system, or its signal to them has a fault.",
-    causes: ["Fault stored in the gearbox or ABS module", "Damaged wiring between modules"],
-    check: "Read the gearbox or ABS module's own faults with a tool that supports it.",
+    // Set on every Defender: these outputs aren't wired there (TD5-Dash, _DEFENDER_EXPECTED).
+    match: /^(air conditioning fan drive|air conditioning clutch|tachometer|gearbox\/abs drive) open load/,
+    title: () => "Nothing connected to an engine computer output",
+    plain: "The engine computer sees nothing connected to its air conditioning, rev counter or gearbox signal output. On a Defender these aren't wired, so this is normal.",
+    causes: ["Output not wired on this vehicle (normal on a Defender)", "Broken wire or loose connector", "Failed relay or part"],
+    check: "On a Defender, ignore it. Otherwise check that the air conditioning and rev counter work.",
+    urgency: "ok",
+  },
+  {
+    match: /^problem detected with auto gear box/,
+    title: () => "Problem reported by the automatic gearbox",
+    plain: "The automatic gearbox has told the engine computer about a fault of its own.",
+    causes: ["Fault stored in the gearbox module", "Damaged wiring between modules"],
+    check: "Read the gearbox module's own faults with a tool that supports it.",
     urgency: "soon",
   },
   {
@@ -213,9 +222,9 @@ const FAMILIES: Family[] = [
     urgency: "ok",
   },
   {
-    match: /^(temperature gauge|tacho|mil lamp|fuel used output|air conditioning|active engine mounting)/,
+    match: /^(temperature gauge|tacho|mil lamp|fuel used output|air conditioning|active engine mounting|gearbox\/abs drive)/,
     title: () => "Fault in a gauge, lamp or accessory circuit",
-    plain: "One of the outputs the ECU drives (a gauge, warning lamp or air conditioning) has a wiring fault. The engine itself is fine.",
+    plain: "One of the outputs the ECU drives (a gauge, warning lamp, air conditioning or gearbox signal) has a wiring fault. The engine itself is fine.",
     causes: ["Damaged wiring or connector", "Failed bulb or gauge", "Accessory not fitted on this vehicle"],
     check: "Check whether the gauge or lamp in question works; on some vehicles the output isn't used at all.",
     urgency: "ok",

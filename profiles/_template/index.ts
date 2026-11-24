@@ -82,6 +82,8 @@ export const templateProfile: VehicleProfile = {
     await ecu.request([0x10, 0x81], { note: "diagnostic session" });
     // Security access goes here if the ECU needs it for reading data.
   },
+  // Optional: end the session on disconnect if the ECU refuses a new one while the old is open.
+  // async disconnect(ecu) { await ecu.request([0x82], { note: "stop communication" }); },
   channels,
   // The round dials on the live screen (channel keys). Leave out to use the first three channels.
   dials: { main: "rpm", right: "coolant" },
