@@ -1,8 +1,9 @@
 # First read on a real car
 
-A one-page plan for the first time Openhood meets a real car. Nothing here has been proven on real
-hardware yet, so expect something to fail. The goal is that it fails usefully: with the traffic saved,
-so it can be fixed the same day.
+A one-page plan for the first time Openhood meets your car. So far only a Land Rover Td5 has been read
+on a real car (a 1999 Defender with a KKL cable); every other profile has only met its simulator, so
+expect something to fail. The goal is that it fails usefully: with the traffic saved, so it can be
+fixed the same day.
 
 Openhood only reads. Nothing below changes anything in the car.
 
@@ -44,10 +45,10 @@ Work down this list and stop at the first step that fails.
 | 5 | Website: pick the car, **Read my car** | The same codes and readings as steps 2 to 4. |
 | 6 | Website: answer **Did this match your car?** | Yes adds the car to the shared list. No sends a test report. |
 
-Which `<profile>`:
-
-- Land Rover Td5 (Defender, Discovery 2) with a KKL cable: `land-rover-td5`
-- Any other car, with an ELM327-type adapter: `generic-obd2`
+Which `<profile>`: `npx openhood profiles` lists them with the cars they cover and the adapters they
+run on. The website picks the same one when you choose your car. No profile for your car? Use
+`generic-obd2` with an ELM327-type adapter: standard codes on most cars from about 2001 (petrol) or
+2004 (diesel) in Europe, 1996 in the US.
 
 ## If a step fails
 

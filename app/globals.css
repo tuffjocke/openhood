@@ -361,7 +361,8 @@ button.rec {
     padding: 0 14px;
   }
 
-  .dense .top .actions button {
+  .dense .top .actions button,
+  .dense .demo-name {
     padding: 8px 14px;
   }
 }
@@ -533,15 +534,15 @@ button.mark-name:hover:not(:disabled) {
   margin-left: 0.28em;
 }
 
+/* Padded like the buttons beside it, so it is as tall as they are in every layout. */
 .demo-name {
   display: inline-flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 12px 20px;
   border-radius: 999px;
   background: var(--sign);
   color: var(--sign-ink);
   font: 500 15px/1 var(--sans);
-  height: 40px;
 }
 
 @media (max-width: 760px) {
@@ -581,7 +582,7 @@ button.mark-name:hover:not(:disabled) {
   }
 
   .demo-name {
-    padding: 0 14px;
+    padding: 12px 14px;
   }
 
   .demo-more {
@@ -1945,15 +1946,16 @@ body:has(.shell.is-first-run) {
   color: var(--cl-ink);
 }
 
+/* A long name wraps within its own space; the value always stays on the right of it. */
 .chart-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px 12px;
+  gap: 12px;
 }
 
 .chart-name {
+  min-width: 0;
   font: 500 17px/1.2 var(--num);
   letter-spacing: 0.03em;
 }
@@ -1963,6 +1965,7 @@ body:has(.shell.is-first-run) {
 }
 
 .chart-value {
+  flex: none;
   margin-left: auto;
   font: 400 clamp(28px, 2.6vw, 36px)/1 var(--sans);
   letter-spacing: -0.02em;

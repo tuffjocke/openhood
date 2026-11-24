@@ -10,6 +10,8 @@ export interface AdapterPick {
   kind: AdapterKind;
   /** The product name people can search for. Car reports use the same text in adapterModel. */
   name: string;
+  /** Other names car reports use for the same adapter (adapterModel), e.g. how a seller lists it. */
+  alsoSoldAs?: string[];
   /** What to type into a shop search. Defaults to the name. */
   search?: string;
   connects: "USB" | "Bluetooth";
@@ -40,11 +42,18 @@ export const ADAPTER_PICKS: AdapterPick[] = [
   {
     kind: "kkl",
     name: "KKL 409.1 cable with FTDI chip",
+    alsoSoldAs: ["VAG-COM KKL 409.1 USB"],
     search: "KKL 409.1 FT232RL",
     connects: "USB",
     why: "No brand to look for: check that the listing says FT232RL.",
   },
 ];
+
+/** Whether a car report's adapterModel names this pick (its name or another name it is sold as). */
+export function isPick(p: AdapterPick, adapterModel: string | undefined): boolean {
+  const m = adapterModel?.trim().toLowerCase();
+  return !!m && [p.name, ...(p.alsoSoldAs ?? [])].some((n) => n.toLowerCase() === m);
+}
 
 export const firstPick = (kind: AdapterKind) => ADAPTER_PICKS.find((p) => p.kind === kind);
 
