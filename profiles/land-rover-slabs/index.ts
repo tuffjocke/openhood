@@ -1,11 +1,14 @@
-import type { EcuLink, Fault, FaultInfo, VehicleProfile } from "@/core/profile";
+import type { Channel, EcuLink, Fault, FaultInfo, Values, VehicleProfile } from "@/core/profile";
 import { NegativeResponse } from "@/core/kwp2000/frame";
 import { createSlabsSimulator } from "./simulator";
 
 /**
  * Land Rover Discovery 2 SLABS: the Wabco module that runs the ABS and the self-levelling rear
  * air suspension. KWP2000 on the K-line after a fast wake-up at address 29, no unlock. Read and
- * clear faults. Status and sources: ./README.md
+ * clear faults, rear ride height and battery. Status and sources: ./README.md
+ *
+ * SLABS drops the session when asked more than about once a second (discovery2-diag measured it
+ * on a car), so everything here runs at that pace.
  */
 
 /** Logged faults 21 11 and current faults 21 47: 16 bytes, one bit per fault. */
@@ -41,6 +44,18 @@ export function slabsBits(block: ArrayLike<number>): string[] {
   return out;
 }
 
+/** Rear ride height sensors (raw, set by calibration) and the battery as SLABS sees it. */
+export const SLABS_CHANNELS: Channel[] = [
+  { key: "rideLeft", label: "Ride height left", unit: "", decimals: 0, min: 0, max: 255, confidence: "community" },
+  { key: "battery", label: "Battery", unit: "V", decimals: 1, min: 10, max: 15, warnBelow: 12, confidence: "community" },
+  { key: "rideRight", label: "Ride height right", unit: "", decimals: 0, min: 0, max: 255, confidence: "community" },
+];
+
+/** 21 54: left and right rear height, one byte each. 61 54 91 9C 0F 0F = 145 and 156. */
+export const decodeHeights = (r: ArrayLike<number>): Values => (r.length >= 4 ? { rideLeft: r[2], rideRight: r[3] } : {});
+/** 21 44: a block of valve and supply voltages; data byte 12 is the battery in 1/16 V. */
+export const decodeSupply = (r: ArrayLike<number>): Values => (r.length >= 15 ? { battery: r[14] / 16 } : {});
+
 async function readFaults(ecu: EcuLink): Promise<Fault[]> {
   const faults = new Map<string, Fault>();
   for (const [lid, when] of [[CURRENT, "now"], [LOGGED, "stored"]] as const) {
@@ -68,7 +83,8 @@ export const landRoverSlabs: VehicleProfile = {
     baudRate: 10400,
     init: "fast",
     addresses: { ecu: 0x29, tester: 0xf7 },
-    interMessageMs: 55,
+    // About one message a second, as the dealer tool sends: faster and SLABS drops the session.
+    interMessageMs: 1000,
   },
 
   async connect(ecu) {
@@ -77,16 +93,33 @@ export const landRoverSlabs: VehicleProfile = {
     } catch (e) {
       if (!(e instanceof NegativeResponse && e.code === 0x10)) throw e;
       await ecu.request([0x82], { addressed: true, note: "stop old session" }).catch(() => {});
-      await ecu.request([0x81], { addressed: true, note: "start communication" });
+      try {
+        await ecu.request([0x81], { addressed: true, note: "start communication" });
+      } catch (e) {
+        // SLABS only lets go after tens of seconds of silence; every try in between restarts the wait.
+        if (e instanceof NegativeResponse && e.code === 0x10)
+          throw new Error("The ABS module still has the last session open. Wait 30 seconds and connect again.");
+        throw e;
+      }
     }
     // The reference tool's first request, which also shows the session is really up.
     await ecu.request([0x1a, 0x8a], { note: "module configuration" });
   },
 
-  // No live readings yet: the tester present message keeps the session open.
-  channels: [],
-  groups: [{ id: "keep-alive", request: [0x3e], decode: () => ({}), confidence: "community" }],
-  schedule: ["keep-alive"],
+  // End the session so the next connect isn't refused.
+  async disconnect(ecu) {
+    await ecu.request([0x82], { note: "stop communication" });
+  },
+
+  // Reading these keeps the session open, so no tester present is needed. Wheel speeds and ABS
+  // sensor voltages are known too, but not which wheel is which, so they aren't shown yet.
+  channels: SLABS_CHANNELS,
+  dials: { main: "battery", left: "rideLeft", right: "rideRight" },
+  groups: [
+    { id: "heights", request: [0x21, 0x54], decode: decodeHeights, confidence: "community" },
+    { id: "supply", request: [0x21, 0x44], decode: decodeSupply, confidence: "community" },
+  ],
+  schedule: ["heights", "heights", "supply"],
 
   faults: {
     read: readFaults,

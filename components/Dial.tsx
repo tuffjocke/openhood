@@ -50,8 +50,9 @@ export function Dial({
       </svg>
       <figcaption>
         <span className="dial-value">{shown}</span>
-        <span className="dial-unit">{c.unit}</span>
-        <span className="sr-only">{c.label}</span>
+        {/* No unit (a raw reading such as ride height): say what it is instead. */}
+        <span className="dial-unit">{c.unit || c.label}</span>
+        {c.unit && <span className="sr-only">{c.label}</span>}
       </figcaption>
       {battery && (
         <span className={`dial-battery${battery.value !== undefined && inWarn(battery.channel, battery.value) ? " warn" : ""}`}>

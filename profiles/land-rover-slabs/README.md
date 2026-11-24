@@ -1,7 +1,8 @@
 # Land Rover SLABS (Discovery 2)
 
 The Wabco SLABS module of the Discovery 2 (1998 to 2004, Td5 and V8): ABS and the
-self-levelling rear air suspension in one unit. Read and clear faults with a KKL cable.
+self-levelling rear air suspension in one unit. Read and clear faults, and see the rear ride
+height and battery, with a KKL cable.
 
 ## Status
 
@@ -15,18 +16,45 @@ on its own Discovery 2 Td5.
 | Faults `21 11` (logged) and `21 47` (current): 16 bytes, one bit per fault | community, proven on a car by the source | `slabs/faults.py` |
 | Byte 3 bit 4: right front wheel speed sensor, output too low; byte 10 bit 4: shuttle valve switch, electrical | community | the source's sniff, matched against the reference tool's screen |
 | Clear `14 FF FF` → `54` about 300 ms later | community, proven on a car by the source | `slabs.py` `clear_faults` |
-| Keep-alive `3E` → `7E` | community | same |
+| At most about one message a second; faster and SLABS drops the session after 15 to 20 s | community, measured on a car by the source | discovery2-diag `references/slabs_protocol.md` (the reference tool sends one a second) |
+| After a session it needs about 25 s or more of silence before it answers a new wake-up; every try in between restarts the wait | community, measured on a car by the source | same |
+| Rear ride height `21 54`: data byte 0 left, byte 1 right, raw (about 110 to 135 is normal, set by calibration; a fixed 0 or 255 means a broken sensor or arm) | community, proven on a car by the source | discovery2-diag `signals/slabs.json`, `slabs_protocol.md` (`91 9C 0F 0F` = 145 and 156) |
+| Battery `21 44`, data byte 12, 1/16 V | community, proven on a car by the source (13.5 V running, 12.0 V off) | discovery2-diag `signals/slabs.json` |
+| StopCommunication `82` on disconnect | community | ostler-pack-lr-d2 (`01 82 83` → `01 C2 C3`) |
+| Wheel speeds `21 43` and ABS sensor voltages `21 50` | not shown | the bytes decode, but which wheel is which isn't confirmed (discovery2-diag) |
 
 Every other bit shows as "ABS or ride height fault (byte n, bit m)" until someone matches it to a
 fault on a car.
 
-The module stops answering above roughly 8 to 20 km/h, says the source: read it standing still.
+The readings and the polling keep the session open, so no tester present (`3E`) is sent.
+
+SLABS stops answering as soon as the car moves, and stays silent until the ignition is turned off
+and on again (discovery2-diag): read it standing still.
+
+## If SLABS doesn't answer the wake-up
+
+The Td5 engine ECU forgives a sloppy wake-up; SLABS doesn't. discovery2-diag found that the high
+period after the 25 ms low pulse decides it: at about 32 ms SLABS answered 9 % of tries, at
+25.00 ms 55 %. Whether `81` or `C1` and tester `F7` or `F1` are used made no difference once that
+was fixed (td5-carplay-gauge switched to `C1 29 F1 81` on a Defender that didn't answer `81 29 F7
+81`, most likely the same timing problem).
+
+Our low pulse is exact (one `0x00` byte at 360 baud), but the high period is "reopen the port at
+10400 baud, then wait 20 ms" (`core/transport/webserial.ts`, `cli/node-serial.ts`), so it is 20 ms
+plus however long the reopen takes. It can't be measured from software (the cable's USB latency
+hides the line), so if SLABS stays silent: wait 30 seconds between tries, then look at that pause
+first, ideally with a logic analyser on the K-line.
 
 Tested on: nothing yet. When you test on a car, add a line here:
-`- 2026-12-01 · Discovery 2 Td5 2001 · faults and clear OK (@yourname)`
+`- 2026-12-01 · Discovery 2 Td5 2001 · faults, clear and heights OK (@yourname)`
 
 ## Sources
 
 - openostler/ostler-pack-lr-d2 (code AGPL-3.0, vehicle data CC BY-SA 4.0), `src/d2diag/slabs/`:
   https://github.com/openostler/ostler-pack-lr-d2. Only facts are used (bytes, the bit layout and
   the two known bits); no code is copied, and the explanations are our own words.
+- Leijoma/discovery2-diag (MIT), `src/d2diag/signals/slabs.json`, `references/slabs_protocol.md`:
+  https://github.com/Leijoma/discovery2-diag. Heights, battery, polling pace and the silence before
+  a new wake-up, as facts.
+- turetax/td5-carplay-gauge (GPL-3.0): https://github.com/turetax/td5-carplay-gauge. Its Defender
+  didn't answer the physical wake-up; it waits 28 s of silence before talking to SLABS. Facts only.
