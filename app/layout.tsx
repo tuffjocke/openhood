@@ -28,9 +28,10 @@ export const metadata: Metadata = {
     url: SITE,
     siteName: "Openhood",
     type: "website",
-    images: [{ url: `${SITE}/og.png`, width: 1200, height: 630, alt: "Openhood explains a fault code in plain words" }],
+    // Bump ?v= when og.png changes: Facebook and others cache the image by its URL.
+    images: [{ url: `${SITE}/og.png?v=2`, width: 1200, height: 630, alt: "Openhood reading a car: live dials and charts, fault codes in plain words" }],
   },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: [`${SITE}/og.png`] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: [`${SITE}/og.png?v=2`] },
   manifest: `${base}/manifest.webmanifest`,
   icons: {
     icon: [{ url: `${base}/favicon-32.png`, sizes: "32x32", type: "image/png" }],

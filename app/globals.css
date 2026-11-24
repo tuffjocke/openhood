@@ -1946,15 +1946,16 @@ body:has(.shell.is-first-run) {
   color: var(--cl-ink);
 }
 
+/* A long name wraps within its own space; the value always stays on the right of it. */
 .chart-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px 12px;
+  gap: 12px;
 }
 
 .chart-name {
+  min-width: 0;
   font: 500 17px/1.2 var(--num);
   letter-spacing: 0.03em;
 }
@@ -1964,6 +1965,7 @@ body:has(.shell.is-first-run) {
 }
 
 .chart-value {
+  flex: none;
   margin-left: auto;
   font: 400 clamp(28px, 2.6vw, 36px)/1 var(--sans);
   letter-spacing: -0.02em;
