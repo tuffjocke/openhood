@@ -133,6 +133,7 @@ tests/td5.test.ts         Td5 known answers from published sources (keygen vecto
 tests/units.test.ts       unit guess and conversions
 tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
+tests/node-serial.test.ts CLI serial transport on serialport's mock: fast init as 0x00 at 360 baud, BREAK fallback
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 tests/slabs.test.ts       Land Rover SLABS fault bits (published sniff) and a session
@@ -232,7 +233,10 @@ Follow docs/adding-a-vehicle.md. In short:
   together per ECU (`parseElmCanFrames`), engine first, because two ECUs answering at once can't be told
   apart otherwise. Older protocols stay headers off. Profiles just get payloads. Its timeouts carry a plain
   message for people.
-- Fast init is timed with JS timers (BREAK for 25 ms). Jitter of a few ms is normal.
+- Fast init in the CLI and MCP server (`cli/node-serial.ts`) is one 0x00 byte at 360 baud: the UART times the
+  25 ms low pulse. BREAK timed with JS timers ran 28 to 35 ms on macOS and a Td5 never woke (issue #1); it is
+  only the fallback for a cable that can't open at 360 baud. The website (`core/transport/webserial.ts`) still
+  uses BREAK with JS timers, untested on macOS.
 - KWP1281 (`link.protocol: "kwp1281"`): requests are [block title, ...data] and answers start with the ECU's
   title (`[0x29, 1]` → `[0xE7, ...]`). `requestMany` confirms each answer until the ECU sends its ack (fault
   lists). The link sends keep-alives itself when idle. Titles mean different things than KWP2000 service ids,

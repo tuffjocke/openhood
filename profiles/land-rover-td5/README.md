@@ -28,13 +28,14 @@ byte in `tests/td5.test.ts` against values those projects published.
 | Clear faults `31 DD` + 18 zeros → `71 DD` | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (cleared on a car) |
 | Plain-language explanations (`fault-explanations.ts`) | community | Written for Openhood, grouped by fault family |
 
-Tested on: nothing yet. When you test on a car, add a line here:
-`- 2026-12-01 · Defender 90 1999 · NNN ECU · connect + live data OK (@yourname)`
+Tested on (add a line when you test on a car):
+- 2026-11-24 · Defender 1999 · engine running · VAG-COM KKL 409.1 (FT232R) on macOS, CLI · connect,
+  unlock, faults and live data OK with the 360-baud fast init; BREAK fast init got no answer (@tuffjocke, [#1](https://github.com/tuffjocke/openhood/issues/1))
 
 ## Connect sequence
 
 ```
-fast init (25 ms low, 25 ms high)
+fast init (25 ms low, then high)
 → 81 13 F7 81 0C          start communication (addressed)
 ← 03 C1 57 8F AA
 → 02 10 A0 B2             diagnostic session
