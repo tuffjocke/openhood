@@ -118,6 +118,7 @@ export const SV: Record<string, string> = {
   "Or try a demo car first": "Eller prova en demobil först",
 
   // Running
+  "Back": "Tillbaka",
   "Back to start": "Till start",
   Demo: "Demobil",
   "car, made-up faults": "med påhittade fel",

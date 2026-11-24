@@ -1645,12 +1645,24 @@ body:has(.shell.is-first-run) {
   align-items: center;
   gap: 16px;
   min-height: 32px;
+  margin-bottom: 14px;
   font: 500 15px/1.3 var(--num);
 }
 
 .binnacle-corners button {
   padding: 8px 14px;
   white-space: nowrap;
+}
+
+/* The demo's way back: plain text in the corner, light on the black. */
+.binnacle-corners .binnacle-back {
+  padding: 0;
+  color: var(--cl-ink);
+  text-decoration: none;
+}
+
+.binnacle-corners .binnacle-back:hover:not(:disabled) {
+  color: var(--cl-muted);
 }
 
 .binnacle-start {
@@ -1900,40 +1912,15 @@ body:has(.shell.is-first-run) {
   stroke-linecap: round;
 }
 
-/* The charts: a key for the colours, then one card per reading. */
-.chart-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin: clamp(24px, 3vw, 40px) 0 0;
-  font: 500 15px/1 var(--num);
-  color: var(--cl-muted);
-}
-
-.chart-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chart-key i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.chart-key .group-air i,
+/* The charts: one card per reading, its name coloured by what it is about. */
 .chart.group-air .chart-name {
   color: var(--air);
 }
 
-.chart-key .group-engine i,
 .chart.group-engine .chart-name {
   color: var(--engine);
 }
 
-.chart-key .group-fuel i,
 .chart.group-fuel .chart-name {
   color: var(--fuel);
 }
@@ -1949,6 +1936,11 @@ body:has(.shell.is-first-run) {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px 20px;
   margin-top: 8px;
+}
+
+/* Under the dials in the binnacle. */
+.dials + .charts {
+  margin-top: clamp(28px, 3.4vw, 48px);
 }
 
 .chart {
