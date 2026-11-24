@@ -22,10 +22,18 @@ live data and faults. No installs, no dealer tools.
 
 ## Supported vehicles
 
-| Vehicle | ECU | Status |
-| --- | --- | --- |
-| [Standard codes](profiles/generic-obd2) (any car with OBD-II/EOBD; ELM327 adapter, or KKL on K-line cars) | Engine, standard values | experimental, not yet tested on a car |
-| [Land Rover Td5](profiles/land-rover-td5) (Defender, Discovery 2, 1998 to 2006) | Engine | experimental, not yet tested on a car |
+| Vehicle | Cars (adapter) | Reads | Status |
+| --- | --- | --- | --- |
+| [Standard codes](profiles/generic-obd2) | Any car with OBD-II/EOBD (ELM327, or KKL on K-line cars) | Engine, standard values | not tested on a car yet |
+| [Land Rover Td5](profiles/land-rover-td5) | Defender, Discovery 2, 1998 to 2006 (KKL) | Engine | tested on a 1999 Defender |
+| [Land Rover SLABS](profiles/land-rover-slabs) | Discovery 2, 1998 to 2004 (KKL) | ABS and ride height | not tested on a car yet |
+| [Land Rover airbag](profiles/land-rover-srs) | Discovery 2, 1998 to 2004 (KKL) | Airbag, read only | not tested on a car yet |
+| [Volvo 850, S70, V70, C70](profiles/volvo-850) | 850 1996 to 1997, S70, V70, C70 1997 to 1998 (ELM327 or KKL) | ABS, airbag, instruments | not tested on a car yet |
+| [Volvo D2](profiles/volvo-d2) | S40, V50 2004 to 2012, C30, C70 2006 to 2013, S60, V70, XC70, S80, XC90 from 2005 (ELM327) | Every module, read only | not tested on a car yet |
+| [Saab Trionic 7](profiles/saab-trionic7) | 9-5 1998 to 2010, 9-3 2000 to 2002 (KKL or ELM327) | Engine | not tested on a car yet |
+| [Saab Trionic 8](profiles/saab-trionic8) | 9-3 2003 to 2011 (ELM327) | Engine | not tested on a car yet |
+| [BMW DS2](profiles/bmw-ds2) | E36, E38, E39, E46, E53, Z3 (KKL) | Every DS2 module, read only | not tested on a car yet |
+| [VW and Audi, older engines](profiles/vw-audi-kwp1281) | VW, Audi, Škoda with KWP1281, about 1991 to 2003 (KKL) | Engine | not tested on a car yet |
 
 Your car isn't here? [Add it](docs/adding-a-vehicle.md), no coding experience needed if you can chat with an AI.
 

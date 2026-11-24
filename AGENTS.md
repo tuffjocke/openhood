@@ -50,6 +50,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   saab-trionic7/          9-5 1998 to 2010 and 9-3 2000 to 2002 engine (KWP2000 on the K-line, KKL or ELM327)
   saab-trionic8/          9-3 2003 to 2011 engine (GMLAN on CAN, ELM327 only, raw frames via `link.can`)
   land-rover-slabs/       Discovery 2 ABS and ride height (Wabco SLABS, KWP2000, KKL): one bit per fault
+  land-rover-srs/         Discovery 2 airbag (TRW SPS, 5-baud wake-up at 5B, addressed frames, KKL): read only
   bmw-ds2/                E36, E38, E39, E46, E53, Z3: every DS2 module's codes (KKL only, 9600 8E1), read only
   shared/obd-codes.ts     official titles + our plain-language explanations of generic P0 codes
   _template/              copy this to start a new profile (not registered)
@@ -144,6 +145,7 @@ tests/watch.test.ts       the live view: streams connect, values, faults; read-o
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 tests/slabs.test.ts       Land Rover SLABS fault bits (published sniff) and a session
+tests/srs.test.ts         Land Rover Discovery 2 airbag: published fault reads, the request frames, a session
 tests/bmw.test.ts         BMW DS2 frames (E46M3-Monitoring's FS_LESEN), fault entry splitting, a session
 tests/saab.test.ts        Saab Trionic 7 and 8 known answers (Trionic CAN Flasher's examples) and sessions
 tests/volvo-d2.test.ts    Volvo D2 on CAN known answers (published frames) and a session through the ELM327
