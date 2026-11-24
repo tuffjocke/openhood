@@ -6,7 +6,7 @@ import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units
 import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
 import { emptyWatchState, WATCH_EVENTS, type WatchEvent, type WatchState } from "@/core/watch";
 import { getProfile } from "@/profiles";
-import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
+import { dialLayout, DialRow } from "./Dials";
 import { FaultPanel } from "./FaultPanel";
 import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
@@ -233,7 +233,7 @@ function Cluster({
   setAllReadings: (all: boolean) => void;
 }) {
   const t = useT();
-  const { charts, groups } = dialLayout(profile);
+  const { charts } = dialLayout(profile);
   return (
     <section className="binnacle" aria-label={t("Live data")}>
       <div className="binnacle-corners">
@@ -250,16 +250,6 @@ function Cluster({
       <DialRow profile={profile} values={latest} unavailable={unavailable} />
       {charts.length > 0 && (
         <>
-          {groups.length > 0 && (
-            <p className="chart-key">
-              {groups.map((g) => (
-                <span key={g} className={`group-${g}`}>
-                  <i />
-                  {t(GROUP_NAMES[g])}
-                </span>
-              ))}
-            </p>
-          )}
           <div className={`charts${allReadings ? " all" : ""}`}>
             {charts.map((c) => (
               <LiveChart key={c.key} channel={c} points={points(c.key)} now={now} value={latest[c.key]} unavailable={unavailable.has(c.key)} />

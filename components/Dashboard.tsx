@@ -20,7 +20,7 @@ import { TimeoutError } from "@/core/transport/types";
 import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
 import { getProfile, PROFILES } from "@/profiles";
-import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
+import { dialLayout, DialRow } from "./Dials";
 import { useUnits } from "./useUnits";
 import { labelsIn, useLang, useT } from "./useLang";
 import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
@@ -399,7 +399,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
   // The profile picks its dials; the rest of its readings become charts, grouped by colour.
-  const { charts: chartChannels, groups: chartGroups } = dialLayout(shown);
+  const { charts: chartChannels } = dialLayout(shown);
   const shownLatest = show(latest.current);
   // A real car that is moving: whoever watches the screen shouldn't be the driver. Readings stay as they are.
   const speedKey = profile.channels.find((c) => c.unit === "km/h")?.key;
@@ -532,8 +532,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
             <div className="binnacle-corners">
               <span className="binnacle-start">
                 {bare && (
-                  <button className="quiet" onClick={disconnect} disabled={status === "connecting"}>
-                    {t("Back to start")}
+                  <button className="link-button binnacle-back" onClick={disconnect} disabled={status === "connecting"}>
+                    <span aria-hidden="true">‹</span> {t("Back")}
                   </button>
                 )}
               </span>
@@ -550,16 +550,6 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
             <DialRow profile={shown} values={shownLatest} unavailable={unavailable} />
             {chartChannels.length > 0 && (
               <>
-                {chartGroups.length > 0 && (
-                  <p className="chart-key">
-                    {chartGroups.map((g) => (
-                      <span key={g} className={`group-${g}`}>
-                        <i />
-                        {t(GROUP_NAMES[g])}
-                      </span>
-                    ))}
-                  </p>
-                )}
                 <div className={`charts${allReadings ? " all" : ""}`}>
                   {chartChannels.map((c) => (
                     <LiveChart
