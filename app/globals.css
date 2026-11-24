@@ -107,6 +107,21 @@ a {
   padding: calc(28px + env(safe-area-inset-top)) 32px 72px;
 }
 
+/* The live view (components/Watch): no header, wider and tighter, for watching an agent work. */
+.shell.watch {
+  max-width: 1440px;
+  padding: calc(14px + env(safe-area-inset-top)) 20px 20px;
+}
+
+.watch-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 .muted {
   color: var(--muted);
   font-size: 15px;
@@ -1624,6 +1639,36 @@ body:has(.shell.is-first-run) {
   color: var(--cl-muted);
 }
 
+/* The live view: the binnacle on the left, faults and traffic beside it. */
+.watch-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.watch .binnacle {
+  margin-top: 0;
+  padding: 14px 20px 20px;
+  border-radius: 36px;
+}
+
+.watch .binnacle-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.watch .binnacle .status {
+  margin: 0;
+  font: inherit;
+  color: var(--cl-muted);
+}
+
+.watch .binnacle .status-live i {
+  box-shadow: none;
+}
+
 /* Shown while a real car is moving: one calm line, the readings stay. */
 .moving {
   margin: 4px 0 0;
@@ -1861,6 +1906,12 @@ body:has(.shell.is-first-run) {
   margin-top: 20px;
 }
 
+.watch .charts {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 20px;
+  margin-top: 8px;
+}
+
 .chart {
   min-width: 0;
   color: var(--cl-ink);
@@ -1961,6 +2012,12 @@ body:has(.shell.is-first-run) {
   margin-top: 28px;
 }
 
+@media (max-width: 900px) {
+  .watch-body {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
 
   .binnacle {
@@ -2017,6 +2074,18 @@ body:has(.shell.is-first-run) {
   gap: clamp(24px, 4vw, 56px);
   display: block;
   margin-top: 28px;
+}
+
+.lower.watch-side {
+  margin-top: 0;
+}
+
+.watch .faults {
+  gap: 8px;
+}
+
+.watch #faults .section-title {
+  margin: 2px 0 10px;
 }
 
 .faults {
@@ -2385,6 +2454,15 @@ span.fault-label {
   margin-top: 48px;
 }
 
+.watch .log {
+  margin-top: 20px;
+}
+
+.watch .log pre {
+  max-height: 280px;
+  overflow: auto;
+}
+
 .log summary {
   cursor: pointer;
   color: var(--muted);
@@ -2482,6 +2560,15 @@ span.fault-label {
 
 .profile-info + .foot {
   margin-top: 16px;
+}
+
+.watch .profile-info {
+  margin-top: 12px;
+}
+
+.watch .foot {
+  margin-top: 20px;
+  padding-top: 12px;
 }
 
 /* ==========================================================================

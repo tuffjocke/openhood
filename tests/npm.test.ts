@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, symlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
@@ -15,6 +15,8 @@ describe("npm package", () => {
     const pkg = JSON.parse(readFileSync("dist/npm/package.json", "utf8"));
     assert.equal(pkg.bin.openhood, "openhood.js");
     assert.deepEqual(Object.keys(pkg.dependencies), ["serialport"], "nothing but serialport at runtime");
+    assert.ok(pkg.files.includes("site") && existsSync("dist/npm/site/watch/index.html"), "the live view page ships with the MCP server");
+    assert.ok(!readFileSync("dist/npm/site/watch/index.html", "utf8").includes("/openhood/_next"), "built at the root, not for GitHub Pages");
 
     // Run from an empty folder, with serialport reachable the way npm would install it.
     const dir = mkdtempSync(join(tmpdir(), "openhood-npm-"));

@@ -92,6 +92,19 @@ The agent gets these tools:
 | `clear_faults` | Clear codes, only with `confirm: true` after the person said yes |
 | `explain_code` | A code in plain words, no car needed |
 
+### Live view: watch the agent in your browser
+
+While the MCP server runs, it also shows what the agent reads at **http://127.0.0.1:4848/watch/**:
+the dials and charts, the fault codes and the raw traffic, the way the website shows them. `connect`
+hands the agent this link, so it can pass it on. The next free port is used if 4848 is taken.
+
+- It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`.
+- It is on this computer only (127.0.0.1) and read-only: the page can't send anything to the car,
+  and the server answers only requests addressed to itself, with no access for other websites.
+- The page is the website's own build, shipped in the npm package. In a clone, run
+  `npm run build:npm` once to build it.
+- Turn it off with `npx -y openhood mcp --no-watch`.
+
 ## Safety
 
 - **Read-only, enforced.** `request` only sends services that read (standard OBD-II modes and the
