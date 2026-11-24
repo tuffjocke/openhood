@@ -169,6 +169,18 @@ export const SV: Record<string, string> = {
   "Imported history for 1 car.": "Importerade historiken för 1 bil.",
   "Couldn't import that file.": "Kunde inte importera den filen.",
 
+  // Live view (what an agent reads through the MCP server)
+  "Live view": "Livevisning",
+  "Waiting for the agent": "Väntar på agenten",
+  "Lost the agent": "Tappade agenten",
+  "Lost the agent. Is it still running? This page will pick it up again by itself.":
+    "Tappade kontakten med agenten. Körs den fortfarande? Sidan kopplar upp sig igen av sig själv.",
+  "This page shows what an AI agent reads with Openhood. Open it from the link the agent gives you.":
+    "Den här sidan visar vad en AI-agent läser av med Openhood. Öppna den från länken som agenten ger dig.",
+  "The car didn’t answer the agent:": "Bilen svarade inte agenten:",
+  "The agent hasn’t connected to a car yet.": "Agenten har inte anslutit till någon bil än.",
+  "The agent hasn’t read the fault codes yet.": "Agenten har inte läst felkoderna än.",
+
   // Readings
   "Air flow": "Luftflöde",
   "Air mass": "Luftmassa",

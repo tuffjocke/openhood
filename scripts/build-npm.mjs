@@ -7,12 +7,21 @@
  *   npm publish ./dist/npm     (a maintainer; the release workflow stages it for approval instead)
  */
 import { build } from "esbuild";
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const root = JSON.parse(readFileSync("package.json", "utf8"));
 const out = "dist/npm";
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
+
+// The website, for the MCP server's live view (cli/watch-server.ts serves it on 127.0.0.1): built at
+// the root (no BASE_PATH) and without the service worker, then copied next to the bundle.
+execFileSync(process.execPath, ["node_modules/next/dist/bin/next", "build"], {
+  stdio: ["ignore", "ignore", "inherit"],
+  env: { ...process.env, BASE_PATH: "", NEXT_PUBLIC_OPENHOOD_LOCAL: "1", NEXT_TELEMETRY_DISABLED: "1" },
+});
+cpSync("out", `${out}/site`, { recursive: true });
 
 await build({
   entryPoints: ["cli/openhood.ts"],
@@ -37,7 +46,7 @@ writeFileSync(
       description: "Read your car's fault codes and live data from the command line, or let an AI agent do it over MCP.",
       type: "module",
       bin: { openhood: "openhood.js" },
-      files: ["openhood.js", "README.md", "LICENSE"],
+      files: ["openhood.js", "site", "README.md", "LICENSE"],
       engines: { node: ">=20" },
       dependencies: { serialport: root.devDependencies.serialport },
       license: "GPL-3.0-only",
@@ -76,6 +85,9 @@ Leave out \`--port\` to try it on a simulated car.
 
 Tools: \`connect\`, \`read_faults\`, \`read_live\`, \`request\` (read-only requests only), \`traffic\`,
 \`explain\`, and \`clear_faults\`, which needs the person's yes.
+
+While it runs, a live view shows what the agent reads (readings, fault codes, traffic) in your browser
+at http://127.0.0.1:4848/watch/, on this computer only. Turn it off with \`mcp --no-watch\`.
 
 More: https://github.com/tuffjocke/openhood/blob/main/docs/cli.md · GPL-3.0
 `,

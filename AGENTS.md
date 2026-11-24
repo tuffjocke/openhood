@@ -56,6 +56,9 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node),
                           command.ts (`npx openhood` or `npm run openhood --` in messages)
+                          watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
+core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
+components/Watch          the live view page (app/watch): what an agent reads, no header, dense, read-only
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
                           every profile, only serialport at runtime. Agents and people run `npx -y openhood ...`;
                           .github/workflows/npm.yml stages it when package.json's version is new on npm (bump the
@@ -135,6 +138,7 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/node-serial.test.ts CLI serial transport on serialport's mock: fast init as 0x00 at 360 baud, BREAK fallback
 tests/webserial.test.ts   website serial transport on a strict fake Web Serial port: the same fast init, reopening
+tests/watch.test.ts       the live view: streams connect, values, faults; read-only, own Host only, no way out
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 tests/slabs.test.ts       Land Rover SLABS fault bits (published sniff) and a session
@@ -265,5 +269,9 @@ Follow docs/adding-a-vehicle.md. In short:
 - A KKL-only profile is not probed for an ELM327 before connecting (no stray bytes on the K-line); the
   probe only runs if the car stays silent, to say "wrong adapter".
 - Web Serial needs a user gesture and works in Chrome/Edge desktop and Chrome 148+ Android. Not Safari.
+- The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
+  `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It
+  stays on 127.0.0.1, GET only, answers its own Host only and sends no CORS headers. Nothing on the watch page
+  may talk to the car: it only shows what the runtime emits (`Runtime.watch`).
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.

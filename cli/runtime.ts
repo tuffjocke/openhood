@@ -3,7 +3,8 @@ import { ElmLink, elmModeFor } from "../core/link/elm327";
 import { kLineLink } from "../core/link/kline";
 import { detectAdapter } from "../core/link/open";
 import type { Link, TrafficEvent } from "../core/link/types";
-import type { AdapterKind, Fault, VehicleProfile } from "../core/profile";
+import type { AdapterKind, Fault, Readiness, Values, VehicleProfile } from "../core/profile";
+import { emptyWatchState, type WatchEvent, type WatchState } from "../core/watch";
 import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
@@ -39,6 +40,11 @@ export class UserError extends Error {}
 export class Runtime {
   private session: Session | null = null;
   private traffic: TrafficEvent[] = [];
+  /** What the live view shows (core/watch.ts), and who is watching. */
+  private view: WatchState = emptyWatchState();
+  private watchers = new Set<(e: WatchEvent) => void>();
+  /** The live view's link, once the MCP server has started it; `connect` hands it to the agent. */
+  liveView?: string;
 
   /** `unsafe` lets raw requests through without the read-only check. Never the default. */
   constructor(private opts: { unsafe?: boolean } = {}) {}
@@ -46,7 +52,51 @@ export class Runtime {
   private log = (e: TrafficEvent) => {
     this.traffic.push(e);
     if (this.traffic.length > TRAFFIC_LINES) this.traffic.shift();
+    if (this.watchers.size) this.emit({ type: "traffic", line: trafficLine(e) });
   };
+
+  /** Follow what this runtime reads. Starts with everything so far; returns a function to stop. */
+  watch(fn: (e: WatchEvent) => void) {
+    this.watchers.add(fn);
+    fn(this.stateEvent());
+    return () => void this.watchers.delete(fn);
+  }
+
+  private stateEvent(): WatchEvent {
+    return { type: "state", state: structuredClone(this.view), traffic: this.trafficLines(TRAFFIC_LINES) };
+  }
+
+  private emit(e: WatchEvent) {
+    for (const fn of this.watchers) {
+      try {
+        fn(e);
+      } catch {} // a watcher that went away must not break the agent's call
+    }
+  }
+
+  private setView(v: Partial<WatchState>) {
+    this.view = { ...this.view, ...v };
+    this.emit(this.stateEvent());
+  }
+
+  /** Values of the profile's channels only, without the profile's own working state. */
+  private shownValues(v: Values): Values {
+    const out: Values = {};
+    for (const c of this.s.profile.channels) if (v[c.key] !== undefined) out[c.key] = v[c.key];
+    return out;
+  }
+
+  private gotValues(v: Values) {
+    const shown = this.shownValues(v);
+    if (!Object.keys(shown).length) return;
+    Object.assign(this.view.values, shown);
+    this.emit({ type: "values", values: shown });
+  }
+
+  private gotFaults(faults: Fault[], pending: Fault[] | null, readiness: Readiness | null) {
+    this.view = { ...this.view, faults, pending, readiness };
+    this.emit({ type: "faults", faults, pending, readiness });
+  }
 
   private get s(): Session {
     if (!this.session) throw new UserError("Not connected. Call connect first.");
@@ -84,16 +134,24 @@ export class Runtime {
     const profile = getProfile(o.profile);
     if (!profile) throw new UserError(`No profile "${o.profile}". Known: ${PROFILES.map((p) => p.id).join(", ")}.`);
     this.traffic = [];
-    const link = await this.openLink(profile, o);
-    const s = new Session(profile, link, this.log);
-    await s.connect();
-    this.session = s;
-    return {
-      profile: profile.id,
-      connectedThrough: link.adapter,
-      init: s.init,
-      unavailableChannels: [...s.unavailableChannels],
-    };
+    this.setView({ ...emptyWatchState(), status: "connecting", profileId: profile.id });
+    try {
+      const link = await this.openLink(profile, o);
+      const s = new Session(profile, link, this.log);
+      await s.connect();
+      this.session = s;
+      this.setView({ status: "connected", adapter: link.adapter, unavailable: [...s.unavailableChannels], values: this.shownValues(s.state) });
+      return {
+        profile: profile.id,
+        connectedThrough: link.adapter,
+        init: s.init,
+        unavailableChannels: [...s.unavailableChannels],
+        ...(this.liveView ? { liveView: this.liveView } : {}),
+      };
+    } catch (e) {
+      this.setView({ status: "failed", error: (e instanceof Error ? e.message : String(e)).split("\n")[0] });
+      throw e;
+    }
   }
 
   private async openLink(profile: VehicleProfile, o: ConnectOptions): Promise<Link> {
@@ -122,7 +180,11 @@ export class Runtime {
   async disconnect() {
     const s = this.session;
     this.session = null;
-    if (s) await s.disconnect();
+    if (s) {
+      await s.disconnect();
+      // What was read stays on the live view; only the status changes.
+      this.setView({ status: "idle" });
+    }
     return { connected: false };
   }
 
@@ -144,9 +206,11 @@ export class Runtime {
   async faults(o: { pending?: boolean } = {}) {
     const stored = await this.s.readFaults();
     const out: Record<string, unknown> = { stored: stored.map((f) => this.describeFault(f)) };
-    if (o.pending) out.pending = ((await this.s.readPending()) ?? []).map((f) => this.describeFault(f));
+    const pending = o.pending ? ((await this.s.readPending()) ?? []) : null;
+    if (pending) out.pending = pending.map((f) => this.describeFault(f));
     const readiness = await this.s.readReadiness();
     if (readiness) out.readiness = readiness;
+    this.gotFaults(stored, pending, readiness);
     return out;
   }
 
@@ -171,7 +235,11 @@ export class Runtime {
     const end = performance.now() + Math.min(Math.max(o.seconds ?? 0, 0), 30) * 1000;
     const seen: Record<string, number[]> = {};
     do {
-      for (const id of ids) for (const [k, v] of Object.entries(await s.readGroup(id))) (seen[k] ??= []).push(v);
+      for (const id of ids) {
+        const got = await s.readGroup(id);
+        this.gotValues(got);
+        for (const [k, v] of Object.entries(got)) (seen[k] ??= []).push(v);
+      }
     } while (performance.now() < end);
     const out: Record<string, unknown> = {};
     for (const c of s.profile.channels) {
@@ -202,15 +270,17 @@ export class Runtime {
         "Clearing only erases the codes, it doesn't fix anything, and it can reset the emissions readiness checks. Ask the person first, then call again with confirm: true.",
       );
     await this.s.clearFaults();
-    return { cleared: true, nowStored: (await this.s.readFaults()).map((f) => f.code ?? f.id) };
+    const now = await this.s.readFaults();
+    this.gotFaults(now, null, await this.s.readReadiness());
+    return { cleared: true, nowStored: now.map((f) => f.code ?? f.id) };
   }
 
   trafficLines(last = 60) {
-    return this.traffic.slice(-last).map(
-      (e) => `${(e.t / 1000).toFixed(3)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  (${e.note})` : ""}`,
-    );
+    return this.traffic.slice(-last).map(trafficLine);
   }
 }
+
+const trafficLine = (e: TrafficEvent) => `${(e.t / 1000).toFixed(3)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  (${e.note})` : ""}`;
 
 const REPORTS_FILE = new URL("../profiles/car-reports.json", import.meta.url);
 

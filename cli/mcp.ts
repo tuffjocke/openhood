@@ -7,13 +7,17 @@ import { Runtime, UserError } from "./runtime";
  * tools/call, ping. Kept dependency-free on purpose; stdout carries only protocol messages.
  */
 
-import { VERSION } from "./command";
+import { FROM_NPM, VERSION } from "./command";
+import { siteDir, startWatchServer } from "./watch-server";
 
 const INSTRUCTIONS = `Openhood reads cars through a KKL cable or an ELM327 adapter, or a simulator when no car is connected.
 Typical flow: list_profiles, list_ports, connect, read_faults, read_live. Use traffic to see the raw conversation.
 It is read-only: request only sends read services, and clear_faults needs the person's yes (confirm: true).
 Values marked confidence "guess" or "community" are not proven; compare them with the car's own dashboard
-before calling them right. Remind the person to test with the car parked.`;
+before calling them right. Remind the person to test with the car parked.
+connect returns a liveView link when there is one: give it to the person once, so they can watch the readings,
+fault codes and traffic in their browser while you work. It only shows what you read; read_live with seconds
+makes the dials move.`;
 
 type Json = Record<string, unknown>;
 
@@ -160,9 +164,19 @@ export async function handle(rt: Runtime, msg: Json): Promise<Json | null> {
   }
 }
 
-export async function serve(opts: { unsafe?: boolean }) {
+export async function serve(opts: { unsafe?: boolean; watch?: boolean }) {
   const rt = new Runtime({ unsafe: opts.unsafe });
   if (opts.unsafe) console.error("openhood: raw requests are NOT limited to read services (--unsafe-allow-any-request).");
+  if (opts.watch !== false) {
+    // The live view is a nice extra: if it can't start, the agent still gets every tool.
+    try {
+      const view = await startWatchServer(rt, { dir: siteDir(FROM_NPM) });
+      rt.liveView = view.url;
+      console.error(`openhood: live view at ${view.url}`);
+    } catch (e) {
+      console.error(`openhood: no live view (${e instanceof Error ? e.message : String(e)})`);
+    }
+  }
   const send = (m: Json) => process.stdout.write(JSON.stringify(m) + "\n");
   const lines = createInterface({ input: process.stdin });
   // One message at a time, in order: the car can only do one thing at a time anyway.
