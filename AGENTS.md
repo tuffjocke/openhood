@@ -59,6 +59,7 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node),
                           command.ts (`npx openhood` or `npm run openhood --` in messages)
                           watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
+                          watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C)
 core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
 components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, read-only
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
@@ -283,7 +284,7 @@ Follow docs/adding-a-vehicle.md. In short:
 - The MCP server (`Runtime` with `keepAlive`) reads the profile's first scheduled group after 1 s without a tool
   call on a KWP2000 K-line session, so ECUs like the Td5 don't end it, and on a timeout checks the car still answers;
   if not, it connects again once and repeats the call (never a clear). Keep-alive lines are noted "keep-alive" and left
-  out of the `traffic` tool. The CLI's one-shot commands don't do this.
+  out of the `traffic` tool. `openhood watch` does the same; the CLI's one-shot commands don't.
 - The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
   `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It
   stays on 127.0.0.1, GET only, answers its own Host only and sends no CORS headers. Nothing on the watch page

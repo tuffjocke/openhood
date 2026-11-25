@@ -121,7 +121,7 @@ export function Watch() {
       )}
       {view.status === "lost" && (
         <p className="notice" role="alert">
-          {t("The car stopped answering. The agent connects again at its next read.")}
+          {t("The car stopped answering. Openhood connects again at the next read.")}
         </p>
       )}
       {view.status === "failed" && view.error && (

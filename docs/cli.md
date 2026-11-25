@@ -39,6 +39,9 @@ npx openhood faults --profile generic-obd2 --port /dev/ttyUSB0
 npx openhood live   --profile generic-obd2 --port COM3 --seconds 5
 npx openhood request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
 
+# the live view in your browser, no agent or MCP setup: dials, charts, faults, traffic until Ctrl+C
+npx openhood watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI
+
 # read the car and share what worked (from npm: prints a link to a ready-made GitHub issue;
 # in a clone: adds it to profiles/car-reports.json for a pull request)
 npx openhood record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
@@ -102,6 +105,10 @@ The agent gets these tools:
 
 ### Live view: watch the agent in your browser
 
+Without an agent, `npx openhood watch --profile <id> --port <port>` shows the same page: it opens it,
+connects, reads the faults once and then the live values until you press Ctrl+C. If the car stops
+answering it tries again every 5 seconds. It holds the port, so stop it before running other commands.
+
 While the MCP server runs, it also shows what the agent reads at **http://127.0.0.1:4848/watch/**:
 the dials and charts, the fault codes and the raw traffic, the way the website shows them. It opens in
 your browser the first time the agent connects to a car (not when the server starts, since agents start
@@ -110,7 +117,7 @@ is taken.
 
 - It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`, and
   slowly between tool calls from the keep-alive reads. "Lost the car" means the car stopped answering;
-  the agent's next read connects again.
+  the next read connects again.
 - "Refused to connect" in the browser means the MCP server isn't running: the page only exists while
   the agent's session has it. Start the agent, then ask it to connect.
 - It is on this computer only (127.0.0.1) and read-only: the page can't send anything to the car,

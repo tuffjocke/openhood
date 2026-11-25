@@ -196,8 +196,8 @@ export const SV: Record<string, string> = {
     "Den här sidan visar vad en AI-agent läser av med Openhood. Öppna den från länken som agenten ger dig.",
   "The car didn’t answer the agent:": "Bilen svarade inte agenten:",
   "Lost the car": "Tappade bilen",
-  "The car stopped answering. The agent connects again at its next read.":
-    "Bilen slutade svara. Agenten ansluter igen nästa gång den läser.",
+  "The car stopped answering. Openhood connects again at the next read.":
+    "Bilen slutade svara. Openhood ansluter igen vid nästa avläsning.",
   "The agent hasn’t connected to a car yet.": "Agenten har inte anslutit till någon bil än.",
   "The agent hasn’t read the fault codes yet.": "Agenten har inte läst felkoderna än.",
 

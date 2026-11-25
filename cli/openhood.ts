@@ -15,6 +15,8 @@
  *           [--adapter-model "Vgate iCar Pro 2S"] [--engine ..] [--notes ..]
  *                                    read the car and add what worked to profiles/car-reports.json
  *                                    (from npm: prints a link to send it in instead)
+ *   watch   --profile <id> [car] [--no-open]
+ *                                    the live view in the browser, no agent needed: reads until Ctrl+C
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio (the flag only in a clone),
  *       [--no-watch] [--no-open]     with a live view at http://127.0.0.1:4848/watch/, opened at the first connect
  *
@@ -24,6 +26,8 @@
 import { CMD, FROM_NPM } from "./command";
 import { serve } from "./mcp";
 import { recordCar, Runtime, UserError, type ConnectOptions } from "./runtime";
+import { watchCar } from "./watch-car";
+import { siteDir } from "./watch-server";
 
 function parse(argv: string[]) {
   const flags: Record<string, string | true> = {};
@@ -39,14 +43,14 @@ function parse(argv: string[]) {
   return { flags, rest };
 }
 
-const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live | request <hex> | record | mcp> [options]
+const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live | request <hex> | record | watch | mcp> [options]
   --profile <id>   e.g. generic-obd2 (see "profiles")
   --port <path>    real hardware, e.g. /dev/ttyUSB0 or COM3; leave out for the simulator
   --adapter kkl|elm327   skip detection
   --elm can|kline  simulator: go through a simulated ELM327
   --seconds <n>    live: keep reading for n seconds
   --no-watch       mcp: no live view in the browser
-  --no-open        mcp: keep the live view, but don't open it at the first connect
+  --no-open        watch, mcp: don't open the live view in the browser by itself
   --make, --model, --year, --engine, --notes   record: the car, names as in profiles/names.ts`;
 
 async function main() {
@@ -60,7 +64,8 @@ async function main() {
     return serve({ unsafe, watch: flags["no-watch"] !== true, open: flags["no-open"] !== true });
   }
 
-  const rt = new Runtime();
+  // watch keeps one connection for a long time: keep its session open and connect again if it drops.
+  const rt = new Runtime({ keepAlive: command === "watch" });
   const print = (x: unknown) => console.log(typeof x === "string" ? x : JSON.stringify(x, null, 2));
   const connectOpts = (): ConnectOptions => {
     if (typeof flags.profile !== "string") throw new UserError(`Add --profile <id>. See: ${CMD} profiles`);
@@ -90,6 +95,16 @@ async function main() {
             ? "Added to profiles/car-reports.json. Send it in with a pull request so others with this car know what works."
             : `Send it in so others with this car know what works (needs a GitHub account):\n${r.sendUrl}`,
         );
+        return;
+      }
+      case "watch": {
+        const stop = new AbortController();
+        process.once("SIGINT", () => {
+          console.error("Stopping…");
+          stop.abort();
+          process.once("SIGINT", () => process.exit(130)); // a second Ctrl+C doesn't wait
+        });
+        await watchCar(rt, connectOpts(), { dir: siteDir(FROM_NPM), open: flags["no-open"] !== true, signal: stop.signal, say: (l) => console.error(l) });
         return;
       }
       case "faults":
