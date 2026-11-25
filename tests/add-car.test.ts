@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { ADD_CAR_PROMPT, addCarPrompt, readCarPrompt, requestCarUrl } from "@/core/add-car";
+import { ADD_CAR_PROMPT, addCarPrompt, explainProblemPrompt, readCarPrompt, requestCarUrl } from "@/core/add-car";
 
 describe("add your car prompt", () => {
   it("matches the copy in docs/adding-a-vehicle.md", () => {
@@ -28,5 +28,28 @@ describe("add your car prompt", () => {
     assert.ok(readCarPrompt("").includes("ask me which car"));
     assert.ok(!readCarPrompt("1997 Volvo 850").includes("MCP server"));
     assert.ok(readCarPrompt("1997 Volvo 850", true).includes("MCP server"), "untried cars ask the agent to dig in");
+  });
+
+  it("hands over what went wrong on the website", () => {
+    const p = readCarPrompt("2002 Land Rover Defender", true, { message: "The car didn't answer.", profile: "land-rover-td5" });
+    assert.ok(p.includes(`It said: "The car didn't answer."`));
+    assert.ok(p.includes("the profile land-rover-td5"));
+    assert.ok(p.includes("npx -y openhood mcp"));
+    assert.ok(!p.includes("Nobody has read this kind of car"), "one ask to dig in, not two");
+    // Claude Code links take up to 5,000 characters; the desktop app more.
+    assert.ok(p.length < 5000, `${p.length} characters`);
+  });
+
+  it("gives a phone AI what happened and the traffic, no commands", () => {
+    const p = explainProblemPrompt("2006 Volvo V70", {
+      message: "No answer from the car.",
+      profile: "generic-obd2",
+      adapter: "ELM327 adapter, ISO 15765-4",
+      traffic: ["    0.120 -> 0100", "    1.120 <- NO DATA"],
+    });
+    assert.ok(p.includes(`What it said: "No answer from the car."`));
+    assert.ok(p.includes("<- NO DATA"));
+    assert.ok(p.includes("Connected through: ELM327 adapter"));
+    assert.ok(!p.includes("npx"), "a phone can't run commands");
   });
 });

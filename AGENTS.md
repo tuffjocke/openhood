@@ -93,15 +93,19 @@ components/FirstRun       landing until the first connection, like a product pag
                           "Faults" (the demo's fault, opened) and "Any car". Black parts swap the colour tokens,
                           so components need no dark styles of their own. The start page only asks for the car,
                           then "Continue" goes to /read (app/read, same Dashboard with page="read"): the car line
-                          with "Change car", then numbered steps, the current one open: 1 "Get the cable" or adapter (for an ELM327
-                          "I have a USB one" / "I have a Bluetooth one", else "I have one", plus Buy on Amazon;
-                          remembered, then folds to a done line), 2 "Plug in, ignition on" with two ways side by
-                          side: ask an AI first (the main button, copies the agent message), or read the codes here
-                          (Bluetooth tries Web Bluetooth, with paired-in-settings as the fallback). For a car's own
-                          profile with no working car report yet, the message asks the agent to use the MCP server,
-                          dig into what fails or is missing, and send it in. /read
+                          with "Change car", then one step at a time in one card, each with a drawing
+                          (components/landing/Art): "You need a KKL cable" (or ELM327: "I have a USB one" /
+                          "I have a Bluetooth one") with Buy on Amazon, remembered; then "Plug it in. Turn the key
+                          to II." and one Start button that reads the car. If a real read goes wrong (no answer,
+                          lost, no faults or readings back), the card (or a box beside the faults) offers one
+                          button, AgentButton: pick the AI app once (Claude, Codex, Cursor, remembered) and it opens
+                          with the message typed in, or copy it for another AI. No vendor is the default. The
+                          message says what failed and asks the agent to find out why with the MCP server. On a
+                          phone it goes to the share sheet with what happened and the traffic, for any AI app to
+                          explain. The start page warns before the car is picked when the browser can't read a car.
+                          /read
                           without a saved car goes back to the start page
-components/landing/       AgentButton (copies the ready-made request for a coding agent), EngineLight
+components/landing/       AgentButton (opens the AI desktop app with the ready-made request), Art, EngineLight
 components/InfoPage       shell for the plain help pages: app/adapters (short docs/hardware.md), app/disclaimer (README's)
 components/Dial           round dial for the live screen: fine scale round the edge, short needle on the ring, value
                           in the middle, optional battery bar in the big dial's bottom gap
@@ -283,3 +287,13 @@ Follow docs/adding-a-vehicle.md. In short:
   the first `connect` (once, not if a page is open, never at start), `--no-open` keeps it closed.
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -26,7 +26,7 @@ export interface ReportInput {
 }
 
 /** Traffic as text. Requests that identify the car (VIN, serial numbers) and their answers are hidden. */
-function trafficLines(traffic: TrafficEvent[]) {
+export function trafficLines(traffic: TrafficEvent[]) {
   let hide = false;
   return traffic.map((e) => {
     if (e.dir === "tx") hide = !!e.private;

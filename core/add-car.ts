@@ -59,17 +59,50 @@ export function requestCarUrl(c: CarDetails): string {
   return `${REPO}/issues/new?${q}`;
 }
 
+/** What went wrong when the website tried to read the car, for the agent to pick up from. */
+export interface ReadProblem {
+  /** What the person saw, in the site's words. */
+  message: string;
+  /** The profile the site read with. */
+  profile: string;
+  /** How it connected, when it got that far ("ELM327 adapter, ISO 15765-4 (CAN 11/500)"). */
+  adapter?: string;
+  /** The last traffic with the car, with anything that identifies it hidden (core/report.ts). */
+  traffic?: string[];
+}
+
 /**
- * The message behind "Or let an AI agent read it": a coding agent on the person's own computer
- * (Claude or Codex desktop app) sets Openhood up and reads the car, so the person never needs
- * a terminal. Uses the CLI, which works without registering the MCP server.
+ * For an AI app on a phone, picked from the share sheet: it can't reach the adapter or run
+ * anything, so it gets what happened and the traffic, and explains it.
  */
+export function explainProblemPrompt(car: string, problem: ReadProblem): string {
+  const traffic = problem.traffic?.length ? `\n\nLast traffic with the car (-> sent, <- answered):\n${problem.traffic.join("\n")}` : "";
+  return `I tried to read my car's fault codes with Openhood (${REPO}), a free fault code reader in the browser, and it went wrong.
+
+Car: ${car || "(not given)"}
+Openhood profile: ${problem.profile}${problem.adapter ? `\nConnected through: ${problem.adapter}` : ""}
+What it said: "${problem.message}"${traffic}
+
+I am not a mechanic or a programmer. In plain words: what most likely went wrong, and what should I try first (the adapter, the plug, the ignition, a setting)? If it looks like a problem in Openhood itself, help me write a short GitHub issue about it.`;
+}
+
 /**
+ * The message behind "Ask Claude": a coding agent on the person's own computer (Claude or Codex
+ * desktop app) sets Openhood up and reads the car, so the person never needs a terminal. Uses the
+ * CLI, which works without registering the MCP server.
+ *
  * `untried`: the car's own profile hasn't read a real car yet. The agent is then asked to check it
  * properly with the MCP server or the traffic log, since it's the first to try.
+ * `problem`: the website tried and failed. The agent is asked to find out why with the MCP server.
  */
-export function readCarPrompt(car: string, untried = false): string {
-  const first = untried
+export function readCarPrompt(car: string, untried = false, problem?: ReadProblem): string {
+  const failed = problem
+    ? `
+I already tried reading it on the Openhood website and it went wrong. The site read it with the profile ${problem.profile}${problem.adapter ? ` through: ${problem.adapter}` : ""}. It said: "${problem.message}"
+Find out why. Openhood has an MCP server (command: npx -y openhood mcp) with tools to connect, read faults and live data, and see the raw traffic: add it if you can, otherwise use the commands with --traffic. Start with that profile. Work out whether it's the adapter, the plug, the ignition or the profile, tell me in plain words what to do, and offer to send what you found in as a GitHub issue. If the adapter's port is busy, ask me to close the Openhood page in the browser.
+`
+    : "";
+  const first = untried && !problem
     ? `
 Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. If you can add an MCP server, Openhood has one (command: npx -y openhood mcp) that lets you connect, read faults and live data, and see the raw traffic yourself; otherwise use the commands with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and tell me what you found. Offer to send it in as a GitHub issue so the profile gets better.
 `
@@ -86,7 +119,7 @@ I am not a programmer. Do the technical steps yourself, one at a time, and tell 
 
 5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npx -y openhood record --profile <id> --port <port> --make <make> --model <model> --year <year> --adapter-model "<what my adapter is sold as, ask me>". It only keeps the car, the adapter, the connection and whether it worked: no VIN, no fault codes. It prints a link to a ready-made GitHub issue: give it to me and help me send it if I want to (it needs a GitHub account).
 
-${first}
+${failed}${first}
 Rules: read only. Never clear codes or send anything that changes the car without asking me first. The commands are described in docs/cli.md in the repository.
 
 My car is ${car || "(ask me which car it is)"}.`;
