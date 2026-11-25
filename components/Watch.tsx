@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { guideAt, type CarCheck } from "@/core/checks";
 import type { Values } from "@/core/profile";
 import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units";
 import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
-import { emptyWatchState, WATCH_EVENTS, type WatchEvent, type WatchState } from "@/core/watch";
+import { emptyWatchState, WATCH_EVENTS, type WatchCheck, type WatchEvent, type WatchState } from "@/core/watch";
 import { getProfile } from "@/profiles";
+import { Dial } from "./Dial";
 import { dialLayout, DialRow } from "./Dials";
 import { FaultPanel } from "./FaultPanel";
 import { EngineLight } from "./landing/EngineLight";
@@ -36,6 +38,8 @@ export function Watch() {
   const [now, setNow] = useState(0);
   const [allReadings, setAllReadings] = useState(false);
   const history = useRef<Record<string, Point[]>>({});
+  /** When the running check started, on this page's clock. */
+  const checkStart = useRef(0);
   const traffic = useRef<string[]>([]);
   const log = useRef<HTMLPreElement>(null);
   /** Keep the traffic log at its newest line, unless the person scrolled up to read. */
@@ -51,6 +55,8 @@ export function Watch() {
         // A new connection starts the charts over; the same one (page reconnecting) keeps them.
         setView((old) => {
           if (old.profileId !== e.state.profileId || e.state.status === "connecting") history.current = {};
+          const c = e.state.check;
+          if (c && !c.findings && (old.check?.id !== c.id || old.check.findings)) checkStart.current = performance.now() - c.elapsedMs;
           return e.state;
         });
         traffic.current = e.traffic.slice(-LOG_LINES);
@@ -102,6 +108,39 @@ export function Watch() {
     </span>
   );
   const linkLine = view.adapter ? t(LINK_LINES[view.adapter] ?? view.adapter) : "";
+  const checkDef = view.check ? profile?.checks?.find((c) => c.id === view.check!.id) : undefined;
+
+  // While a check runs, the page is only the check: what to do is the one thing on screen.
+  if (view.check && !view.check.findings && profile && shown) {
+    return (
+      <main className="shell dense check-focus">
+        {stream === "lost" && (
+          <p className="notice" role="alert">
+            {t("Lost the agent. Is it still running? This page will pick it up again by itself.")}
+          </p>
+        )}
+        {view.status === "lost" && (
+          <p className="notice" role="alert">
+            {t("The car stopped answering. Openhood connects again at the next read.")}
+          </p>
+        )}
+        <CheckFocus
+          check={view.check}
+          def={checkDef}
+          profile={shown}
+          seconds={(now - checkStart.current) / 1000}
+          latest={latest}
+          toShown={(k, v) => show({ [k]: v })[k]}
+          unavailable={unavailable}
+          points={(key) => {
+            const h = history.current[key] ?? [];
+            return units === "metric" ? h : h.map((p) => ({ t: p.t, v: show({ [key]: p.v })[key] }));
+          }}
+          now={now}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="shell dense">
@@ -128,6 +167,10 @@ export function Watch() {
         <p className="notice" role="alert">
           {t("The car didn’t answer the agent:")} {view.error}
         </p>
+      )}
+
+      {view.check && profile && (
+        <CheckCard check={view.check} />
       )}
 
       {!profile || !shown ? (
@@ -211,6 +254,105 @@ export function Watch() {
         </span>
       </footer>
     </main>
+  );
+}
+
+/** A finished test check (core/checks.ts) over the binnacle: what it found, one dot per finding. */
+function CheckCard({ check }: { check: WatchCheck }) {
+  const t = useT();
+  return (
+    <section className="check" aria-live="polite">
+      <p className="check-head">
+        <span className="check-title">{t(check.title)}</span>
+        <span className="check-time">{check.findings && t("Done")}</span>
+      </p>
+      {check.findings ? (
+        <ul className="check-findings">
+          {check.findings.map((f) => (
+            <li key={f.text} className={`verdict-${f.verdict}`}>
+              {f.text}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="check-ask">{check.ask}</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * A running test check, as the whole page: what to do and the time left, then the check's readings
+ * on the same instruments as the live screen (dials stay dials, charts stay charts). With a pacer
+ * (the rev test) the cue sits over the dial and a yellow mark on the dial shows where to take it. The
+ * pacer runs on this page's clock from when the check started, so it keeps time between readings.
+ */
+function CheckFocus({
+  check,
+  def,
+  profile,
+  seconds,
+  latest,
+  toShown,
+  unavailable,
+  points,
+  now,
+}: {
+  check: WatchCheck;
+  def?: CarCheck;
+  /** In the person's units. */
+  profile: NonNullable<ReturnType<typeof getProfile>>;
+  seconds: number;
+  latest: Values;
+  /** A metric value in the person's units (the pacer's targets are metric, like the profile). */
+  toShown: (key: string, v: number) => number;
+  unavailable: Set<string>;
+  points: (key: string) => Point[];
+  now: number;
+}) {
+  const t = useT();
+  const left = Math.max(0, Math.ceil(check.seconds - seconds));
+  const guide = def?.guide;
+  const cue = guide && seconds < check.seconds ? guideAt(guide, Math.max(0, seconds)) : null;
+  const layout = dialLayout(profile);
+  const watch = def?.watch ?? [];
+  const dials = layout.dials.filter((d) => watch.includes(d.channel.key));
+  // Everything else it watches as a chart, the battery too (on the live screen it's a bar in a dial).
+  const charts = watch.flatMap((k) => (dials.some((d) => d.channel.key === k) ? [] : profile.channels.filter((c) => c.key === k)));
+  return (
+    <section className="check" aria-live="polite">
+      <p className="check-head">
+        <span className="check-title">{t(check.title)}</span>
+        <span className="check-time">{check.seconds > 0 ? t("{n} s left", { n: left }) : ""}</span>
+      </p>
+      <p className="check-ask">{check.ask}</p>
+      {(dials.length > 0 || charts.length > 0) && (
+        <div className="binnacle check-instruments">
+          {cue && <p className={`check-cue${cue.up ? " up" : ""}`}>{t(cue.text)}</p>}
+          {dials.length > 0 && (
+            <div className="dials">
+              {dials.map(({ channel }) => (
+                <Dial
+                  key={channel.key}
+                  channel={channel}
+                  big={channel.key === guide?.channel || dials.length === 1}
+                  value={latest[channel.key]}
+                  unavailable={unavailable.has(channel.key)}
+                  target={cue && channel.key === guide?.channel ? toShown(channel.key, cue.target) : undefined}
+                />
+              ))}
+            </div>
+          )}
+          {charts.length > 0 && (
+            <div className="charts all">
+              {charts.map((c) => (
+                <LiveChart key={c.key} channel={c} points={points(c.key)} now={now} value={latest[c.key]} unavailable={unavailable.has(c.key)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

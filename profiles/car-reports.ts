@@ -6,7 +6,8 @@
  * Deliberately nothing personal: no VIN, no fault codes, no location. tests/car-reports.test.ts
  * checks every entry: names from profiles/names.ts, a known profile, a real-looking year.
  */
-import type { AdapterKind } from "@/core/profile";
+import type { Verdict } from "@/core/checks";
+import type { AdapterKind, VehicleProfile } from "@/core/profile";
 import data from "./car-reports.json";
 
 export interface CarReport {
@@ -27,6 +28,8 @@ export interface CarReport {
   values?: number;
   /** YYYY-MM-DD */
   date: string;
+  /** Openhood's test (core/checks.ts), when it was run: each check's outcome, the worst of its findings. */
+  checks?: Record<string, Verdict>;
   notes?: string;
 }
 
@@ -52,4 +55,13 @@ export function summarise(reports: CarReport[]): string | null {
   return `Read by ${who(worked.length)} (${span})${adapters.length ? `, with ${adapters.join(" or ")}` : ""}.${
     worked.length < reports.length ? ` ${reports.length - worked.length} more had trouble.` : ""
   }`;
+}
+
+/**
+ * Whether a car should get Openhood's test (core/checks.ts) first: no report from these cars has run
+ * it with this profile, or the profile has readings nobody has verified on a car. Running it is how
+ * readings get verified. `reports`: the car's own (reportsFor) or, knowing only the profile, all.
+ */
+export function needsTest(profile: VehicleProfile, reports: CarReport[] = CAR_REPORTS): boolean {
+  return profile.channels.some((c) => c.confidence !== "verified") || !reports.some((r) => r.profile === profile.id && r.checks);
 }

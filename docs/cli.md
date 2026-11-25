@@ -100,6 +100,7 @@ The agent gets these tools:
 | `read_live` | Every value once, or min, max and last over a few seconds |
 | `request` | One raw read request, e.g. `21 09`, and the answers |
 | `traffic` | The last lines of raw traffic |
+| `list_checks`, `run_check`, `test_report` | Test the car step by step, shown on the live view, and make a test report ([testing-a-car.md](testing-a-car.md)) |
 | `clear_faults` | Clear codes, only with `confirm: true` after the person said yes |
 | `explain_code` | A code in plain words, no car needed |
 

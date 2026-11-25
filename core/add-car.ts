@@ -91,8 +91,8 @@ I am not a mechanic or a programmer. In plain words: what most likely went wrong
  * desktop app) sets Openhood up and reads the car, so the person never needs a terminal. Uses the
  * CLI, which works without registering the MCP server.
  *
- * `untried`: the car's own profile hasn't read a real car yet. The agent is then asked to check it
- * properly with the MCP server or the traffic log, since it's the first to try.
+ * `untried`: Openhood isn't proven on this car (profiles/car-reports.ts `needsTest`). The agent is then
+ * asked to run Openhood's test with the person first, through the MCP server.
  * `problem`: the website tried and failed. The agent is asked to find out why with the MCP server.
  */
 export function readCarPrompt(car: string, untried = false, problem?: ReadProblem): string {
@@ -107,7 +107,7 @@ ${traffic}Find out why. Openhood has an MCP server (command: npx -y openhood mcp
     : "";
   const first = untried && !problem
     ? `
-Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. If you can add an MCP server (it loads when a session starts), Openhood has one (command: npx -y openhood mcp) that lets you connect, read faults and live data, and see the raw traffic yourself; otherwise use the commands with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and tell me what you found. Offer to send it in as a GitHub issue so the profile gets better.
+Openhood isn't proven on this car yet: nobody has run its test on one, or some of its readings aren't verified. So before the fault codes, run Openhood's test with me. It takes about ten minutes with the car parked, tells much more than the codes, and is how those readings get verified. It needs Openhood's MCP server (command: npx -y openhood mcp; one added now only loads in a new session): connect with it and follow what connect says (list_checks, then run_check one check at a time, then test_report). Its live view in my browser shows me what to do during each check. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and offer to send what you found in as a GitHub issue.
 `
     : "";
   return `Help me read my car's fault codes with Openhood, an open-source car diagnostics tool:

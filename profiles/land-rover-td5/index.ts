@@ -1,5 +1,6 @@
 import { NegativeResponse } from "@/core/kwp2000/frame";
 import type { VehicleProfile } from "@/core/profile";
+import { checks } from "./checks";
 import { channels, groups } from "./data";
 import { faults } from "./faults";
 import { td5Key } from "./keygen";
@@ -70,5 +71,6 @@ export const landRoverTd5: VehicleProfile = {
   ],
   slowGroups: ["ambient"],
   faults,
+  checks,
   simulator: createTd5Simulator,
 };

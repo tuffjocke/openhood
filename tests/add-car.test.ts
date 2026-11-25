@@ -27,7 +27,8 @@ describe("add your car prompt", () => {
     assert.ok(p.endsWith("My car is 1999 Land Rover Defender."));
     assert.ok(readCarPrompt("").includes("ask me which car"));
     assert.ok(!readCarPrompt("1997 Volvo 850").includes("MCP server"));
-    assert.ok(readCarPrompt("1997 Volvo 850", true).includes("MCP server"), "untried cars ask the agent to dig in");
+    assert.ok(readCarPrompt("1997 Volvo 850", true).includes("MCP server"), "unproven cars ask the agent to dig in");
+    assert.ok(readCarPrompt("1997 Volvo 850", true).includes("run Openhood's test with me"), "with the test first");
   });
 
   it("hands over what went wrong on the website", () => {
@@ -35,7 +36,7 @@ describe("add your car prompt", () => {
     assert.ok(p.includes(`It said: "The car didn't answer."`));
     assert.ok(p.includes("the profile land-rover-td5"));
     assert.ok(p.includes("npx -y openhood mcp"));
-    assert.ok(!p.includes("Nobody has read this kind of car"), "one ask to dig in, not two");
+    assert.ok(!p.includes("run Openhood's test with me"), "one ask to dig in, not two");
     // Claude Code links take up to 5,000 characters; the desktop app more.
     assert.ok(p.length < 5000, `${p.length} characters`);
 

@@ -16,6 +16,11 @@ describe("car reports", () => {
       assert.ok(["kkl", "elm327"].includes(r.adapter), `${where}: adapter`);
       assert.ok(["worked", "partly", "failed"].includes(r.result), `${where}: result`);
       assert.match(r.date, /^\d{4}-\d{2}-\d{2}$/, `${where}: date`);
+      if (r.checks !== undefined)
+        for (const [id, v] of Object.entries(r.checks)) {
+          assert.match(id, /^[a-z][a-z0-9-]*$/, `${where}: check id ${id}`);
+          assert.ok(["ok", "look", "unclear"].includes(v), `${where}: check ${id} outcome`);
+        }
       if (r.adapterModel !== undefined) assert.match(r.adapterModel, /^[\p{L}\p{N} .+-]{2,60}$/u, `${where}: adapterModel`);
       // Notes are read by people and by AI agents working in the repo: keep them short and plain.
       if (r.notes !== undefined) {

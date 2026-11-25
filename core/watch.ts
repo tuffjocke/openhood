@@ -3,6 +3,7 @@
  * (components/Watch.tsx) while an agent reads the car. One way only, from the car to the page:
  * the page can't ask the car anything. Both sides ship in the same npm package, so they match.
  */
+import type { Finding } from "./checks";
 import type { Fault, Readiness, Values } from "./profile";
 
 /** Where the page gets the stream, on the same origin it was served from. */
@@ -29,6 +30,21 @@ export interface WatchState {
   faults: Fault[] | null;
   pending: Fault[] | null;
   readiness: Readiness | null;
+  /** The test check the agent is running (core/checks.ts), or null. */
+  check: WatchCheck | null;
+}
+
+/** A check on the live view: what the person should do, and once done, what it found. */
+export interface WatchCheck {
+  /** The check's id in the profile's `checks`; the page finds its pacer there. */
+  id: string;
+  title: string;
+  ask: string;
+  seconds: number;
+  /** How far into the check it was when this was sent, so a page can run the pacer itself. */
+  elapsedMs: number;
+  /** null while it runs. */
+  findings: Finding[] | null;
 }
 
 export type WatchEvent =
@@ -48,4 +64,5 @@ export const emptyWatchState = (): WatchState => ({
   faults: null,
   pending: null,
   readiness: null,
+  check: null,
 });

@@ -17,7 +17,12 @@ Values marked confidence "guess" or "community" are not proven; compare them wit
 before calling them right. Remind the person to test with the car parked.
 The first connect opens a live view in the person's browser, and connect returns its link (liveView): give the
 link to the person once, in case no window opened, so they can watch the readings, fault codes and traffic. It only shows what you read; read_live with seconds
-makes the dials move.`;
+makes the dials move.
+Openhood's test comes first on cars it isn't proven on: when connect returns test.recommended, say why in plain
+words and, with the person's okay, run it before anything else: list_checks, then each check with run_check one at a
+time (tell the person what to do and wait until they're ready), then test_report with make, model and year. Say the
+safety note before any check with the engine running. The test is how readings get verified, so ask the person whether
+the car's own gauges agree with the readings not verified yet.`;
 
 type Json = Record<string, unknown>;
 
@@ -111,6 +116,54 @@ export const TOOLS: Tool[] = [
     description: "The last lines of raw traffic with the car (requests, answers, wake-up), for debugging a profile.",
     inputSchema: { type: "object", properties: { last: { type: "number", description: "How many lines. Default 60." } } },
     run: (rt, a) => rt.trafficLines(typeof a.last === "number" ? a.last : 60),
+  },
+  {
+    name: "list_checks",
+    description:
+      "The test steps for the connected car (faults, ignition on, idle, rev test, charging, wiggle, warm-up and the car's own), each with what the person does. Read-only. Run them one at a time with run_check.",
+    inputSchema: { type: "object", properties: {} },
+    run: (rt) => rt.listChecks(),
+  },
+  {
+    name: "run_check",
+    description:
+      "Run one test step from list_checks, after telling the person what to do and hearing they're ready. Reads for the step's seconds (up to 120), shows it on the live view (with a pacer for the rev test) and returns findings: ok, look or unclear, each with a plain sentence.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: str('Check id from list_checks, e.g. "idle".'),
+        seconds: { type: "number", description: "Read for less time than the check says, for a quick look. Default: the check's own." },
+      },
+      required: ["id"],
+    },
+    run: (rt, a) => rt.runCheck(String(a.id), { seconds: typeof a.seconds === "number" ? a.seconds : undefined }),
+  },
+  {
+    name: "test_report",
+    description:
+      "What the checks found, with a link to a ready-made public GitHub test report. Fault codes are left out unless includeFaults is true: ask the person first.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        car: str('The car as the person says it, e.g. "Land Rover Defender 1999 2.5 Td5". No VIN or registration.'),
+        make: str('Official make, e.g. "Land Rover". With model and year it also returns carReport: a link adding the car to the shared list, as tested.'),
+        model: str('Model without engine or trim, e.g. "Defender".'),
+        year: { type: "number", description: "Model year." },
+        engine: str('e.g. "2.5 Td5".'),
+        adapterModel: str('What the adapter is sold as, e.g. "VAG-COM KKL 409.1".'),
+        includeFaults: { type: "boolean", description: "Put fault codes in the report. Only if the person agreed." },
+      },
+    },
+    run: (rt, a) =>
+      rt.testReport({
+        car: typeof a.car === "string" ? a.car : undefined,
+        make: typeof a.make === "string" ? a.make : undefined,
+        model: typeof a.model === "string" ? a.model : undefined,
+        year: typeof a.year === "number" ? a.year : undefined,
+        engine: typeof a.engine === "string" ? a.engine : undefined,
+        adapterModel: typeof a.adapterModel === "string" ? a.adapterModel : undefined,
+        includeFaults: a.includeFaults === true,
+      }),
   },
   {
     name: "clear_faults",

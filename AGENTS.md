@@ -60,6 +60,13 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           command.ts (`npx openhood` or `npm run openhood --` in messages)
                           watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
                           watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C)
+core/checks.ts            test checks (#25): what the person does, what to read, how to judge it; standardChecks
+                          builds the usual set from a profile's channel keys. Profiles list theirs in `checks`; the
+                          MCP tools list_checks, run_check, test_report run them, the live view shows only the running
+                          check on the live screen's own dials and charts. It comes first on cars Openhood isn't proven
+                          on (`needsTest` in profiles/car-reports.ts: no test run, or readings not verified): `connect`
+                          recommends it and the AI hand-off asks for it. "Readings not verified yet" is added to every
+                          profile with such readings, and is how they get verified
 core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
 components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, read-only
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
@@ -149,6 +156,7 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/node-serial.test.ts CLI serial transport on serialport's mock: fast init as 0x00 at 360 baud, BREAK fallback
 tests/webserial.test.ts   website serial transport on a strict fake Web Serial port: the same fast init, reopening
+tests/checks.test.ts      test checks: how each judges its readings, the rev pacer, the MCP tools on the Td5
 tests/watch.test.ts       the live view: streams connect, values, faults; read-only, own Host only, no way out
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
@@ -158,7 +166,7 @@ tests/bmw.test.ts         BMW DS2 frames (E46M3-Monitoring's FS_LESEN), fault en
 tests/saab.test.ts        Saab Trionic 7 and 8 known answers (Trionic CAN Flasher's examples) and sessions
 tests/volvo-d2.test.ts    Volvo D2 on CAN known answers (published frames) and a session through the ELM327
 docs/                     adding-a-vehicle.md, hardware.md, cli.md, first-read.md (test plan for a first real
-                          car), architecture.md, k-line-primer.md
+                          car), testing-a-car.md (the checks), architecture.md, k-line-primer.md
 ```
 
 ## Most common task: add or extend a vehicle
