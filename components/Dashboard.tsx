@@ -83,6 +83,10 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   /** The saved car has been read from the browser (the steps page waits for it). */
   const [loaded, setLoaded] = useState(false);
   const [source, setSource] = useState<Source | null>(null);
+  /** Ending the session with the car (StopCommunication) before letting go of the adapter. */
+  const [leaving, setLeaving] = useState(false);
+  /** The last real car was let go of properly: the cable can come out. */
+  const [unplugOk, setUnplugOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [faults, setFaults] = useState<Fault[] | null>(null);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
@@ -172,6 +176,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     setUnavailable(new Set());
     setSource(kind);
     setStatus("connecting");
+    setUnplugOk(false);
     setProblem(null);
     setAdapter(undefined);
     // The demo can't go wrong in a way an AI could help with.
@@ -211,11 +216,18 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   async function disconnect() {
     const wasDemo = source === "simulator";
     setRecording(false);
-    await session.current?.disconnect();
+    setLeaving(true);
+    try {
+      // Ends the session with the car first (the profile's disconnect), so the next connect isn't refused.
+      await session.current?.disconnect();
+    } finally {
+      setLeaving(false);
+    }
     session.current = null;
     setStatus("idle");
     setSource(null);
     if (wasDemo) goHome(); // the demo isn't their car: nothing to keep on screen
+    else setUnplugOk(true);
   }
 
   /** Let go of the adapter so the AI agent can open it, and stay on this screen. */
@@ -491,7 +503,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
             <span className={`status status-${status}`}>
               <i />
               <span className="status-text">
-                {status === "idle" && t("Not connected")}
+                {status === "idle" && t(unplugOk ? "Safe to unplug" : "Not connected")}
                 {status === "connecting" && t("Waking the car…")}
                 {status === "live" && t("Connected")}
                 {status === "error" && t("Stopped")}
@@ -509,8 +521,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 </button>
               </span>
             ) : (
-              <button onClick={disconnect} disabled={status === "connecting"}>
-                {t("Disconnect")}
+              <button className="stop" onClick={disconnect} disabled={status === "connecting" || leaving}>
+                {t(leaving ? "Disconnecting…" : "Disconnect securely")}
               </button>
             )}
             {/* Nothing to log for a profile without live readings. */}
