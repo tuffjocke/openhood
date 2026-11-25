@@ -263,7 +263,8 @@ button.big {
   padding: 14px 24px;
 }
 
-button.rec {
+button.rec,
+button.stop {
   background: var(--falu);
   color: var(--falu-ink);
 }

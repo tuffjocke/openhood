@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { EXAMPLE_CODES, lookupCode, normaliseCode } from "@/profiles";
+import { faultSearchQuery } from "@/core/fault-search";
+import { EXAMPLE_CODES, getProfile, lookupCode, normaliseCode } from "@/profiles";
 
 describe("code lookup", () => {
   it("accepts the ways people type codes", () => {
@@ -29,5 +30,23 @@ describe("typed car names", () => {
     assert.equal(tidyName("i30"), "i30");
     assert.equal(tidyName("e-tron"), "e-tron");
     assert.equal(tidyName("CR-V"), "CR-V");
+  });
+});
+
+describe("Search the web", () => {
+  const td5 = getProfile("land-rover-td5")!;
+  const obd = getProfile("generic-obd2")!;
+
+  it("describes the fault, not just the code", () => {
+    assert.equal(
+      faultSearchQuery("Land Rover Defender 1999 2.5 Td5 diesel", { id: "td5-4.6", code: "4-7", name: "Air flow circuit (Logged Low)" }, td5),
+      "Land Rover Defender 2.5 Td5 diesel 4-7 Air flow circuit Low",
+    );
+    assert.equal(faultSearchQuery("Volvo V70 2003", { id: "P0171", code: "P0171", name: "System too lean (Bank 1)" }, obd), "Volvo V70 P0171 System too lean Bank 1");
+  });
+
+  it("names the engine when the car isn't chosen, and nothing for standard codes", () => {
+    assert.equal(faultSearchQuery("", { id: "td5-25.0", code: "26-1", name: "Road speed missing (Current)" }, td5), "Land Rover Td5 26-1 Road speed missing");
+    assert.equal(faultSearchQuery("", { id: "P0300", code: "P0300", name: "Random/multiple cylinder misfire detected" }, obd), "P0300 Random/multiple cylinder misfire detected");
   });
 });
