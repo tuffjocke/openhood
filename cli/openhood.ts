@@ -1,7 +1,7 @@
 /**
  * Openhood on the command line, and as an MCP server for coding agents.
  *
- *   npx openhood <command> [options]          from the npm package
+ *   npx -y openhood@latest <command> [options]          from the npm package
  *   npm run openhood -- <command> [options]   in a clone of the repository
  *
  * Commands:
@@ -19,6 +19,7 @@
  *                                    the live view in the browser, no agent needed: reads until Ctrl+C
  *   mcp [--unsafe-allow-any-request] run as an MCP server on stdio (the flag only in a clone),
  *       [--no-watch] [--no-open]     with a live view at http://127.0.0.1:4848/watch/, opened at the first connect
+ *       [--no-update-check]          and a check at start that npm has no newer openhood
  *
  * [car] is --port <path> for real hardware (adapter detected, or --adapter kkl|elm327),
  * or nothing for the simulator (--elm can|kline to simulate an ELM327).
@@ -51,6 +52,7 @@ const USAGE = `Usage: ${CMD} <profiles | ports | explain <code> | faults | live 
   --seconds <n>    live: keep reading for n seconds
   --no-watch       mcp: no live view in the browser
   --no-open        watch, mcp: don't open the live view in the browser by itself
+  --no-update-check  mcp: don't ask npm whether a newer openhood is out
   --make, --model, --year, --engine, --notes   record: the car, names as in profiles/names.ts`;
 
 async function main() {
@@ -61,7 +63,7 @@ async function main() {
     // Lifting the read-only limit is for maintainers working in a clone, never for the published package.
     if (unsafe && FROM_NPM)
       throw new UserError("--unsafe-allow-any-request isn't available in the npm package. Use a clone of the repository.");
-    return serve({ unsafe, watch: flags["no-watch"] !== true, open: flags["no-open"] !== true });
+    return serve({ unsafe, watch: flags["no-watch"] !== true, open: flags["no-open"] !== true, updateCheck: flags["no-update-check"] !== true });
   }
 
   // watch keeps one connection for a long time: keep its session open and connect again if it drops.

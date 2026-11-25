@@ -13,11 +13,11 @@ Do this now so the laptop is sorted before you sit in the car.
 
 1. Install [Node.js](https://nodejs.org) 20 or newer. That's all: `npx` fetches Openhood itself.
    (Working on a profile? Clone the repository, `npm install`, and write `npm run openhood --`
-   wherever this page says `npx openhood`.)
+   wherever this page says `npx -y openhood@latest`.)
 2. Read the demo car. No adapter needed:
 
    ```
-   npx openhood faults --profile generic-obd2
+   npx -y openhood@latest faults --profile generic-obd2
    ```
 
    **Good:** it prints made-up codes such as P0171 and P0420, each with a plain-words explanation.
@@ -38,14 +38,14 @@ Work down this list and stop at the first step that fails.
 
 | Step | Do this | Good looks like |
 | --- | --- | --- |
-| 1 | `npx openhood ports` | Your adapter is in the list. Note its name, like `COM3` or `/dev/ttyUSB0`. |
-| 2 | `npx openhood faults --profile <profile> --port <name> --traffic` | It says what it connected through, then lists stored codes, or none. |
-| 3 | `npx openhood live --profile <profile> --port <name> --seconds 10` | Numbers that make sense: battery near 12 V, coolant near outside temperature on a cold engine, 0 rpm. |
+| 1 | `npx -y openhood@latest ports` | Your adapter is in the list. Note its name, like `COM3` or `/dev/ttyUSB0`. |
+| 2 | `npx -y openhood@latest faults --profile <profile> --port <name> --traffic` | It says what it connected through, then lists stored codes, or none. |
+| 3 | `npx -y openhood@latest live --profile <profile> --port <name> --seconds 10` | Numbers that make sense: battery near 12 V, coolant near outside temperature on a cold engine, 0 rpm. |
 | 4 | Start the engine, run step 3 again | About 700 to 900 rpm at idle, battery 13.5 to 14.5 V. |
 | 5 | Website: pick the car, **Read my car** | The same codes and readings as steps 2 to 4. |
 | 6 | Website: answer **Did this match your car?** | Yes adds the car to the shared list. No sends a test report. |
 
-Which `<profile>`: `npx openhood profiles` lists them with the cars they cover and the adapters they
+Which `<profile>`: `npx -y openhood@latest profiles` lists them with the cars they cover and the adapters they
 run on. The website picks the same one when you choose your car. No profile for your car? Use
 `generic-obd2` with an ELM327-type adapter: standard codes on most cars from about 2001 (petrol) or
 2004 (diesel) in Europe, 1996 in the US.
@@ -55,7 +55,7 @@ run on. The website picks the same one when you choose your car. No profile for 
 Don't retry more than twice. Save what happened and move on:
 
 ```
-npx openhood faults --profile <profile> --port <name> --traffic > first-read.txt 2>&1
+npx -y openhood@latest faults --profile <profile> --port <name> --traffic > first-read.txt 2>&1
 ```
 
 Then send `first-read.txt` together with:

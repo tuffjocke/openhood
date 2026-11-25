@@ -22,7 +22,7 @@ describe("add your car prompt", () => {
 
   it("gives the agent working commands and the car", () => {
     const p = readCarPrompt("1999 Land Rover Defender");
-    for (const cmd of ["npx -y openhood ports", "npx -y openhood profiles", "npx -y openhood faults --profile", "npx -y openhood record"])
+    for (const cmd of ["npx -y openhood@latest ports", "npx -y openhood@latest profiles", "npx -y openhood@latest faults --profile", "npx -y openhood@latest record"])
       assert.ok(p.includes(cmd), cmd);
     assert.ok(p.endsWith("My car is 1999 Land Rover Defender."));
     assert.ok(readCarPrompt("").includes("ask me which car"));
@@ -35,7 +35,7 @@ describe("add your car prompt", () => {
     const p = readCarPrompt("2002 Land Rover Defender", true, { message: "The car didn't answer.", profile: "land-rover-td5" });
     assert.ok(p.includes(`It said: "The car didn't answer."`));
     assert.ok(p.includes("the profile land-rover-td5"));
-    assert.ok(p.includes("npx -y openhood mcp"));
+    assert.ok(p.includes("npx -y openhood@latest mcp"));
     assert.ok(!p.includes("run Openhood's test with me"), "one ask to dig in, not two");
     // Claude Code links take up to 5,000 characters; the desktop app more.
     assert.ok(p.length < 5000, `${p.length} characters`);

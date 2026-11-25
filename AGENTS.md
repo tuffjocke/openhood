@@ -57,7 +57,7 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
   _template/              copy this to start a new profile (not registered)
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node),
-                          command.ts (`npx openhood` or `npm run openhood --` in messages)
+                          command.ts (`npx -y openhood@latest` or `npm run openhood --` in messages)
                           watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
                           watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C)
 core/checks.ts            test checks (#25): what the person does, what to read, how to judge it; standardChecks
@@ -70,7 +70,7 @@ core/checks.ts            test checks (#25): what the person does, what to read,
 core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
 components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, read-only
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
-                          every profile, only serialport at runtime. Agents and people run `npx -y openhood ...`;
+                          every profile, only serialport at runtime. Agents and people run `npx -y openhood@latest ...`;
                           .github/workflows/npm.yml stages it when package.json's version is new on npm (bump the
                           version, push to main), and a maintainer approves it with 2FA on npmjs.com
 core/safety.ts            which raw requests tools may send: read services only
@@ -211,6 +211,8 @@ Follow docs/adding-a-vehicle.md. In short:
   Don't widen that list to include anything that writes, unlocks or programs, or reads raw memory (0x23).
 - **No backend, no database, no tracking.** Everything stays in the user's browser; sharing happens
   only when the user chooses to (export file, GitHub issue). Discuss in an issue before changing that.
+  The one outside request: the MCP server from npm asks registry.npmjs.org for openhood's latest version
+  number at start (`cli/update-check.ts`, nothing sent, `--no-update-check`). Commands use `npx -y openhood@latest`.
 - **Out of scope:** immobiliser, key programming, odometer changes, emissions defeat. Do not add them.
 - Every profile must have a working simulator. The app and tests must work with no hardware.
 - TypeScript strict, no `any`. No new runtime dependencies without a good reason.

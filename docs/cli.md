@@ -9,12 +9,12 @@ The website does everything most people need. This is for two other jobs:
 It runs the same code as the website (`core/` and `profiles/`), with Node's serial port library instead
 of Web Serial. Two ways to run it:
 
-- **From npm**, nothing to install but Node.js: `npx openhood <command>`. The package is one file with
+- **From npm**, nothing to install but Node.js: `npx -y openhood@latest <command>`. The package is one file with
   every car profile in it, plus serialport, about 4 MB in all.
 - **From a clone** of the repository, after `npm install`: `npm run openhood -- <command>`. Use this
   when you work on a profile; `record` then writes into the repository's list of cars.
 
-The examples below use `npx openhood`; in a clone, write `npm run openhood --` instead.
+The examples below use `npx -y openhood@latest`; in a clone, write `npm run openhood --` instead.
 
 ## No terminal: let an agent do it
 
@@ -31,20 +31,20 @@ On the website, pick your car and press **Or let an AI agent read it** to copy t
 First time on a real car? Follow [first-read.md](first-read.md).
 
 ```
-npx openhood profiles                 # vehicle profiles and which adapters they run on
-npx openhood ports                    # USB adapters, KKL cables, paired Bluetooth adapters
-npx openhood explain P0171            # a fault code in plain words, no car needed
+npx -y openhood@latest profiles                 # vehicle profiles and which adapters they run on
+npx -y openhood@latest ports                    # USB adapters, KKL cables, paired Bluetooth adapters
+npx -y openhood@latest explain P0171            # a fault code in plain words, no car needed
 
-npx openhood faults --profile generic-obd2 --port /dev/ttyUSB0
-npx openhood live   --profile generic-obd2 --port COM3 --seconds 5
-npx openhood request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
+npx -y openhood@latest faults --profile generic-obd2 --port /dev/ttyUSB0
+npx -y openhood@latest live   --profile generic-obd2 --port COM3 --seconds 5
+npx -y openhood@latest request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
 
 # the live view in your browser, no agent or MCP setup: dials, charts, faults, traffic until Ctrl+C
-npx openhood watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI
+npx -y openhood@latest watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI
 
 # read the car and share what worked (from npm: prints a link to a ready-made GitHub issue;
 # in a clone: adds it to profiles/car-reports.json for a pull request)
-npx openhood record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
+npx -y openhood@latest record --profile generic-obd2 --port /dev/ttyUSB0 --make Volvo --model V70 --year 2003 \
   --adapter-model "Vgate iCar Pro 2S"
 ```
 
@@ -72,14 +72,19 @@ picks the same car ("Read by 3 people (2002 to 2004), with an ELM327 adapter").
 ## As an MCP server for coding agents
 
 Any agent (Claude Code, Claude Desktop, Codex, Cursor): add a stdio MCP server running
-`npx -y openhood mcp`. For Claude Code:
+`npx -y openhood@latest mcp`. For Claude Code:
 
 ```
-claude mcp add openhood -- npx -y openhood mcp
+claude mcp add openhood -- npx -y openhood@latest mcp
 ```
 
 In a clone of the repository, Claude Code also picks it up from `.mcp.json` (the clone's own code):
 start `claude` in the repo folder and approve the "openhood" server when asked.
+
+Keep `@latest` in the command: without it npx keeps running whatever copy it found first (a global
+install, its cache), however old. The server also asks the npm registry for the latest version number
+when it starts (nothing else is sent; `--no-update-check` turns it off), and if a newer one is out,
+`connect` tells the agent, so it can offer to switch. Offline at the car, there's simply no notice.
 
 Add it **before** starting the agent: agents load MCP servers when a session starts, so one added in
 the middle of a session only shows up in the next. The commands above work without it.
@@ -106,7 +111,7 @@ The agent gets these tools:
 
 ### Live view: watch the agent in your browser
 
-Without an agent, `npx openhood watch --profile <id> --port <port>` shows the same page: it opens it,
+Without an agent, `npx -y openhood@latest watch --profile <id> --port <port>` shows the same page: it opens it,
 connects, reads the faults once and then the live values until you press Ctrl+C. If the car stops
 answering it tries again every 5 seconds. It holds the port, so stop it before running other commands.
 
@@ -125,7 +130,7 @@ is taken.
   and the server answers only requests addressed to itself, with no access for other websites.
 - The page is the website's own build, shipped in the npm package. In a clone, run
   `npm run build:npm` once to build it.
-- Keep it but don't open it by itself with `npx -y openhood mcp --no-open`; turn it off with `--no-watch`.
+- Keep it but don't open it by itself with `npx -y openhood@latest mcp --no-open`; turn it off with `--no-watch`.
 
 ## Safety
 

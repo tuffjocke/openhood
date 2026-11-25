@@ -60,6 +60,8 @@ export class Runtime {
   private watchers = new Set<(e: WatchEvent) => void>();
   /** The live view's link, once the MCP server has started it; `connect` hands it to the agent. */
   liveView?: string;
+  /** Set by the MCP server when npm has a newer openhood than this one; `connect` tells the agent. */
+  update?: { running: string; latest: string };
 
   /**
    * `unsafe` lets raw requests through without the read-only check. Never the default.
@@ -257,6 +259,14 @@ export class Runtime {
         init: s.init,
         unavailableChannels: [...s.unavailableChannels],
         ...(o.port ? { test: this.testAdvice(s) } : {}),
+        ...(this.update
+          ? {
+              update: {
+                ...this.update,
+                how: "This is an older openhood. Tell the person, and offer to switch: change the MCP server's command to npx -y openhood@latest mcp (Claude Code: claude mcp remove openhood, then claude mcp add openhood -- npx -y openhood@latest mcp) and start a new session. Reading the car works meanwhile.",
+              },
+            }
+          : {}),
         ...(this.liveView ? { liveView: this.liveView } : {}),
       };
     } catch (e) {
