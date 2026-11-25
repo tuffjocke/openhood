@@ -12,6 +12,9 @@ import { SimulatedTransport } from "@/core/transport/simulated";
 import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { LiveChart, type Point } from "./LiveChart";
 import { AgentButton } from "./landing/AgentButton";
+import { CableArt, PlugInArt } from "./landing/Art";
+import { EngineLight } from "./landing/EngineLight";
+import type { ReadProblem } from "@/core/add-car";
 import { GUIDE_URL } from "./CarChooser";
 import { profileIn, valuesIn } from "@/core/units";
 import { reportsFor } from "@/profiles/car-reports";
@@ -143,6 +146,7 @@ export function FirstRun({
   onConnect,
   onBluetooth,
   onSimulator,
+  problem,
 }: {
   /** The start page, or the steps for the chosen car (/read). */
   page: "home" | "read";
@@ -159,6 +163,8 @@ export function FirstRun({
   onConnect: () => void;
   onBluetooth: () => void;
   onSimulator: () => void;
+  /** The last read of a real car went wrong. */
+  problem: ReadProblem | null;
 }) {
   const t = useT();
   const carText = selection.make && selection.model && selection.year ? `${selection.year} ${selection.make} ${selection.model}` : "";
@@ -185,9 +191,13 @@ export function FirstRun({
   const [hasAdapter, setHasAdapter] = useState(false);
   // "your phone" or "your computer": known only in the browser, after the static page loads.
   const [device, setDevice] = useState("computer");
+  // No browser on an iPhone or iPad can reach an adapter (they all run Safari's engine).
+  const [ios, setIos] = useState(false);
   useEffect(() => {
-    if (/Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)) setDevice("phone");
-    else if (/iPad|Tablet/i.test(navigator.userAgent)) setDevice("tablet");
+    const ua = navigator.userAgent;
+    if (/Android|iPhone|iPod|Mobile/i.test(ua)) setDevice("phone");
+    else if (/iPad|Tablet/i.test(ua)) setDevice("tablet");
+    setIos(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1));
   }, []);
   useEffect(() => {
     try {
@@ -219,172 +229,136 @@ export function FirstRun({
   const thing = kinds[0] === "kkl" ? "KKL cable" : "ELM327 adapter";
   const deviceWord = t(device);
   const ble = bluetoothOk && kinds.includes("elm327");
-  const canRead = serialOk || ble;
-  // KKL cables are always USB. An ELM327 can be either, so step 1 asks which one they have.
+  // KKL cables are always USB. An ELM327 can be either, so the first step asks which one they have.
   const elm = kinds.includes("elm327");
   const link: AdapterLink = elm && via === "bluetooth" ? "bluetooth" : "usb";
   const done = hasAdapter && (!elm || via !== null);
   // Bluetooth Low Energy adapters connect straight from the browser. Older ones are paired in the
   // computer's settings first and then read like a cable.
   const readBle = link === "bluetooth" && ble;
+  const canStart = readBle || serialOk;
+  const start = readBle ? onBluetooth : onConnect;
   const busy = connecting === (readBle ? "bluetooth" : "serial");
-  // The AI agent comes first for every car: it can see the traffic, work around problems and record
-  // the car for others (docs/cli.md). A car's own profile that nobody has read a real car with yet
-  // gets a message asking the agent to dig in.
+  // A car's own profile that nobody has read a real car with yet: the AI is asked to dig in.
   const untried =
     !profile.generic &&
     profile.status !== "tested" &&
     !reportsFor(selection.make ?? "", selection.model ?? "", Number(selection.year)).some(
       (r) => r.result === "worked" && r.profile === profile.id,
     );
-  const readWay = (
-    <div className="way">
-      <h3>{t("Read the codes")}</h3>
-      <p>{t("See every fault here, in plain words.")}</p>
-      {!canRead && (
-        <p className="hero-note" role="note">
-          <strong>{t("This browser can’t read a car.")}</strong> {t("Use Chrome or Edge on a computer, or Chrome on Android.")}
-        </p>
-      )}
-      {canRead && !readBle && !serialOk && (
-        <p className="link-hint">{t("This browser only reaches Bluetooth adapters.")}</p>
-      )}
-      {(readBle || serialOk) && (
-        <div className="chooser-actions">
-          <button
-            className="ghost big"
-            onClick={readBle ? onBluetooth : onConnect}
-            disabled={!!connecting}
-          >
-            {t(busy ? (readBle ? "Connecting…" : "Waking the car…") : "Read my car")}
-          </button>
-        </div>
-      )}
-      {canRead && link === "bluetooth" && (
-        <p className="link-hint">
-          {readBle && serialOk ? (
-            <>
-              {t("Not found?")}{" "}
-              <button className="link-button" onClick={onConnect} disabled={!!connecting}>
-                {t("Pair it in your settings, then read it here")}
-              </button>
-            </>
-          ) : readBle ? (
-            t("Turn the adapter on. No pairing needed.")
-          ) : (
-            t("Pair it in your {device}\u2019s Bluetooth settings first.", { device: deviceWord })
-          )}
-        </p>
-      )}
-    </div>
+  const buyLink = buy && (
+    <a className={`button big ${elm ? "quiet" : "ghost"}`} href={buy.link.url} target="_blank" rel="noreferrer">
+      {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}
+    </a>
   );
-  const aiWay = (
-    <div className="way">
-      <h3>{t("Ask an AI")}</h3>
-      <p>
-        {t(
-          untried
-            ? "Not tried on this car yet. An AI agent on your computer can read it, fix what goes wrong and add it for others."
-            : "An AI agent on your computer reads the car and tells you what to fix.",
-        )}
+
+  // One thing at a time, each with a drawing: get the cable, then plug in and start. If the read
+  // goes wrong, the AI on their computer takes over.
+  const cableStep = (
+    <>
+      <CableArt kind={kinds[0] === "kkl" ? "kkl" : "elm327"} />
+      <h2 className="step-title">{t(thing === "KKL cable" ? "You need a KKL cable" : "You need an ELM327 adapter")}</h2>
+      <p className="step-line">
+        {/* Sure for a car Openhood knows; a good guess for any other car. */}
+        {t(profile.generic ? "Most likely what connects your {make} to your {device}." : "It connects your {make} to your {device}.", {
+          make: selection.make || t("car"),
+          device: deviceWord,
+        })}
       </p>
       <div className="chooser-actions">
-        <AgentButton car={carText} primary untried={untried} />
+        {elm ? (
+          // How it connects decides how it is read: people know cable or Bluetooth.
+          <>
+            <button className="primary big" onClick={() => gotAdapter(true, "usb")}>
+              {t("I have a USB one")}
+            </button>
+            <button className="primary big" onClick={() => gotAdapter(true, "bluetooth")}>
+              {t("I have a Bluetooth one")}
+            </button>
+          </>
+        ) : (
+          <button className="primary big" onClick={() => gotAdapter(true)}>
+            {t("I have one")}
+          </button>
+        )}
+        {buyLink}
       </div>
-    </div>
+      {buy && (
+        <p className="step-foot">
+          {t("Our pick:")} {buy.pick.name}, {t(buy.pick.connects)}.
+        </p>
+      )}
+    </>
   );
-  // Steps for the chosen car: 1 get the cable, 2 read it here or with an AI agent.
-  const steps = (
-    <ol className="steps">
-      <li className={done ? "is-done" : "is-now"}>
-        <span className="step-num" aria-hidden="true">
-          {done ? "✓" : "1"}
-        </span>
-        <div className="step-body">
-          {done ? (
-            <p className="step-title">
-              {elm
-                ? t(link === "usb" ? "Got a USB ELM327" : "Got a Bluetooth ELM327")
-                : t("Got the {thing}", { thing: t(thing) })}
-              <button className="link-button" onClick={() => gotAdapter(false)}>
-                {t("Change")}
-              </button>
-            </p>
-          ) : (
-            <>
-              <h2 className="step-title">{t(elm ? "Get the adapter" : "Get the cable")}</h2>
-              <p className="step-line">
-                {/* Sure for a car Openhood knows; a good guess for any other car. */}
-                {t(
-                  profile.generic
-                    ? "We think you need {a} {thing} to connect your {make} to your {device}."
-                    : "You need {a} {thing} to connect your {make} to your {device}.",
-                  { a: thing.startsWith("ELM") ? "an" : "a", thing: t(thing), make: selection.make || t("car"), device: deviceWord },
-                )}
-              </p>
-              {elm ? (
-                // How it connects decides how step 2 reads it: people know cable or Bluetooth.
+
+  const got = elm ? t(link === "usb" ? "Got a USB ELM327" : "Got a Bluetooth ELM327") : t("Got the {thing}", { thing: t(thing) });
+  const plugStep = (
+    <>
+      <PlugInArt />
+      <h2 className="step-title">{t("Plug it in. Turn the key to II.")}</h2>
+      <p className="step-line">{t("Don\u2019t start the engine. The socket is under the dashboard, near your knee.")}</p>
+      {canStart ? (
+        <>
+          <div className="chooser-actions">
+            <button className="primary big go" onClick={start} disabled={!!connecting}>
+              {t(busy ? (readBle ? "Connecting…" : "Waking the car…") : "Start")}
+            </button>
+          </div>
+          {link === "bluetooth" && (
+            <p className="link-hint">
+              {readBle && serialOk ? (
                 <>
-                  <div className="chooser-actions">
-                    <button className="primary big" onClick={() => gotAdapter(true, "usb")}>
-                      {t("I have a USB one")}
-                    </button>
-                    <button className="primary big" onClick={() => gotAdapter(true, "bluetooth")}>
-                      {t("I have a Bluetooth one")}
-                    </button>
-                  </div>
-                  {buy && (
-                    <p className="step-foot">
-                      {t("None yet?")}{" "}
-                      <a href={buy.link.url} target="_blank" rel="noreferrer">
-                        {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}
-                      </a>
-                      . {t("Our pick:")} {buy.pick.name}, {t(buy.pick.connects)}. {t(buy.pick.why)}
-                    </p>
-                  )}
+                  {t("Not found?")}{" "}
+                  <button className="link-button" onClick={onConnect} disabled={!!connecting}>
+                    {t("Pair it in your settings, then read it here")}
+                  </button>
                 </>
+              ) : readBle ? (
+                t("Turn the adapter on. No pairing needed.")
               ) : (
-                <>
-                  <div className="chooser-actions">
-                    <button className="primary big" onClick={() => gotAdapter(true)}>
-                      {t("I have one")}
-                    </button>
-                    {buy && (
-                      <a className="button big ghost" href={buy.link.url} target="_blank" rel="noreferrer">
-                        {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}
-                      </a>
-                    )}
-                  </div>
-                  {buy && (
-                    <p className="step-foot">
-                      {t("Our pick:")} {buy.pick.name}, {t(buy.pick.connects)}. {t(buy.pick.why)}
-                    </p>
-                  )}
-                </>
+                t("Pair it in your {device}\u2019s Bluetooth settings first.", { device: deviceWord })
               )}
-            </>
+            </p>
           )}
-        </div>
-      </li>
-      <li className={done ? "is-now" : "is-next"}>
-        <span className="step-num" aria-hidden="true">
-          2
-        </span>
-        <div className="step-body">
-          <h2 className="step-title">{t("Plug in, ignition on")}</h2>
-          {done && (
-            <>
-              <p className="step-line">{t("The socket is under the dashboard, near your knee. Then pick one:")}</p>
-              <div className="ways">
-                {aiWay}
-                {readWay}
-              </div>
-              <p className="step-foot">{t("Only reads. Nothing in your car changes.")}</p>
-            </>
-          )}
-        </div>
-      </li>
-    </ol>
+        </>
+      ) : (
+        // This browser can't reach the adapter: the AI on the computer can.
+        <>
+          <p className="hero-note" role="note">
+            <strong>{t("This browser can\u2019t read a car.")}</strong> {t("Let an AI on your computer read it, or use Chrome or Edge.")}
+          </p>
+          <div className="chooser-actions">
+            <AgentButton car={carText} untried={untried} />
+          </div>
+        </>
+      )}
+      <p className="step-foot">
+        {got}.{" "}
+        <button className="link-button" onClick={() => gotAdapter(false)}>
+          {t("Change")}
+        </button>
+      </p>
+    </>
+  );
+
+  // The read went wrong: one way forward, the AI on their computer, which can see the traffic.
+  const failStep = problem && (
+    <>
+      <p className="step-lamp">
+        <EngineLight lit />
+      </p>
+      <h2 className="step-title">{t("Couldn\u2019t read the car")}</h2>
+      <p className="step-line">{t(problem.message)}</p>
+      <p className="step-line">{t("An AI can find out why and tell you what to do.")}</p>
+      <div className="chooser-actions">
+        <AgentButton car={carText} problem={problem} />
+      </div>
+      <p className="step-foot">
+        <button className="link-button" onClick={start} disabled={!!connecting}>
+          {t(busy ? "Waking the car…" : "Try again")}
+        </button>
+      </p>
+    </>
   );
 
   if (page === "read")
@@ -395,7 +369,7 @@ export function FirstRun({
         </h1>
         {carText && (
           <div className="start">
-            <div className="car-result">
+            <div className="car-result read-card">
               <p className="car-chosen">
                 <span>
                   <strong>
@@ -407,7 +381,7 @@ export function FirstRun({
                   {t("Change car")}
                 </Link>
               </p>
-              {steps}
+              {failStep || (done ? plugStep : cableStep)}
             </div>
           </div>
         )}
@@ -428,6 +402,13 @@ export function FirstRun({
             {t("A free, open source fault code reader in your browser. Plug in a cheap adapter and see what’s wrong, in plain words, or let your AI read the car for you.")}
           </p>
         </div>
+        {/* Said before they pick a car: nothing past the demo works in this browser. */}
+        {!serialOk && !bluetoothOk && (
+          <p className="hero-note" role="note">
+            <strong>{t(ios ? "iPhones and iPads can\u2019t read a car." : "This browser can\u2019t read a car.")}</strong>{" "}
+            {t(ios ? "Use Chrome or Edge on a computer, or Chrome on Android." : "Open Openhood in Chrome or Edge, or let an AI app on your computer read the car.")}
+          </p>
+        )}
         <div className="start home">
           <CarChooser
             profiles={PROFILES}

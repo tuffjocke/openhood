@@ -11,7 +11,7 @@ import {
   parseExport,
   type HistoryEntry,
 } from "@/core/history";
-import { carReportUrl, reportUrl } from "@/core/report";
+import { carReportUrl, reportUrl, trafficLines } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
 import { AdapterError } from "@/core/link/elm327";
@@ -30,6 +30,7 @@ import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
 import { FaultPanel, HistoryFile } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
+import { AgentButton } from "./landing/AgentButton";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
@@ -103,6 +104,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   /** The "did this match your car?" answer for this connection. */
   const [asked, setAsked] = useState<"yes" | "no" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  /** What went wrong reading a real car: the AI on their computer is offered to find out why. */
+  const [problem, setProblem] = useState<string | null>(null);
 
   // Readings are kept in metric, as the profile gives them, and converted only to show and log.
   const [units, setUnits] = useUnits();
@@ -169,6 +172,10 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     setUnavailable(new Set());
     setSource(kind);
     setStatus("connecting");
+    setProblem(null);
+    setAdapter(undefined);
+    // The demo can't go wrong in a way an AI could help with.
+    const flag = (msg: string) => kind !== "simulator" && setProblem(msg);
     latest.current = {};
     history.current = {};
     traffic.current = [];
@@ -182,15 +189,22 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       setEverLive(true);
       setAsked(null);
       window.scrollTo(0, 0);
-      void refreshFaults(s);
+      void refreshFaults(s).then((ok) => ok || flag("Connected, but the fault codes couldn\u2019t be read."));
       void s.poll(onValues, (e) => {
         setStatus("error");
         setError(explain(e) ?? "Lost the ECU.");
+        flag(explain(e) ?? "Lost the ECU.");
       });
+      // Connected but nothing comes back: worth a closer look too.
+      if (profile.channels.length)
+        setTimeout(() => {
+          if (session.current === s && !Object.keys(latest.current).length) flag("Connected, but no readings came back.");
+        }, 10_000);
     } catch (e) {
       const msg = explain(e);
       setStatus(msg ? "error" : "idle");
       setError(msg);
+      if (msg) flag(msg);
     }
   }
 
@@ -202,6 +216,15 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     setStatus("idle");
     setSource(null);
     if (wasDemo) goHome(); // the demo isn't their car: nothing to keep on screen
+  }
+
+  /** Let go of the adapter so the AI agent can open it, and stay on this screen. */
+  async function release() {
+    setRecording(false);
+    const s = session.current;
+    session.current = null;
+    await s?.disconnect();
+    setStatus((now) => (now === "live" ? "idle" : now));
   }
 
   /** Back to the start page. */
@@ -311,17 +334,22 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     });
   }
 
-  /** Read stored faults, pending faults and self-tests, one after the other (half duplex). */
-  async function refreshFaults(s: Session) {
+  /** Read stored faults, pending faults and self-tests, one after the other (half duplex). False if the stored ones failed. */
+  async function refreshFaults(s: Session): Promise<boolean> {
     try {
       const stored = await s.readFaults();
       setFaults(stored);
       remember(stored, false);
+    } catch {
+      return false;
+    }
+    try {
       const pend = await s.readPending();
       setPending(pend);
       if (pend) remember(pend, true);
       setReadiness(await s.readReadiness());
     } catch {}
+    return true;
   }
 
   async function faultAction(clear: boolean) {
@@ -396,6 +424,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   // Empty for a generic profile: "I have a Generic OBD-II" would read oddly in the AI question.
   const vehicleText = selection.make ? [label.title, label.detail].filter(Boolean).join(" ") : "";
   const rate = reads.current.length / 2;
+  const readProblem = problem ? { message: problem, profile: profile.id, adapter, traffic: trafficLines(traffic.current.slice(-40)) } : null;
   const recSeconds = recording ? Math.floor((now - recStart.current) / 1000) : 0;
 
   // The profile picks its dials; the rest of its readings become charts, grouped by colour.
@@ -491,7 +520,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       </header>
       )}
 
-      {error && (
+      {/* A problem the AI can look into gets its own card instead (the steps page, or beside the faults). */}
+      {error && error !== problem && (
         <p className="notice" role="alert">
           {t(error)}{" "}
           {source && source !== "simulator" && (
@@ -517,6 +547,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           onConnect={() => connect("serial")}
           onBluetooth={() => connect("bluetooth")}
           onSimulator={() => connect("simulator")}
+          problem={readProblem}
         />
       ) : (
         <>
@@ -573,6 +604,16 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
           )}
 
       <div className="live-side">
+      {/* Something went wrong with a real car: the AI on their computer can see the traffic and find out why. */}
+      {readProblem && !demo && (
+        <section className="ai-help" aria-live="polite">
+          <h2>{t("Not reading right?")}</h2>
+          <p>{t(readProblem.message)} {t("An AI can find out why and tell you what to do.")}</p>
+          <div className="chooser-actions">
+            <AgentButton car={vehicleText} problem={readProblem} onBefore={() => void release()} />
+          </div>
+        </section>
+      )}
       <section className="lower">
         <FaultPanel
           profile={shown}
