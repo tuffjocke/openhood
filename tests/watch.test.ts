@@ -1,6 +1,7 @@
 /**
  * The MCP server's live view (cli/watch-server.ts): it streams what the runtime reads, serves the
  * site, and stays read-only and private (127.0.0.1, its own Host only, no way out of the site folder).
+ * Also `openhood watch` (cli/watch-car.ts), the same page without an agent.
  */
 import assert from "node:assert/strict";
 import { request } from "node:http";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { Runtime } from "../cli/runtime";
+import { watchCar } from "../cli/watch-car";
 import { browserCommand, startWatchServer, type WatchServer } from "../cli/watch-server";
 import type { WatchEvent } from "../core/watch";
 
@@ -130,5 +132,31 @@ describe("live view", () => {
     assert.ok(first.type === "state" && first.state.status === "connected" && first.state.values.rpm !== undefined);
     s.close();
     await rt.disconnect();
+  });
+});
+
+describe("openhood watch", () => {
+  it("shows the car without an agent: connects, reads faults and values, stops on Ctrl+C", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "openhood-site-"));
+    const rt = new Runtime({ keepAlive: true });
+    const stop = new AbortController();
+    const seen: WatchEvent["type"][] = [];
+    let status = "";
+    rt.watch((e) => {
+      seen.push(e.type);
+      if (e.type === "state") status = e.state.status;
+      if (e.type === "values") stop.abort(); // a reading reached the page: enough
+    });
+    const said: string[] = [];
+    await watchCar(rt, { profile: "land-rover-td5" }, { dir, open: false, signal: stop.signal, say: (l) => said.push(l) });
+    assert.match(said[0], /^Live view: http:\/\/127\.0\.0\.1:\d+\/watch\/$/);
+    assert.ok(said.some((l) => l.startsWith("Connected")));
+    assert.ok(seen.includes("faults") && seen.includes("values"));
+    assert.equal(status, "idle", "disconnected at the end");
+  });
+
+  it("says how to build the page in a clone", async () => {
+    const car = watchCar(new Runtime(), { profile: "land-rover-td5" }, { dir: join(tmpdir(), "openhood-no-site"), open: false, signal: new AbortController().signal, say: () => {} });
+    await assert.rejects(car, /npm run build:npm/);
   });
 });
