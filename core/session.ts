@@ -74,10 +74,10 @@ export class Session {
     return this.activeGroups.has(id);
   }
 
-  async readGroup(id: string): Promise<Values> {
+  async readGroup(id: string, opts: { note?: string } = {}): Promise<Values> {
     const g = this.profile.groups.find((g) => g.id === id);
     if (!g) throw new Error(`Profile ${this.profile.id} has no group "${id}"`);
-    const res = await this.exclusive(() => this.link.request(g.requestFor?.(this.state) ?? g.request));
+    const res = await this.exclusive(() => this.link.request(g.requestFor?.(this.state) ?? g.request, opts));
     const v = g.decode(res, this.state);
     Object.assign(this.state, v);
     return v;

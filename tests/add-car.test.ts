@@ -38,6 +38,15 @@ describe("add your car prompt", () => {
     assert.ok(!p.includes("Nobody has read this kind of car"), "one ask to dig in, not two");
     // Claude Code links take up to 5,000 characters; the desktop app more.
     assert.ok(p.length < 5000, `${p.length} characters`);
+
+    // The traffic shows how the website woke the car, cut to fit the link.
+    const long = readCarPrompt("1999 Land Rover Defender", false, {
+      message: "The car didn't answer.",
+      profile: "land-rover-td5",
+      traffic: [...Array.from({ length: 30 }, () => "  0.100  <-  " + "00 ".repeat(40)), "  0.400  ->  fast init: 0x00 at 360 baud, reopen 40 ms, echo after 30 ms, then high 300 ms"],
+    });
+    assert.ok(long.includes("fast init: 0x00 at 360 baud"));
+    assert.ok(long.length < 5000, `${long.length} characters`);
   });
 
   it("gives a phone AI what happened and the traffic, no commands", () => {

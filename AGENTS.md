@@ -280,6 +280,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - A KKL-only profile is not probed for an ELM327 before connecting (no stray bytes on the K-line); the
   probe only runs if the car stays silent, to say "wrong adapter".
 - Web Serial needs a user gesture and works in Chrome/Edge desktop and Chrome 148+ Android. Not Safari.
+- The MCP server (`Runtime` with `keepAlive`) reads the profile's first scheduled group after 1 s without a tool
+  call on a KWP2000 K-line session, so ECUs like the Td5 don't end it, and on a timeout checks the car still answers;
+  if not, it connects again once and repeats the call (never a clear). Keep-alive lines are noted "keep-alive" and left
+  out of the `traffic` tool. The CLI's one-shot commands don't do this.
 - The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
   `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It
   stays on 127.0.0.1, GET only, answers its own Host only and sends no CORS headers. Nothing on the watch page

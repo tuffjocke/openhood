@@ -51,7 +51,8 @@ describe("Web Serial fast init", () => {
     const port = new FakePort();
     const t = transport(port);
     await t.open();
-    await t.fastInit();
+    const how = await t.fastInit();
+    assert.match(String(how), /^0x00 at 360 baud, reopen \d+ ms, (echo after \d+ ms|no echo), then high \d+ ms$/, "says how it woke the car");
     assert.deepEqual(port.opens, [10400, 360, 10400]);
     assert.deepEqual(port.written, [{ baudRate: 360, bytes: [0x00] }]);
     assert.deepEqual(port.breaks, [false], "no BREAK pulse, only the idle line");
@@ -68,7 +69,8 @@ describe("Web Serial fast init", () => {
     const port = new FakePort(true);
     const t = transport(port);
     await t.open();
-    await t.fastInit();
+    const how = await t.fastInit();
+    assert.match(String(how), /^BREAK, the cable didn't open at 360 baud/, "says it fell back to BREAK");
     assert.deepEqual(port.opens, [10400, 360, 10400]);
     assert.equal(port.written.length, 0, "BREAK sends no bytes");
     assert.deepEqual(port.breaks, [false, true, false]);

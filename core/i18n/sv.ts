@@ -193,6 +193,9 @@ export const SV: Record<string, string> = {
   "This page shows what an AI agent reads with Openhood. Open it from the link the agent gives you.":
     "Den här sidan visar vad en AI-agent läser av med Openhood. Öppna den från länken som agenten ger dig.",
   "The car didn’t answer the agent:": "Bilen svarade inte agenten:",
+  "Lost the car": "Tappade bilen",
+  "The car stopped answering. The agent connects again at its next read.":
+    "Bilen slutade svara. Agenten ansluter igen nästa gång den läser.",
   "The agent hasn’t connected to a car yet.": "Agenten har inte anslutit till någon bil än.",
   "The agent hasn’t read the fault codes yet.": "Agenten har inte läst felkoderna än.",
 
@@ -202,6 +205,8 @@ export const SV: Record<string, string> = {
   "Air pressure": "Lufttryck",
   Battery: "Batteri",
   Boost: "Laddtryck",
+  "Brake pedal": "Bromspedal",
+  "Clutch pedal": "Kopplingspedal",
   Coolant: "Kylvätska",
   "Engine load": "Motorlast",
   "Engine speed": "Varvtal",

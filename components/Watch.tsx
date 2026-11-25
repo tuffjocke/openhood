@@ -88,11 +88,11 @@ export function Watch() {
   const unavailable = useMemo(() => new Set(view.unavailable), [view.unavailable]);
   const latest = show(view.values);
 
-  const status = stream === "lost" ? "error" : view.status === "connected" ? "live" : view.status === "connecting" ? "connecting" : view.status === "failed" ? "error" : "idle";
+  const status = stream === "lost" ? "error" : view.status === "connected" ? "live" : view.status === "connecting" ? "connecting" : view.status === "failed" || view.status === "lost" ? "error" : "idle";
   const statusText =
     stream === "lost"
       ? "Lost the agent"
-      : { idle: profile ? "Not connected" : "Waiting for the agent", connecting: "Waking the car…", connected: "Connected", failed: "Stopped" }[view.status];
+      : { idle: profile ? "Not connected" : "Waiting for the agent", connecting: "Waking the car…", connected: "Connected", failed: "Stopped", lost: "Lost the car" }[view.status];
 
   // No header: the status sits in the cluster's corner, or on its own line before there is one.
   const statusLight = (
@@ -118,6 +118,11 @@ export function Watch() {
       )}
       {stream === "unreachable" && (
         <p className="notice">{t("This page shows what an AI agent reads with Openhood. Open it from the link the agent gives you.")}</p>
+      )}
+      {view.status === "lost" && (
+        <p className="notice" role="alert">
+          {t("The car stopped answering. The agent connects again at its next read.")}
+        </p>
       )}
       {view.status === "failed" && view.error && (
         <p className="notice" role="alert">

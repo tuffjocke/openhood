@@ -9,6 +9,7 @@ import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
 import { SimulatedElm } from "../core/transport/simulated-elm";
+import { TimeoutError } from "../core/transport/types";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { carReportUrl } from "../core/report";
 import { CMD } from "./command";
@@ -18,6 +19,9 @@ import { VEHICLE_NAMES } from "../profiles/names";
 import { NodeSerialTransport } from "./node-serial";
 
 const TRAFFIC_LINES = 500;
+/** Idle time before the MCP server reads something to keep a K-line session open. ISO 14230's P3max is 5 s; a Td5 drops sooner. */
+const KEEP_ALIVE_MS = 1000;
+const KEEP_ALIVE_NOTE = "keep-alive";
 
 export interface ConnectOptions {
   /** Profile id, e.g. "generic-obd2" or "land-rover-td5". */
@@ -39,6 +43,12 @@ export class UserError extends Error {}
  */
 export class Runtime {
   private session: Session | null = null;
+  /** How the agent last connected, to connect the same way again when the car drops the session. */
+  private lastConnect: ConnectOptions | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Tool calls in progress; the keep-alive waits for none. */
+  private calls = 0;
+  private keepAliveMisses = 0;
   private traffic: TrafficEvent[] = [];
   /** What the live view shows (core/watch.ts), and who is watching. */
   private view: WatchState = emptyWatchState();
@@ -46,8 +56,12 @@ export class Runtime {
   /** The live view's link, once the MCP server has started it; `connect` hands it to the agent. */
   liveView?: string;
 
-  /** `unsafe` lets raw requests through without the read-only check. Never the default. */
-  constructor(private opts: { unsafe?: boolean } = {}) {}
+  /**
+   * `unsafe` lets raw requests through without the read-only check. Never the default.
+   * `keepAlive` (the MCP server): between tool calls, read something about once a second so a
+   * K-line session stays open, and if the car drops it anyway, connect again once by itself.
+   */
+  constructor(private opts: { unsafe?: boolean; keepAlive?: boolean } = {}) {}
 
   private log = (e: TrafficEvent) => {
     this.traffic.push(e);
@@ -68,7 +82,7 @@ export class Runtime {
   }
 
   private stateEvent(): WatchEvent {
-    return { type: "state", state: structuredClone(this.view), traffic: this.trafficLines(TRAFFIC_LINES) };
+    return { type: "state", state: structuredClone(this.view), traffic: this.trafficLines(TRAFFIC_LINES, { keepAlive: true }) };
   }
 
   private emit(e: WatchEvent) {
@@ -108,6 +122,84 @@ export class Runtime {
     return this.session;
   }
 
+  /**
+   * Run a tool call on the car. With keepAlive, a timeout on a session the car has dropped
+   * connects again and runs the call once more; a request the car just doesn't answer doesn't.
+   */
+  private async use<T>(fn: (s: Session) => Promise<T>): Promise<T> {
+    if (!this.session) throw new UserError("Not connected. Call connect first.");
+    this.calls++;
+    this.stopKeepAlive();
+    try {
+      if (this.opts.keepAlive && this.view.status === "lost") await this.reconnect();
+      try {
+        return await fn(this.s);
+      } catch (e) {
+        if (!this.opts.keepAlive || !(e instanceof TimeoutError) || (await this.answers(this.s))) throw e;
+        await this.reconnect();
+        return await fn(this.s);
+      }
+    } finally {
+      this.calls--;
+      this.startKeepAlive();
+    }
+  }
+
+  /** A K-line session that ends when nothing is sent for a few seconds (KWP2000). KWP1281 links keep themselves alive, DS2 has no session, adapters keep their own. */
+  private needsKeepAlive(s: Session) {
+    return !!this.opts.keepAlive && s.init.kind !== "adapter" && (s.profile.link.protocol ?? "kwp2000") === "kwp2000";
+  }
+
+  /** The cheapest thing to read: the first group in the profile's schedule the ECU supports. */
+  private keepAliveGroup(s: Session) {
+    return s.profile.schedule.find((id) => s.isActive(id));
+  }
+
+  /** Whether the car still answers on this session. */
+  private async answers(s: Session) {
+    const id = this.keepAliveGroup(s);
+    if (!id) return false;
+    try {
+      this.gotValues(await s.readGroup(id, { note: KEEP_ALIVE_NOTE }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private startKeepAlive() {
+    this.stopKeepAlive();
+    const s = this.session;
+    if (!s || this.calls || this.view.status !== "connected" || !this.needsKeepAlive(s)) return;
+    this.idleTimer = setTimeout(() => void this.keepAlive(s), KEEP_ALIVE_MS);
+    this.idleTimer.unref?.(); // never what keeps the process running
+  }
+
+  private stopKeepAlive() {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  private async keepAlive(s: Session) {
+    this.idleTimer = null;
+    if (this.session !== s || this.calls) return;
+    if (await this.answers(s)) this.keepAliveMisses = 0;
+    else if (this.session === s && ++this.keepAliveMisses >= 3) {
+      // The live view says so; the next tool call connects again.
+      this.setView({ status: "lost", error: "The car stopped answering." });
+      return;
+    }
+    this.startKeepAlive();
+  }
+
+  /** Connect again the way the agent last did, keeping the traffic and what was read. */
+  private async reconnect() {
+    const o = this.lastConnect;
+    if (!o) throw new UserError("Not connected. Call connect first.");
+    this.log({ t: performance.now(), dir: "tx", bytes: new Uint8Array(0), note: "the car dropped the session, connecting again" });
+    await this.connect(o, { again: true });
+  }
+
   profiles() {
     return PROFILES.map((p) => ({
       id: p.id,
@@ -134,18 +226,22 @@ export class Runtime {
     return { code: r.code, title: r.title ?? null, explanation: r.info ?? null };
   }
 
-  async connect(o: ConnectOptions) {
-    await this.disconnect();
+  async connect(o: ConnectOptions, { again = false } = {}) {
+    await this.drop();
+    this.lastConnect = null;
     const profile = getProfile(o.profile);
     if (!profile) throw new UserError(`No profile "${o.profile}". Known: ${PROFILES.map((p) => p.id).join(", ")}.`);
-    this.traffic = [];
-    this.setView({ ...emptyWatchState(), status: "connecting", profileId: profile.id });
+    if (!again) this.traffic = [];
+    this.setView(again ? { status: "connecting", error: null } : { ...emptyWatchState(), status: "connecting", profileId: profile.id });
     try {
       const link = await this.openLink(profile, o);
       const s = new Session(profile, link, this.log);
       await s.connect();
       this.session = s;
-      this.setView({ status: "connected", adapter: link.adapter, unavailable: [...s.unavailableChannels], values: this.shownValues(s.state) });
+      this.lastConnect = o;
+      this.keepAliveMisses = 0;
+      this.setView({ status: "connected", adapter: link.adapter, unavailable: [...s.unavailableChannels], values: { ...this.view.values, ...this.shownValues(s.state) } });
+      this.startKeepAlive();
       return {
         profile: profile.id,
         connectedThrough: link.adapter,
@@ -183,6 +279,13 @@ export class Runtime {
   }
 
   async disconnect() {
+    this.lastConnect = null;
+    await this.drop();
+    return { connected: false };
+  }
+
+  private async drop() {
+    this.stopKeepAlive();
     const s = this.session;
     this.session = null;
     if (s) {
@@ -190,7 +293,6 @@ export class Runtime {
       // What was read stays on the live view; only the status changes.
       this.setView({ status: "idle" });
     }
-    return { connected: false };
   }
 
   private describeFault(f: Fault) {
@@ -208,22 +310,26 @@ export class Runtime {
     };
   }
 
-  async faults(o: { pending?: boolean } = {}) {
-    const stored = await this.s.readFaults();
-    const out: Record<string, unknown> = { stored: stored.map((f) => this.describeFault(f)) };
-    const pending = o.pending ? ((await this.s.readPending()) ?? []) : null;
-    if (pending) out.pending = pending.map((f) => this.describeFault(f));
-    const readiness = await this.s.readReadiness();
-    if (readiness) out.readiness = readiness;
-    this.gotFaults(stored, pending, readiness);
-    return out;
+  faults(o: { pending?: boolean } = {}) {
+    return this.use(async (s) => {
+      const stored = await s.readFaults();
+      const out: Record<string, unknown> = { stored: stored.map((f) => this.describeFault(f)) };
+      const pending = o.pending ? ((await s.readPending()) ?? []) : null;
+      if (pending) out.pending = pending.map((f) => this.describeFault(f));
+      const readiness = await s.readReadiness();
+      if (readiness) out.readiness = readiness;
+      this.gotFaults(stored, pending, readiness);
+      return out;
+    });
   }
 
-  async freezeFrame(code: string) {
-    const fault = (await this.s.readFaults()).find((f) => f.code === code || f.id === code);
-    if (!fault) throw new UserError(`${code} isn't stored right now.`);
-    const values = await this.s.readFreezeFrame(fault);
-    return { code, snapshot: values ? this.labelled(values) : null };
+  freezeFrame(code: string) {
+    return this.use(async (s) => {
+      const fault = (await s.readFaults()).find((f) => f.code === code || f.id === code);
+      if (!fault) throw new UserError(`${code} isn't stored right now.`);
+      const values = await s.readFreezeFrame(fault);
+      return { code, snapshot: values ? this.labelled(values) : null };
+    });
   }
 
   private labelled(values: Record<string, number>) {
@@ -234,10 +340,13 @@ export class Runtime {
   }
 
   /** Read every supported group once, or keep reading for `seconds` and report min, max and last. */
-  async live(o: { seconds?: number } = {}) {
-    const s = this.s;
+  live(o: { seconds?: number } = {}) {
+    return this.use((s) => this.readLive(s, o.seconds ?? 0));
+  }
+
+  private async readLive(s: Session, seconds: number) {
     const ids = [...new Set(s.profile.schedule)].filter((id) => s.isActive(id));
-    const end = performance.now() + Math.min(Math.max(o.seconds ?? 0, 0), 30) * 1000;
+    const end = performance.now() + Math.min(Math.max(seconds, 0), 30) * 1000;
     const seen: Record<string, number[]> = {};
     do {
       for (const id of ids) {
@@ -264,7 +373,7 @@ export class Runtime {
     const payload = parseHex(o.hex);
     const verdict = checkReadOnly(payload, this.s.profile.link.protocol);
     if (!verdict.ok && !this.opts.unsafe) throw new UserError(`Refused: ${verdict.reason}`);
-    const answers = await this.s.rawRequest(payload, o.many);
+    const answers = await this.use((s) => s.rawRequest(payload, o.many));
     return { request: hex(payload), answers: answers.map((a) => hex(a)) };
   }
 
@@ -274,14 +383,33 @@ export class Runtime {
       throw new UserError(
         "Clearing only erases the codes, it doesn't fix anything, and it can reset the emissions readiness checks. Ask the person first, then call again with confirm: true.",
       );
-    await this.s.clearFaults();
-    const now = await this.s.readFaults();
-    this.gotFaults(now, null, await this.s.readReadiness());
-    return { cleared: true, nowStored: now.map((f) => f.code ?? f.id) };
+    // Not repeated after a reconnect: a clear that timed out may still have gone through.
+    const s = this.s;
+    this.calls++;
+    this.stopKeepAlive();
+    try {
+      await s.clearFaults();
+    } finally {
+      this.calls--;
+      this.startKeepAlive();
+    }
+    return this.use(async (s) => {
+      const now = await s.readFaults();
+      this.gotFaults(now, null, await s.readReadiness());
+      return { cleared: true, nowStored: now.map((f) => f.code ?? f.id) };
+    });
   }
 
-  trafficLines(last = 60) {
-    return this.traffic.slice(-last).map(trafficLine);
+  /** The last lines of traffic. Keep-alive reads are left out unless asked for: they'd crowd out the rest. */
+  trafficLines(last = 60, { keepAlive = false } = {}) {
+    let skip = false;
+    const shown = keepAlive
+      ? this.traffic
+      : this.traffic.filter((e) => {
+          if (e.dir === "tx") skip = e.note === KEEP_ALIVE_NOTE;
+          return !skip;
+        });
+    return shown.slice(-last).map(trafficLine);
   }
 }
 

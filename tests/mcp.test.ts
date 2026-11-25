@@ -51,4 +51,22 @@ describe("MCP server", () => {
     assert.equal(r.isError, true);
     assert.match(r.text, /connect first/);
   });
+
+  it("keeps a K-line session open between tool calls, and connects again if the car drops it", async () => {
+    const rt = new Runtime({ keepAlive: true });
+    await call(rt, 13, "connect", { profile: "land-rover-td5" });
+    // Idle for a while: the server reads something by itself, but the agent's traffic leaves it out.
+    await new Promise((r) => setTimeout(r, 2600));
+    assert.ok(rt.trafficLines(500, { keepAlive: true }).some((l) => l.includes("(keep-alive)")), "a keep-alive was sent");
+    assert.ok(!rt.trafficLines(500).some((l) => l.includes("keep-alive")), "and hidden from the agent's traffic");
+
+    // The ECU forgets the session (a Td5 does after a few seconds of silence) and stays quiet until woken again.
+    const transport = (rt as unknown as { session: { link: { transport: { ecu: unknown } } } }).session.link.transport;
+    transport.ecu = null;
+    const live = await call(rt, 14, "read_live");
+    assert.equal(live.isError, false, live.text);
+    assert.ok((JSON.parse(live.text) as { rpm?: { last: number } }).rpm, "read after connecting again");
+    assert.ok(rt.trafficLines(500).some((l) => l.includes("connecting again")));
+    await call(rt, 15, "disconnect");
+  });
 });

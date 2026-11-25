@@ -35,7 +35,7 @@ describe("Node serial fast init", () => {
     MockBinding.createPort(PATH, { echo: true, record: true });
     const t = new MockTransport();
     await t.open();
-    await t.fastInit();
+    assert.match(String(await t.fastInit()), /^0x00 at 360 baud/);
     assert.deepEqual(
       t.opened.map((o) => o.baudRate),
       [10400, 360, 10400],
