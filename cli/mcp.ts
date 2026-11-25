@@ -8,6 +8,7 @@ import { Runtime, UserError } from "./runtime";
  */
 
 import { FROM_NPM, VERSION } from "./command";
+import { isNewer, latestVersion } from "./update-check";
 import { openInBrowser, siteDir, startWatchServer } from "./watch-server";
 
 const INSTRUCTIONS = `Openhood reads cars through a KKL cable or an ELM327 adapter, or a simulator when no car is connected.
@@ -217,8 +218,15 @@ export async function handle(rt: Runtime, msg: Json): Promise<Json | null> {
   }
 }
 
-export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean }) {
+export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean; updateCheck?: boolean }) {
   const rt = new Runtime({ unsafe: opts.unsafe, keepAlive: true });
+  // From npm only (a clone is as new as its checkout). In the background: the agent never waits for it.
+  if (FROM_NPM && opts.updateCheck !== false)
+    void latestVersion().then((latest) => {
+      if (!latest || !isNewer(latest, VERSION)) return;
+      rt.update = { running: VERSION, latest };
+      console.error(`openhood: ${latest} is out, this is ${VERSION}. Run it with: npx -y openhood@latest mcp`);
+    });
   if (opts.unsafe) console.error("openhood: raw requests are NOT limited to read services (--unsafe-allow-any-request).");
   if (opts.watch !== false) {
     // The live view is a nice extra: if it can't start, the agent still gets every tool.

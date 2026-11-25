@@ -69,4 +69,16 @@ describe("MCP server", () => {
     assert.ok(rt.trafficLines(500).some((l) => l.includes("connecting again")));
     await call(rt, 15, "disconnect");
   });
+
+  it("tells the agent when npm has a newer openhood", async () => {
+    const { isNewer } = await import("../cli/update-check");
+    assert.ok(isNewer("0.1.12", "0.1.10") && isNewer("0.2.0", "0.1.12") && isNewer("1.0.0", "0.9.9"));
+    assert.ok(!isNewer("0.1.10", "0.1.10") && !isNewer("0.1.9", "0.1.10"));
+    const rt = new Runtime();
+    rt.update = { running: "0.1.10", latest: "0.1.12" };
+    const r = JSON.parse((await call(rt, 16, "connect", { profile: "generic-obd2" })).text) as { update?: { latest: string; how: string } };
+    assert.equal(r.update?.latest, "0.1.12");
+    assert.match(r.update!.how, /npx -y openhood@latest mcp/);
+    await call(rt, 17, "disconnect");
+  });
 });

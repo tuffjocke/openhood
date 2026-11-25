@@ -1,6 +1,6 @@
 /**
  * Builds the npm package `openhood`: the command-line tools and MCP server in one file, with the
- * car profiles inside, so people and agents can run `npx openhood` without cloning the website.
+ * car profiles inside, so people and agents can run `npx -y openhood@latest` without cloning the website.
  * Only serialport is installed with it (it talks to the adapter and has native parts).
  *
  *   npm run build:npm        → dist/npm
@@ -68,11 +68,11 @@ Read your car's fault codes and live data with a cheap adapter, in plain words. 
 The same tools as the website (https://tuffjocke.github.io/openhood/), for the command line and AI agents.
 
 \`\`\`
-npx openhood ports                                   find your adapter
-npx openhood profiles                                which cars have their own profile
-npx openhood faults --profile generic-obd2 --port <port>
-npx openhood live --profile generic-obd2 --port <port> --seconds 5
-npx openhood explain P0171                           a code in plain words, no car needed
+npx -y openhood@latest ports                                   find your adapter
+npx -y openhood@latest profiles                                which cars have their own profile
+npx -y openhood@latest faults --profile generic-obd2 --port <port>
+npx -y openhood@latest live --profile generic-obd2 --port <port> --seconds 5
+npx -y openhood@latest explain P0171                           a code in plain words, no car needed
 \`\`\`
 
 Leave out \`--port\` to try it on a simulated car.
