@@ -14,7 +14,7 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | --- | --- | --- |
 | Fast init, `81 13 F7 81 0C`, answer `03 C1 57 8F AA` | verified, known answer | Ekaitza_Itzali, SimonRafferty, TD5-Dash |
 | Diagnostic session `02 10 A0 B2` → `01 50 51` | verified, known answer | Ekaitza_Itzali, SimonRafferty |
-| Security key (`keygen.ts`), big-endian seed and key | verified, known answer (34A5 → 54D3, 8972 → 4511 on the car) | td5keygen, LR4x4 ESP32 thread |
+| Security key (`keygen.ts`), big-endian seed and key | verified, known answer (34A5 → 54D3; 8972 → 4511 and 0897 → 6209 on the car) | td5keygen, LR4x4 ESP32 thread |
 | 55 ms between messages with the engine running | community | TD5-Dash |
 | `7F 81 10` = old session still open: send `01 82 83`, retry | community | TD5-Dash (§7, §11); the addressed `81 13 F7 82 0D` is refused (`7F 82 10`) on the car |
 | StopCommunication `01 82 83` on disconnect | community | TD5-Dash |
@@ -26,6 +26,7 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | Injected fuel per stroke `21 1D`, data offset 6 (0.01 mg), shown as "Injected" | community | discovery2-diag (`injection_qty`, marked proven there); the rest of the block isn't read |
 | Cylinder balance `21 40`: five signed numbers, cylinders 1 to 5, no unit published | community | discovery2-diag (`balance_1..5`, marked proven on a Discovery 2 NNN; its notes say BinOwl_Td5Gauge reads it the same way), td5-carplay-gauge (`injector_balance`, marked verified on a Defender). Not read by us yet |
 | Battery `21 10` (mV) | verified | SimonRafferty |
+| Pedal switches `21 1E`, 2 data bytes, each bit low while pressed: clutch = offset 0 bit 1, brake = offset 1 bit 7 | verified, known answer | Read on the 1999 Defender pressing brake, clutch, brake, clutch (GitHub issue #23): `03 A2` at rest. Offset 1 bit 5 flips by itself every 0.5 to 2 s; cruise not tested |
 | Accelerator tracks `21 1B` (mV, track 1 shown) | verified | SimonRafferty |
 | Pedal 5 V supply `21 1B`, data offset 8, in the 10-byte answer only | community, seen on the car | td5-carplay-gauge (`throttle_supply_v`, "verified when available"); the 1999 Defender answered `03 63 10 50 13 88 00 00 13 A3`, `13 A3` = 5.03 V. discovery2-diag puts it at offset 6, which is 0 on the Defender, so a shorter answer shows no supply |
 | Fault memory `21 3B`: 35-byte block, one bit per fault | verified, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
@@ -38,6 +39,8 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 Tested on (add a line when you test on a car):
 - 2026-11-24 · Defender 1999 · early MSB ECU, EU2 · VAG-COM KKL 409.1 (FTDI) on macOS · connect, unlock,
   fault read and all live values at idle OK; clearing not tried (@tuffjocke, GitHub issue #1)
+- 2026-11-25 · the same car and cable, warm idle · CLI 0.1.10: connect, unlock, faults and 18 values OK, pedal
+  switches found (#23). The website in Chrome on macOS didn't wake it (#21)
 
 ## Connect sequence
 
@@ -64,12 +67,16 @@ the ECU refuses `81` with `7F 81 10`, and every refused start keeps the old sess
 
 **Fast init on macOS:** a serial BREAK never woke the ECU (each BREAK call takes 3 to 5 ms; 15 to
 25 ms waits were tried). One `0x00` byte at 360 baud (start bit + 8 zero bits = 25.0 ms) works, so
-the CLI's `NodeSerialTransport` does that. The browser still uses BREAK (not tried on a car yet).
+the CLI's `NodeSerialTransport` does that, and so does the website (it reopens the Web Serial port at
+360 baud and back). On the car the website hasn't woken the ECU yet (#21): its traffic now says how it
+woke the line ("fast init: 0x00 at 360 baud, reopen … ms, echo after … ms, then high … ms", or BREAK if
+the cable didn't open at 360 baud), so a read in Chrome can be compared with the CLI's.
 
 ## Known gaps
 
 - **Unnamed bits** `15.6`, `23.7`, `25.5` (Nanocom 16-7, 24-8, 26-6) are set on an early MSB Defender
-  and named by no source. A Nanocom or Testbook reading of that car would name them.
+  and named by no source; `25.3` (Nanocom 26-4) was set too on a later read of the same car (#21).
+  A Nanocom or Testbook reading of that car would name them.
 - `14.1` and `15.1` are both "high speed crank (Logged)" in every source.
 - **External air temperature** (`21 1A`, third pair) reads -50 °C at 5000 mV when no sensor is fitted
   (early Defender), so it isn't shown.
@@ -77,9 +84,8 @@ the CLI's `NodeSerialTransport` does that. The browser still uses BREAK (not tri
   yet, so we show track 1 in volts.
 - **Not tried on a car yet:** idle speed error (`21 21`) and fuel per stroke (`21 1D`). A car that
   refuses either one leaves that chart empty; the other readings carry on.
-- **Not read yet:** injector balance (`21 40`, five signed cylinder trims), input switches
-  (`21 1E`: brake, clutch, cruise), EGR (`21 37`) and wastegate (`21 38`) positions.
-  Ekaitza_Itzali's sign handling for `21 40` and `21 21` subtracts 65537, one off: use 65536.
+- **Not read yet:** EGR (`21 37`) and wastegate (`21 38`) positions, and the cruise control bits of `21 1E`.
+- Ekaitza_Itzali's sign handling for `21 40` and `21 21` subtracts 65537, one off: use 65536.
 - **Avoid** `21 07`, `0A`, `0B`, `0F`, `17`, `20`, `2B`, `2C`: reported as rejected or unreliable.
 
 ## Sources

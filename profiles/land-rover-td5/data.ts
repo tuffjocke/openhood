@@ -6,6 +6,7 @@
  * one open project or a Nanocom log format (sources in README.md). The "verified" ones were checked
  * against the raw bytes on a 1999 Defender with the engine idling (GitHub issue #1, tests/td5.test.ts);
  * idle speed error, fuel per stroke and cylinder balance ("community") haven't been read on a car by us yet.
+ * The pedal switches were found on the same car (GitHub issue #23).
  *
  * Each group carries an `encode` used only by the simulator, kept next to `decode`
  * so the two can never drift apart.
@@ -32,6 +33,9 @@ export const channels: Channel[] = [
   // Cylinder balance: how much the ECU trims each injector to even out the cylinders. No unit
   // published; a healthy engine sits within a few counts of 0.
   ...[1, 2, 3, 4, 5].map((n): Channel => ({ key: `balance${n}`, label: `Cylinder ${n} balance`, unit: "", decimals: 0, min: -30, max: 30, group: "fuel", confidence: "community" })),
+  // Pedal switches: 1 while pressed. Found on a 1999 Defender by pressing each pedal in turn (issue #23).
+  { key: "brake", label: "Brake pedal", unit: "", decimals: 0, min: 0, max: 1, confidence: "verified" },
+  { key: "clutch", label: "Clutch pedal", unit: "", decimals: 0, min: 0, max: 1, confidence: "verified" },
 ];
 
 type SimGroup = Group & { encode(s: SimSnapshot): number[] };
@@ -137,5 +141,15 @@ export const groups: SimGroup[] = [
     decode: (r): Values => (r.length >= 10 ? { fuel: u16(r, 8) / 100 } : {}),
     encode: (s) => [0x61, 0x1d, 0, 0, 0, 0, 0, 0, ...be16(s.fuel * 100), ...new Array(10).fill(0)],
     confidence: "community",
+  },
+  {
+    id: "switches",
+    request: [0x21, 0x1e],
+    // two bytes of input switches, each low while its pedal is pressed: clutch = data offset 0 bit 1,
+    // brake = offset 1 bit 7 (`61 1E 03 A2` at rest on a 1999 Defender, issue #23). Offset 1 bit 5
+    // flips by itself every second or so; cruise control isn't found yet.
+    decode: (r): Values => (r.length >= 4 ? { clutch: r[2] & 0x02 ? 0 : 1, brake: r[3] & 0x80 ? 0 : 1 } : {}),
+    encode: (s) => [0x61, 0x1e, s.clutch ? 0x01 : 0x03, s.brake ? 0x22 : 0xa2],
+    confidence: "verified",
   },
 ];

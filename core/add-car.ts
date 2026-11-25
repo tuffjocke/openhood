@@ -96,15 +96,18 @@ I am not a mechanic or a programmer. In plain words: what most likely went wrong
  * `problem`: the website tried and failed. The agent is asked to find out why with the MCP server.
  */
 export function readCarPrompt(car: string, untried = false, problem?: ReadProblem): string {
+  // The end of the website's traffic, cut to fit a link (Claude Code takes up to 5,000 characters).
+  const lines = problem?.traffic?.slice(-12).map((l) => (l.length > 90 ? `${l.slice(0, 87)}...` : l)) ?? [];
+  const traffic = lines.length ? `\nThe website's last traffic with the car (-> sent, <- answered):\n${lines.join("\n")}\n` : "";
   const failed = problem
     ? `
 I already tried reading it on the Openhood website and it went wrong. The site read it with the profile ${problem.profile}${problem.adapter ? ` through: ${problem.adapter}` : ""}. It said: "${problem.message}"
-Find out why. Openhood has an MCP server (command: npx -y openhood mcp) with tools to connect, read faults and live data, and see the raw traffic: add it if you can, otherwise use the commands with --traffic. Start with that profile. Work out whether it's the adapter, the plug, the ignition or the profile, tell me in plain words what to do, and offer to send what you found in as a GitHub issue. If the adapter's port is busy, ask me to close the Openhood page in the browser.
+${traffic}Find out why. Openhood has an MCP server (command: npx -y openhood mcp) with tools to connect, read faults and live data, and see the raw traffic: add it if you can (an MCP server added now only loads in a new session), otherwise use the commands with --traffic. Start with that profile. Work out whether it's the adapter, the plug, the ignition or the profile, tell me in plain words what to do, and offer to send what you found in as a GitHub issue. If the adapter's port is busy, ask me to close the Openhood page in the browser.
 `
     : "";
   const first = untried && !problem
     ? `
-Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. If you can add an MCP server, Openhood has one (command: npx -y openhood mcp) that lets you connect, read faults and live data, and see the raw traffic yourself; otherwise use the commands with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and tell me what you found. Offer to send it in as a GitHub issue so the profile gets better.
+Nobody has read this kind of car with Openhood yet, so its profile is untested and you may be the first. If you can add an MCP server (it loads when a session starts), Openhood has one (command: npx -y openhood mcp) that lets you connect, read faults and live data, and see the raw traffic yourself; otherwise use the commands with --traffic. If something fails, or the car answers things the profile doesn't show yet, find out why using the profile's README and its sources in the repository, and tell me what you found. Offer to send it in as a GitHub issue so the profile gets better.
 `
     : "";
   return `Help me read my car's fault codes with Openhood, an open-source car diagnostics tool:

@@ -78,6 +78,14 @@ claude mcp add openhood -- npx -y openhood mcp
 In a clone of the repository, Claude Code also picks it up from `.mcp.json` (the clone's own code):
 start `claude` in the repo folder and approve the "openhood" server when asked.
 
+Add it **before** starting the agent: agents load MCP servers when a session starts, so one added in
+the middle of a session only shows up in the next. The commands above work without it.
+
+Between tool calls the server keeps the car's session open: on a K-line car (KWP2000) it reads one value
+about once a second while the agent is busy elsewhere, since a Td5 and many other ECUs end the session
+after a few quiet seconds. If the car drops it anyway, the next tool call connects again once by itself.
+`traffic` leaves these keep-alive reads out; the live view shows them.
+
 The agent gets these tools:
 
 | Tool | What it does |
@@ -100,7 +108,11 @@ your browser the first time the agent connects to a car (not when the server sta
 it with every session), and `connect` also hands the agent the link. The next free port is used if 4848
 is taken.
 
-- It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`.
+- It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`, and
+  slowly between tool calls from the keep-alive reads. "Lost the car" means the car stopped answering;
+  the agent's next read connects again.
+- "Refused to connect" in the browser means the MCP server isn't running: the page only exists while
+  the agent's session has it. Start the agent, then ask it to connect.
 - It is on this computer only (127.0.0.1) and read-only: the page can't send anything to the car,
   and the server answers only requests addressed to itself, with no access for other websites.
 - The page is the website's own build, shipped in the npm package. In a clone, run

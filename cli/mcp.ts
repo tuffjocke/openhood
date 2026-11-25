@@ -165,7 +165,7 @@ export async function handle(rt: Runtime, msg: Json): Promise<Json | null> {
 }
 
 export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean }) {
-  const rt = new Runtime({ unsafe: opts.unsafe });
+  const rt = new Runtime({ unsafe: opts.unsafe, keepAlive: true });
   if (opts.unsafe) console.error("openhood: raw requests are NOT limited to read services (--unsafe-allow-any-request).");
   if (opts.watch !== false) {
     // The live view is a nice extra: if it can't start, the agent still gets every tool.

@@ -10,7 +10,8 @@ export const WATCH_EVENTS = "/events";
 /** The page, as the MCP server's live view link points at it. */
 export const WATCH_PAGE = "/watch/";
 
-export type WatchStatus = "idle" | "connecting" | "connected" | "failed";
+/** "lost": the car stopped answering between the agent's reads; its next read connects again. */
+export type WatchStatus = "idle" | "connecting" | "connected" | "failed" | "lost";
 
 export interface WatchState {
   status: WatchStatus;

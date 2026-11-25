@@ -44,8 +44,8 @@ export class KlineLink implements Link {
     if (mode === "fast" || mode === "auto") {
       try {
         this.init = { kind: "fast" };
-        this.note("fast init");
-        await this.transport.fastInit();
+        const how = await this.transport.fastInit();
+        this.note(how ? `fast init: ${how}` : "fast init");
         await connect(this, this.init);
         return;
       } catch (e) {

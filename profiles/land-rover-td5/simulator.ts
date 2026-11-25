@@ -23,6 +23,8 @@ export interface SimSnapshot {
   fuel: number;
   /** Cylinder balance 1 to 5. */
   balance: number[];
+  brake: boolean;
+  clutch: boolean;
 }
 
 export function createTd5Simulator(): SimulatedEcu {
@@ -159,6 +161,8 @@ class EngineModel {
       fuel: 7 + load * (18 + 32 * spool) + n(0.3),
       // A healthy engine: each cylinder a few counts either side of 0, number 3 a little high.
       balance: [-2, 1, 4, -1, -2].map((b) => Math.round(b + n(2))),
+      brake: brake > 0,
+      clutch: shifting || (this.v < 4 && phase > 8 && phase < 10), // in for each change and to pull away
     };
   }
 }

@@ -10,8 +10,11 @@ export interface Transport {
   readonly kind: "serial" | "simulator";
   open(): Promise<void>;
   close(): Promise<void>;
-  /** ISO 14230 fast init: K-line low 25 ms, high 25 ms. */
-  fastInit(): Promise<void>;
+  /**
+   * ISO 14230 fast init: K-line low 25 ms, high 25 ms. May return a few words on how the line was
+   * woken and how long each part took, for the traffic log ("0x00 at 360 baud, low 25 ms, high 61 ms").
+   */
+  fastInit(): Promise<string | void>;
   /**
    * Send one address byte at 5 baud (ISO 9141 / ISO 14230 slow init): start bit, 8 data bits
    * LSB first, stop bit, 200 ms each. The rest of the handshake (sync byte, key bytes) is done

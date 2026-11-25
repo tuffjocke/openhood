@@ -14,6 +14,7 @@ describe("Land Rover Td5", () => {
     assert.equal(td5Key(0x34a5), 0x54d3); // td5keygen README
     assert.equal(td5Key(0x021c), 0x4043); // Ekaitza_Itzali Read_Faults_and_clear.log
     assert.equal(td5Key(0x8972), 0x4511); // a 1999 Defender (GitHub issue #1)
+    assert.equal(td5Key(0x0897), 0x6209); // the same car (GitHub issue #21)
   });
 
   it("builds the sniffed fault clear request byte for byte", () => {
@@ -49,6 +50,18 @@ describe("Land Rover Td5", () => {
     assert.equal(hex(shortFrame([0x10, 0xa0])), "02 10 A0 B2");
     assert.equal(hex(shortFrame([0x27, 0x01])), "02 27 01 2A");
     assert.equal(hex(shortFrame([0x27, 0x02, 0x54, 0xd3])), "04 27 02 54 D3 54");
+  });
+
+  it("reads the pedal switches the way a Defender sent them", () => {
+    // GitHub issue #23: 61 1E 03 A2 at rest, 03 22 / 03 02 with the brake down, 01 A2 / 01 82 with the clutch down
+    const sw = groups.find((g) => g.id === "switches")!;
+    const at = (a: number, b: number) => sw.decode(Uint8Array.from([0x61, 0x1e, a, b]), {});
+    assert.deepEqual(at(0x03, 0xa2), { clutch: 0, brake: 0 });
+    assert.deepEqual(at(0x03, 0x82), { clutch: 0, brake: 0 }); // bit 5 of byte 1 flips by itself
+    assert.deepEqual(at(0x03, 0x22), { clutch: 0, brake: 1 });
+    assert.deepEqual(at(0x03, 0x02), { clutch: 0, brake: 1 });
+    assert.deepEqual(at(0x01, 0xa2), { clutch: 1, brake: 0 });
+    assert.deepEqual(at(0x01, 0x82), { clutch: 1, brake: 0 });
   });
 
   it("decodes values the way a Nanocom log reports them", () => {

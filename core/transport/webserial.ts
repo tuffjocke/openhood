@@ -19,6 +19,7 @@ export class WebSerialTransport implements Transport, ByteStream {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private rx = new ByteQueue();
   private reading = false;
+  private pumping: Promise<void> = Promise.resolve();
 
   /** Pass a port already chosen by the person, or let open() ask for one. */
   constructor(private opts: { baudRate: number; echo?: boolean; port?: SerialPort; parity?: "none" | "even" }) {
@@ -46,7 +47,7 @@ export class WebSerialTransport implements Transport, ByteStream {
     });
     this.opened = true;
     this.reading = true;
-    void this.pump();
+    this.pumping = this.pump();
   }
 
   private async pump() {
@@ -71,8 +72,9 @@ export class WebSerialTransport implements Transport, ByteStream {
     try {
       await this.reader?.cancel();
     } catch {}
-    // Wait for the read loop to let go of the stream before closing the port.
-    await sleep(20);
+    // Wait for the read loop to let go of the stream before closing the port. Not a fixed wait: on
+    // the reopen after the fast init pulse every ms counts.
+    await Promise.race([this.pumping, sleep(100)]);
     try {
       await this.port?.close();
     } catch {}
@@ -94,31 +96,45 @@ export class WebSerialTransport implements Transport, ByteStream {
     // Bus must be idle (high) for at least 300 ms before the pulse.
     await this.port.setSignals({ break: false });
     await sleep(300);
+    const t0 = performance.now();
     try {
       await this.setBaudRate(360);
-    } catch {
+    } catch (e) {
       await this.setBaudRate(baudRate);
-      return this.breakInit();
+      const why = e instanceof Error ? e.message : String(e);
+      return `BREAK, the cable didn't open at 360 baud (${why}); ${await this.breakInit()}`;
     }
+    const reopen = performance.now() - t0;
+    let echo = true;
+    let sent = 0;
+    let lowEnd = 0;
     try {
       this.rx.clear();
+      sent = performance.now();
       await this.send(Uint8Array.of(0x00));
       // The echo comes back once the byte is on the line, so the low pulse is over. No echo: wait it out.
-      await this.rx.take(1, 150).catch(() => sleep(30));
+      await this.rx.take(1, 150).catch(() => ((echo = false), sleep(30)));
+      lowEnd = performance.now();
     } finally {
       await this.setBaudRate(baudRate);
     }
     await sleep(20); // high (TiniH): reopening already took a few ms; TD5-Dash waits 75 ms on a Td5
     this.rx.clear();
+    const ms = (n: number) => `${Math.round(n)} ms`;
+    // The pulse itself is the UART's 25 ms; "echo after" includes the cable's USB latency.
+    return `0x00 at 360 baud, reopen ${ms(reopen)}, ${echo ? `echo after ${ms(lowEnd - sent)}` : "no echo"}, then high ${ms(performance.now() - lowEnd)}`;
   }
 
   /** Fast init by holding BREAK for 25 ms with JS timers: runs a few ms long on macOS. */
   private async breakInit() {
+    const t0 = performance.now();
     await this.port!.setSignals({ break: true });
     await sleep(25);
+    const t1 = performance.now();
     await this.port!.setSignals({ break: false });
     await sleep(25);
     this.rx.clear();
+    return `low about ${Math.round(t1 - t0)} ms`;
   }
 
   /** Send bytes as they are, without waiting for the echo. */

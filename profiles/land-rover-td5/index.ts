@@ -66,7 +66,7 @@ export const landRoverTd5: VehicleProfile = {
   schedule: [
     "rpm", "manifold", "pedal", "speed", "fuelling",
     "rpm", "manifold", "pedal", "temperatures", "idle",
-    "rpm", "manifold", "pedal", "battery", "ambient", "balance",
+    "rpm", "manifold", "pedal", "battery", "ambient", "balance", "switches",
   ],
   slowGroups: ["ambient"],
   faults,
