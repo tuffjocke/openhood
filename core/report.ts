@@ -3,6 +3,7 @@
  * Reports are public, so include nothing personal (we never read the VIN).
  */
 import { hex } from "./kwp2000/frame";
+import type { Finding } from "./checks";
 import type { Fault, Values, VehicleProfile } from "./profile";
 import type { TrafficEvent } from "./session";
 
@@ -106,4 +107,47 @@ export function carReportUrl(entry: Record<string, unknown>): string {
   ].join("\n");
   const q = new URLSearchParams({ title, body, labels: "car-report" });
   return `${REPO_URL}/issues/new?${q}`;
+}
+
+export interface CheckReportInput {
+  /** "Land Rover Defender 1999 2.5 Td5", as the person says it. */
+  car?: string;
+  /** What the adapter is sold as. */
+  adapterModel?: string;
+  profile: VehicleProfile;
+  /** How it connected, e.g. "KWP2000 fast init". */
+  connection: string;
+  results: { id: string; title: string; findings: Finding[] }[];
+}
+
+const VERDICT_WORDS: Record<Finding["verdict"], string> = { ok: "OK", look: "Look at", unclear: "Unclear" };
+
+/**
+ * The test checks (core/checks.ts) as a pre-filled "test-report" issue: one row per finding. The
+ * caller leaves fault codes out unless the person agreed. Long findings are cut until it fits a link.
+ */
+export function checkReportUrl(r: CheckReportInput): string {
+  const title = `Test report: ${r.car || r.profile.name} (${r.profile.id}) checks`;
+  for (const max of [400, 200, 120, 60]) {
+    const rows = r.results.flatMap((c) =>
+      c.findings.map((f) => `| ${c.title} | ${VERDICT_WORDS[f.verdict]} | ${(f.text.length > max ? `${f.text.slice(0, max - 3)}...` : f.text).replace(/\|/g, "/")} |`),
+    );
+    const body = [
+      "<!-- Made by Openhood's test checks. Fill in the question at the bottom, then press Submit. This report is public. -->",
+      "",
+      `**Vehicle:** ${r.car || "(not given)"}`,
+      `**Profile:** \`${r.profile.id}\` (${r.profile.status})`,
+      `**Connected with:** ${r.adapterModel ? `${r.adapterModel}, ` : ""}${r.connection}`,
+      "",
+      "| Check | Result | What was seen |",
+      "| --- | --- | --- |",
+      ...rows,
+      "",
+      "**Did this match the car (gauges, how it drives)?**",
+      "",
+    ].join("\n");
+    const url = `${REPO_URL}/issues/new?${new URLSearchParams({ title, body, labels: "test-report" })}`;
+    if (url.length <= MAX_URL) return url;
+  }
+  return `${REPO_URL}/issues/new?${new URLSearchParams({ title, labels: "test-report" })}`;
 }

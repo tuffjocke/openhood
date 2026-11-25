@@ -13,12 +13,15 @@ export function Dial({
   unavailable,
   big,
   battery,
+  target,
 }: {
   channel: Channel;
   value: number | undefined;
   unavailable?: boolean;
   big?: boolean;
   battery?: { channel: Channel; value: number | undefined };
+  /** Where the reading should go now (a test check's pacer): a yellow mark on the edge of the scale. */
+  target?: number;
 }) {
   const scale = useMemo(() => drawScale(c, !!big), [c, big]);
   const shown = unavailable ? "n/a" : value === undefined ? "-" : fmt(value, c.decimals);
@@ -44,6 +47,11 @@ export function Dial({
           </text>
         ))}
         {battery && <BatteryBar {...battery} />}
+        {target !== undefined && (
+          <g className="dial-target" style={{ transform: `rotate(${angleOf(c, target)}deg)` }}>
+            <line x1="100" y1="1" x2="100" y2="20" />
+          </g>
+        )}
         <g className="dial-needle" style={{ transform: `rotate(${needle}deg)`, transitionDuration: `${glide}ms` }}>
           <line x1="100" y1="46" x2="100" y2={big ? 8 : 11} />
         </g>

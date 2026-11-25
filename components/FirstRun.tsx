@@ -17,7 +17,7 @@ import { EngineLight } from "./landing/EngineLight";
 import type { ReadProblem } from "@/core/add-car";
 import { GUIDE_URL } from "./CarChooser";
 import { profileIn, valuesIn } from "@/core/units";
-import { reportsFor } from "@/profiles/car-reports";
+import { needsTest, reportsFor } from "@/profiles/car-reports";
 import { useUnits } from "./useUnits";
 import { labelsIn, useT } from "./useLang";
 import { VEHICLE_NAMES } from "@/profiles/names";
@@ -239,13 +239,9 @@ export function FirstRun({
   const canStart = readBle || serialOk;
   const start = readBle ? onBluetooth : onConnect;
   const busy = connecting === (readBle ? "bluetooth" : "serial");
-  // A car's own profile that nobody has read a real car with yet: the AI is asked to dig in.
-  const untried =
-    !profile.generic &&
-    profile.status !== "tested" &&
-    !reportsFor(selection.make ?? "", selection.model ?? "", Number(selection.year)).some(
-      (r) => r.result === "worked" && r.profile === profile.id,
-    );
+  // Openhood isn't proven on this car yet (no test run on one, or readings not verified): the AI is
+  // asked to run Openhood's test with the person first.
+  const untried = needsTest(profile, reportsFor(selection.make ?? "", selection.model ?? "", Number(selection.year)));
   const buyLink = buy && (
     <a className={`button big ${elm ? "quiet" : "ghost"}`} href={buy.link.url} target="_blank" rel="noreferrer">
       {t(buy.link.product ? "Buy on Amazon" : "Find on Amazon")}

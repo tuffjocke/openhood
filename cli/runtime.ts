@@ -1,3 +1,4 @@
+import { basicChecks, ENGINE_SAFETY, unverifiedCheck, type CarCheck, type Finding, type Verdict } from "../core/checks";
 import { hex } from "../core/kwp2000/frame";
 import { ElmLink, elmModeFor } from "../core/link/elm327";
 import { kLineLink } from "../core/link/kline";
@@ -11,10 +12,10 @@ import { SimulatedTransport } from "../core/transport/simulated";
 import { SimulatedElm } from "../core/transport/simulated-elm";
 import { TimeoutError } from "../core/transport/types";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { carReportUrl } from "../core/report";
+import { carReportUrl, checkReportUrl } from "../core/report";
 import { CMD } from "./command";
 import { getProfile, lookupCode, PROFILES } from "../profiles";
-import type { CarReport } from "../profiles/car-reports";
+import { needsTest, type CarReport } from "../profiles/car-reports";
 import { VEHICLE_NAMES } from "../profiles/names";
 import { NodeSerialTransport } from "./node-serial";
 
@@ -49,6 +50,10 @@ export class Runtime {
   /** Tool calls in progress; the keep-alive waits for none. */
   private calls = 0;
   private keepAliveMisses = 0;
+  /** When the check on the live view started (performance.now()), while it runs. */
+  private checkStarted = 0;
+  /** The last result of each check run on this connection, for test_report. */
+  private results = new Map<string, { title: string; findings: Finding[] }>();
   private traffic: TrafficEvent[] = [];
   /** What the live view shows (core/watch.ts), and who is watching. */
   private view: WatchState = emptyWatchState();
@@ -82,7 +87,10 @@ export class Runtime {
   }
 
   private stateEvent(): WatchEvent {
-    return { type: "state", state: structuredClone(this.view), traffic: this.trafficLines(TRAFFIC_LINES, { keepAlive: true }) };
+    const state = structuredClone(this.view);
+    // A page that opens mid-check picks up the pacer where it is.
+    if (state.check && !state.check.findings) state.check.elapsedMs = performance.now() - this.checkStarted;
+    return { type: "state", state, traffic: this.trafficLines(TRAFFIC_LINES, { keepAlive: true }) };
   }
 
   private emit(e: WatchEvent) {
@@ -238,6 +246,7 @@ export class Runtime {
       const s = new Session(profile, link, this.log);
       await s.connect();
       this.session = s;
+      if (!again) this.results.clear();
       this.lastConnect = o;
       this.keepAliveMisses = 0;
       this.setView({ status: "connected", adapter: link.adapter, unavailable: [...s.unavailableChannels], values: { ...this.view.values, ...this.shownValues(s.state) } });
@@ -247,6 +256,7 @@ export class Runtime {
         connectedThrough: link.adapter,
         init: s.init,
         unavailableChannels: [...s.unavailableChannels],
+        ...(o.port ? { test: this.testAdvice(s) } : {}),
         ...(this.liveView ? { liveView: this.liveView } : {}),
       };
     } catch (e) {
@@ -344,17 +354,32 @@ export class Runtime {
     return this.use((s) => this.readLive(s, o.seconds ?? 0));
   }
 
-  private async readLive(s: Session, seconds: number) {
-    const ids = [...new Set(s.profile.schedule)].filter((id) => s.isActive(id));
-    const end = performance.now() + Math.min(Math.max(seconds, 0), 30) * 1000;
+  /**
+   * Read the ECU's groups over and over for `seconds` (at least once each), and return every value
+   * seen, in order. With `keys`, after the first round only the groups that gave one of them are
+   * read, so a check samples its readings as fast as the line allows.
+   */
+  private async sample(s: Session, seconds: number, keys?: string[]) {
+    let ids = [...new Set(s.profile.schedule)].filter((id) => s.isActive(id));
+    const end = performance.now() + seconds * 1000;
     const seen: Record<string, number[]> = {};
+    let first = true;
     do {
+      const useful: string[] = [];
       for (const id of ids) {
         const got = await s.readGroup(id);
         this.gotValues(got);
         for (const [k, v] of Object.entries(got)) (seen[k] ??= []).push(v);
+        if (!keys || Object.keys(got).some((k) => keys.includes(k))) useful.push(id);
       }
+      if (first && keys && useful.length) ids = useful;
+      first = false;
     } while (performance.now() < end);
+    return seen;
+  }
+
+  private async readLive(s: Session, seconds: number) {
+    const seen = await this.sample(s, Math.min(Math.max(seconds, 0), 30));
     const out: Record<string, unknown> = {};
     for (const c of s.profile.channels) {
       const v = seen[c.key];
@@ -366,6 +391,117 @@ export class Runtime {
       out[c.key] = { label: c.label, unit: c.unit, last: r(v[v.length - 1]), min: r(Math.min(...v)), max: r(Math.max(...v)), samples: v.length, confidence: c.confidence };
     }
     return out;
+  }
+
+  /** The profile's checks, with the readings not verified yet checked right after idle (or at the end). */
+  /**
+   * Whether this car should get Openhood's test before anything else: when no car has run it with
+   * this profile yet, or the profile has readings nobody has verified on a car. That's how readings
+   * get verified, so it comes first.
+   */
+  private testAdvice(s: Session) {
+    if (!needsTest(s.profile)) return { recommended: false };
+    const unverified = s.profile.channels.filter((c) => c.confidence !== "verified" && !s.unavailableChannels.has(c.key)).map((c) => c.label);
+    const tested = !needsTest({ ...s.profile, channels: [] });
+    return {
+      recommended: true,
+      why: [
+        tested ? "" : "No car has run Openhood's test with this profile yet.",
+        unverified.length ? `${unverified.length} readings aren't verified on a car yet: ${unverified.join(", ")}.` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      next: "Before anything else, ask the person whether they have about ten minutes with the car parked, then call list_checks and go through the checks one at a time. Finish with test_report, with make, model and year.",
+    };
+  }
+
+  private checksFor(s: Session): CarCheck[] {
+    const own = s.profile.checks ?? basicChecks(s.profile.channels.map((c) => c.key));
+    const open = unverifiedCheck(s.profile.channels.filter((c) => !s.unavailableChannels.has(c.key)));
+    if (!open) return own;
+    const at = own.findIndex((c) => c.id === "idle");
+    return at < 0 ? [...own, open] : [...own.slice(0, at + 1), open, ...own.slice(at + 1)];
+  }
+
+  /** The test steps for the connected car, in order, with what to tell the person before each. */
+  listChecks() {
+    const s = this.s;
+    return {
+      how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. Explain each finding. The live view shows the check and, for the rev test, when to rev. Finish with test_report.",
+      safety: ENGINE_SAFETY,
+      checks: this.checksFor(s).map((c) => ({ id: c.id, title: c.title, ask: c.ask, seconds: c.seconds, engineRunning: !!c.engineRunning, done: this.results.has(c.id) })),
+    };
+  }
+
+  /** Run one check: read faults and live values as it says, judge them, show it on the live view. */
+  runCheck(id: string, o: { seconds?: number } = {}) {
+    const check = this.checksFor(this.s).find((c) => c.id === id);
+    if (!check) throw new UserError(`No check "${id}". Known: ${this.checksFor(this.s).map((c) => c.id).join(", ")}.`);
+    return this.use(async (s) => {
+      // Shorter on request (a quick look, tests), never longer than the check says.
+      const seconds = Math.min(Math.max(o.seconds ?? check.seconds, 0), check.seconds, 120);
+      this.checkStarted = performance.now();
+      this.setView({ check: { id: check.id, title: check.title, ask: check.ask, seconds, elapsedMs: 0, findings: null } });
+      try {
+        const faultsBefore = check.faults ? await s.readFaults() : undefined;
+        if (faultsBefore) this.gotFaults(faultsBefore, this.view.pending, this.view.readiness);
+        const watch = check.watch.filter((k) => !s.unavailableChannels.has(k));
+        const seen = seconds > 0 && watch.length ? await this.sample(s, seconds, watch) : {};
+        const faultsAfter = check.faults && seconds > 0 ? await s.readFaults() : undefined;
+        if (faultsAfter) this.gotFaults(faultsAfter, this.view.pending, this.view.readiness);
+        const series = Object.fromEntries(watch.filter((k) => seen[k]).map((k) => [k, seen[k]]));
+        const findings = check.judge({ series, faultsBefore, faultsAfter });
+        this.results.set(check.id, { title: check.title, findings });
+        this.setView({ check: { ...this.view.check!, findings } });
+        const readings: Record<string, unknown> = {};
+        for (const c of s.profile.channels) {
+          const v = series[c.key];
+          if (!v) continue;
+          const r = (x: number) => Number(x.toFixed(c.decimals));
+          readings[c.key] = { label: c.label, unit: c.unit, min: r(Math.min(...v)), max: r(Math.max(...v)), last: r(v[v.length - 1]), samples: v.length };
+        }
+        return { id: check.id, title: check.title, findings, readings };
+      } catch (e) {
+        this.setView({ check: null });
+        throw e;
+      }
+    });
+  }
+
+  /**
+   * What the checks found, as a public test report: a ready-made GitHub issue link. Fault codes only
+   * with `includeFaults` (ask the person first); never the VIN, which Openhood doesn't read.
+   */
+  testReport(o: { car?: string; make?: string; model?: string; year?: number; engine?: string; adapterModel?: string; includeFaults?: boolean }) {
+    const s = this.s;
+    if (!this.results.size) throw new UserError("No checks run yet. Run them with run_check first.");
+    const order = this.checksFor(s).map((c) => c.id);
+    const results = [...this.results.entries()]
+      .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
+      .map(([id, r]) => ({ id, ...r, findings: o.includeFaults || (id !== "faults" && id !== "wiggle") ? r.findings : r.findings.map(hideCodes) }));
+    const protocol = s.init.kind === "adapter" ? s.init.protocol || "ELM327" : s.init.kind === "fast" ? "KWP2000 fast init" : `5-baud init, ${s.init.protocol}`;
+    const car = o.car ?? ([o.make, o.model, o.year, o.engine].filter(Boolean).join(" ") || undefined);
+    const url = checkReportUrl({ car, adapterModel: o.adapterModel, profile: s.profile, connection: protocol, results });
+    // The shared car list learns this car has been tested: each check's worst finding, nothing personal.
+    const worst = (f: Finding[]): Verdict => (f.some((x) => x.verdict === "look") ? "look" : f.some((x) => x.verdict === "unclear") ? "unclear" : "ok");
+    const real = s.link.adapter === "kkl" || s.link.adapter === "elm327";
+    const carReport =
+      real && o.make && o.model && o.year
+        ? carReportUrl({
+            make: o.make,
+            model: o.model,
+            year: o.year,
+            ...(o.engine ? { engine: o.engine } : {}),
+            profile: s.profile.id,
+            date: new Date().toISOString().slice(0, 10),
+            adapter: s.link.adapter,
+            ...(o.adapterModel ? { adapterModel: o.adapterModel } : {}),
+            protocol,
+            result: "worked",
+            checks: Object.fromEntries(results.map((r) => [r.id, worst(r.findings)])),
+          })
+        : undefined;
+    return { results, url, ...(carReport ? { carReport } : {}) };
   }
 
   /** Send one raw request. Read-only requests only, unless started with the unsafe flag. */
@@ -412,6 +548,10 @@ export class Runtime {
     return shown.slice(-last).map(trafficLine);
   }
 }
+
+/** A finding about faults without the codes and names: how many, and whether it was fine. */
+const hideCodes = (f: Finding): Finding =>
+  f.verdict === "ok" ? f : { ...f, text: f.text.replace(/:.*$/, ". (Codes left out of the report.)") };
 
 const trafficLine = (e: TrafficEvent) => `${(e.t / 1000).toFixed(3)} ${e.dir === "tx" ? "->" : "<-"} ${e.text ?? hex(e.bytes)}${e.note ? `  (${e.note})` : ""}`;
 

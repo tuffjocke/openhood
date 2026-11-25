@@ -1,3 +1,4 @@
+import { standardChecks } from "@/core/checks";
 import { u16 } from "@/core/kwp2000/frame";
 import type { VehicleProfile } from "@/core/profile";
 import { faults } from "./dtc";
@@ -48,5 +49,14 @@ export const genericObd2: VehicleProfile = {
   groups,
   schedule: ["rpm", "speed", "throttle", "load", "rpm", "speed", "map", "maf", "rpm", "speed", "throttle", "load", "rpm", "stft", "coolant", "timing", "airTemp", "ltft", "voltage"],
   faults,
+  // Standard PIDs only, so the standard checks; a car that lacks a PID skips that part.
+  checks: standardChecks(channels, {
+    rpm: "rpm",
+    battery: "voltage",
+    coolant: "coolant",
+    temperatures: ["coolant", "airTemp"],
+    followRevs: ["maf", "throttle"],
+    trims: ["stft", "ltft"],
+  }),
   simulator: () => createObdSimulator(),
 };

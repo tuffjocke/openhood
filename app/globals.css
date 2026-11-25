@@ -123,6 +123,119 @@ a {
   color: var(--muted);
 }
 
+/* The test check the agent runs, over the binnacle on the live view: what to do, then what it found. */
+.check {
+  margin: 0 0 12px;
+  padding: 16px 20px 18px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.check-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin: 0;
+}
+
+.check-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.check-time {
+  font: 500 22px/1 var(--num);
+  color: var(--muted);
+}
+
+.check-ask {
+  margin: 6px 0 0;
+  max-width: 70ch;
+}
+
+/* While a check runs it is the whole page: big, centred, nothing else to read. */
+.check-focus {
+  display: grid;
+  align-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.check-focus .check {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 36px 36px;
+  border-radius: var(--r-lg);
+}
+
+.check-focus .check-title {
+  font: 600 clamp(36px, 5vw, 56px) / 1.02 var(--sans);
+  letter-spacing: -0.04em;
+}
+
+.check-focus .check-time {
+  font-size: clamp(28px, 4vw, 44px);
+}
+
+.check-focus .check-ask {
+  margin-top: 14px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+
+/* A running check's instruments: the live screen's own dials and charts, in a binnacle of their own. */
+.check .check-instruments {
+  margin-top: 20px;
+}
+
+/* The pacer's cue over the dial: what to do with the pedal right now. Orange while it says "up". */
+.check-cue {
+  margin: 0 0 20px;
+  text-align: center;
+  font: 600 clamp(40px, 6vw, 64px) / 1 var(--num);
+  color: var(--cl-ink);
+}
+
+.check-cue.up {
+  color: var(--needle);
+}
+
+.check-findings {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check-findings li {
+  position: relative;
+  margin-top: 6px;
+  padding-left: 20px;
+}
+
+/* One status dot per finding, in the fault cards' colours. */
+.check-findings li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.5em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.check-findings .verdict-ok::before {
+  background: var(--ok);
+}
+
+.check-findings .verdict-look::before {
+  background: var(--sign);
+}
+
+
 .muted {
   color: var(--muted);
   font-size: 15px;
@@ -1764,6 +1877,19 @@ html:has(.shell.is-read) {
   stroke-width: 3.2;
 }
 
+/* Where a test check wants the reading: a road-sign yellow mark across the edge of the scale. */
+.dial-target {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform 0.35s ease;
+}
+
+.dial-target line {
+  stroke: var(--sign);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
 .dial figcaption {
   position: absolute;
   inset: 0;
@@ -1869,6 +1995,12 @@ html:has(.shell.is-read) {
 /* Under the dials in the binnacle. */
 .dials + .charts {
   margin-top: clamp(28px, 3.4vw, 48px);
+}
+
+/* A running check's few charts keep the live screen's size instead of stretching across. */
+.dense .check-instruments .charts {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 260px));
+  justify-content: center;
 }
 
 .chart {

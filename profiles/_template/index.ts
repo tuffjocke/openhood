@@ -7,6 +7,7 @@
  *  - The simulator must speak the same bytes your decoders expect (put encode next to decode).
  *  - Register the profile in /profiles/index.ts, then run `npm run check`.
  */
+import { standardChecks } from "@/core/checks";
 import { be16, u16 } from "@/core/kwp2000/frame";
 import type { Channel, Group, SimulatedEcu, VehicleProfile } from "@/core/profile";
 
@@ -89,5 +90,7 @@ export const templateProfile: VehicleProfile = {
   dials: { main: "rpm", right: "coolant" },
   groups,
   schedule: ["rpm", "rpm", "coolant"],
+  // Test steps (docs/testing-a-car.md) with this profile's channel keys; add checks of your own after them.
+  checks: standardChecks(channels, { rpm: "rpm", coolant: "coolant" }),
   simulator: createSimulator,
 };

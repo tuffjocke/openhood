@@ -4,6 +4,7 @@
  *
  * To add a vehicle, copy /profiles/_template and read docs/adding-a-vehicle.md.
  */
+import type { CarCheck } from "./checks";
 import type { Addresses } from "./kwp2000/frame";
 
 /** Decoded values by key. Keys not listed in `channels` are kept but not shown (e.g. ambient pressure). */
@@ -365,6 +366,13 @@ export interface VehicleProfile {
     freezeFrame?(ecu: EcuLink, fault: Fault, state: Readonly<Values>): Promise<Values | null>;
     confidence: Confidence;
   };
+
+  /**
+   * Optional: the read-only test steps for this car (core/checks.ts), usually standardChecks(...)
+   * with this profile's channel keys, plus checks of its own. Without them a test is the faults and
+   * a short reading of everything.
+   */
+  checks?: CarCheck[];
 
   /** A fake ECU for development and tests. Required: every profile must run without a car. */
   simulator(): SimulatedEcu;
