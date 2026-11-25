@@ -457,7 +457,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   );
 
   return (
-    <main className={`shell${showFirstRun ? " is-first-run" : " dense"}`}>
+    <main className={`shell${showFirstRun ? ` is-first-run${page === "read" ? " is-read" : ""}` : " dense"}`}>
       {/* The demo needs no header: Back to start and Log a drive sit in the binnacle's corners. */}
       {!bare && (
       <header className="top">

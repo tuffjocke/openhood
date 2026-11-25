@@ -96,7 +96,6 @@ export const SV: Record<string, string> = {
   "Pair it in your settings, then read it here": "Parkoppla den i inställningarna och läs av den här",
   "Turn the adapter on. No pairing needed.": "Slå på adaptern. Ingen parkoppling behövs.",
   "Pair it in your {device}’s Bluetooth settings first.": "Parkoppla den först i Bluetooth-inställningarna på din {device}.",
-  "Or try a demo car first": "Eller prova en demobil först",
   "You need a KKL cable": "Du behöver en KKL-kabel",
   "You need an ELM327 adapter": "Du behöver en ELM327-adapter",
   "Most likely what connects your {make} to your {device}.": "Troligen det som kopplar din {make} till din {device}.",
