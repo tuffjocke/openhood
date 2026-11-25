@@ -1,5 +1,6 @@
 "use client";
 
+import { faultSearchUrl } from "@/core/fault-search";
 import { useState } from "react";
 import type { HistoryEntry } from "@/core/history";
 import type { Fault, FaultInfo, Readiness, Urgency, Values, VehicleProfile } from "@/core/profile";
@@ -148,7 +149,7 @@ function FaultRow({
     }
   }
 
-  const search = `https://www.google.com/search?q=${encodeURIComponent(`${vehicle} ${fault.code ?? fault.name}`.trim())}`;
+  const search = faultSearchUrl(vehicle, fault, profile);
 
   return (
     <li>
