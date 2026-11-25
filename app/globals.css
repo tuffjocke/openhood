@@ -1037,12 +1037,6 @@ button.mark-name:hover:not(:disabled) {
   margin-top: 0;
 }
 
-.read-demo {
-  margin: 24px 0 48px;
-  font-size: 15px;
-  color: var(--muted);
-}
-
 .path-foot a {
   color: var(--ink);
   text-underline-offset: 3px;
@@ -1311,7 +1305,7 @@ main > details.more {
 
 .showcase.light,
 .showcase-fault,
-.is-first-run .foot {
+.is-first-run:not(.is-read) .foot {
   --paper: #eef1ee;
   --surface: #e1e6e2;
   --surface-2: #d5dcd7;
@@ -1326,6 +1320,11 @@ main > details.more {
 body:has(.shell.is-first-run) {
   background: #0a0c0d;
   overflow-x: clip;
+}
+
+/* The steps page is black to the bottom of the window, under the footer too. */
+html:has(.shell.is-read) {
+  background: #0a0c0d;
 }
 
 .shell.is-first-run {
@@ -1525,7 +1524,7 @@ body:has(.shell.is-first-run) {
   /* In dark mode the light sections turn to polar night, so the black still takes turns with something. */
   .showcase.light,
   .showcase-fault,
-  .is-first-run .foot {
+  .is-first-run:not(.is-read) .foot {
     --paper: #151a1c;
     --surface: #1f2528;
     --surface-2: #293033;
@@ -2525,7 +2524,7 @@ span.fault-label {
   cursor: pointer;
 }
 
-/* On the start page the footer closes the last light section, full width. */
+/* On the start page the footer closes the last light section, full width. On the steps page it stays black. */
 .is-first-run .foot {
   margin-top: 0;
   margin-inline: calc(50% - 50vw);

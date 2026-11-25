@@ -385,11 +385,6 @@ export function FirstRun({
             </div>
           </div>
         )}
-        <p className="read-demo">
-          <button className="link-button" onClick={onSimulator} disabled={!!connecting}>
-            {t(connecting === "simulator" ? "Starting the demo…" : "Or try a demo car first")}
-          </button>
-        </p>
       </section>
     );
 
