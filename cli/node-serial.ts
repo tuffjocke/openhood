@@ -1,5 +1,5 @@
 import { SerialPort } from "serialport";
-import { ByteQueue, sleep, TimeoutError, type ByteStream, type Transport } from "../core/transport/types";
+import { bounded, ByteQueue, sleep, takeEcho, WRITE_STUCK, writeLimitMs, type ByteStream, type Transport } from "../core/transport/types";
 
 /** What the transport uses of a serial port, so tests can hand it serialport's mock. */
 export type Port = Pick<SerialPort, "isOpen" | "open" | "close" | "write" | "drain" | "set" | "update" | "on">;
@@ -41,7 +41,7 @@ export class NodeSerialTransport implements Transport, ByteStream {
     const port = this.port;
     this.port = null;
     // A cable that went away may never call back: give up waiting after a second.
-    if (port?.isOpen) await bounded(new Promise<void>((resolve) => port.close(() => resolve())), 1000).catch(() => {});
+    if (port?.isOpen) await bounded(new Promise<void>((resolve) => port.close(() => resolve())), 1000, "close").catch(() => {});
   }
 
   private set(brk: boolean) {
@@ -115,7 +115,7 @@ export class NodeSerialTransport implements Transport, ByteStream {
   private send(bytes: Uint8Array) {
     const port = this.port!;
     const out = new Promise<void>((resolve, reject) => port.write(Buffer.from(bytes), (e) => (e ? reject(e) : port.drain(() => resolve()))));
-    return bounded(out, 1000 + bytes.length * 10);
+    return bounded(out, writeLimitMs(bytes.length), WRITE_STUCK);
   }
 
   async fiveBaud(address: number) {
@@ -139,7 +139,7 @@ export class NodeSerialTransport implements Transport, ByteStream {
         if (i < bytes.length - 1) await sleep(interByteMs);
       }
     } else await this.send(bytes);
-    if (this.opts.echo !== false) await this.rx.take(bytes.length, 50 + bytes.length * 2);
+    if (this.opts.echo !== false) await takeEcho(this.rx, bytes.length);
   }
 
   read(n: number, timeoutMs: number) {
@@ -159,13 +159,4 @@ export class NodeSerialTransport implements Transport, ByteStream {
   flush() {
     this.rx.clear();
   }
-}
-
-/** `p`, or a TimeoutError if it hasn't settled after `ms`. */
-function bounded<T>(p: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new TimeoutError(0, 0, "The cable stopped taking data. Is it still plugged in?")), ms);
-  });
-  return Promise.race([p, late]).finally(() => clearTimeout(timer));
 }

@@ -253,7 +253,9 @@ Follow docs/adding-a-vehicle.md. In short:
   when polling and their channels show "n/a". `connect` can write to `state` to decide this.
 - Response payloads include the positive SID: for request `[0x21, 0x09]` the response is
   `[0x61, 0x09, ...data]`, so data starts at index 2.
-- KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo.
+- KKL cables echo every byte sent; `WebSerialTransport` strips it. The simulator has no echo. No echo at all is
+  `NO_ECHO` (core/transport/types.ts): the cable or computer side, not the car; echo but no answer is the car. Without
+  an echo, the website's fast init line says how many bytes came from the cable and any read errors (#21).
 - `EcuLink.init` says how the link was set up. On an ELM327 it is `{ kind: "adapter", can }`; on CAN some
   OBD answers differ (mode 03/07 start with a count byte). Profiles handle that, not the link.
 - The ELM327 link starts with headers off. On CAN it turns headers on (ATH1) and puts long answers back
