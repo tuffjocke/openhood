@@ -30,7 +30,7 @@ import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
 import { FaultPanel, HistoryFile } from "./FaultPanel";
 import { FirstRun } from "./FirstRun";
-import { AgentButton } from "./landing/AgentButton";
+import { AgentButton, noteDemo } from "./landing/AgentButton";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
 
 type Status = "idle" | "connecting" | "live" | "error";
@@ -179,8 +179,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     setUnplugOk(false);
     setProblem(null);
     setAdapter(undefined);
-    // The demo can't go wrong in a way an AI could help with.
-    const flag = (msg: string) => kind !== "simulator" && setProblem(msg);
+    // The demo going wrong says the browser or Openhood is at fault: noted for any later ask for the AI.
+    const flag = (msg: string) => (kind === "simulator" ? noteDemo(msg) : setProblem(msg));
     latest.current = {};
     history.current = {};
     traffic.current = [];
@@ -189,6 +189,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       session.current = s;
       await s.connect();
       setAdapter(describeAdapter(s));
+      if (kind === "simulator") noteDemo(null);
       setUnavailable(new Set(s.unavailableChannels));
       setStatus("live");
       setEverLive(true);
