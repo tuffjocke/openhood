@@ -36,6 +36,7 @@ describe("add your car prompt", () => {
     assert.ok(p.includes(`It said: "The car didn't answer."`));
     assert.ok(p.includes("the profile land-rover-td5"));
     assert.ok(p.includes("npx -y openhood@latest mcp"));
+    assert.ok(p.includes("look at the open ones"), "adds to an open issue instead of a duplicate");
     assert.ok(!p.includes("run Openhood's test with me"), "one ask to dig in, not two");
     // Claude Code links take up to 5,000 characters; the desktop app more.
     assert.ok(p.length < 5000, `${p.length} characters`);
@@ -48,6 +49,19 @@ describe("add your car prompt", () => {
     });
     assert.ok(long.includes("fast init: 0x00 at 360 baud"));
     assert.ok(long.length < 5000, `${long.length} characters`);
+  });
+
+  it("says when the demo car failed in the browser too", () => {
+    assert.ok(!readCarPrompt("1997 Volvo 850").includes("demo car"));
+    const p = readCarPrompt("1997 Volvo 850", false, undefined, "Simulator stopped.");
+    assert.ok(p.includes("demo car also failed to start in this browser"));
+    assert.ok(p.includes(`It said: "Simulator stopped."`));
+    assert.ok(p.endsWith("My car is 1997 Volvo 850."));
+    const both = readCarPrompt("2002 Land Rover Defender", false, { message: "The car didn't answer.", profile: "land-rover-td5" }, "x".repeat(2000));
+    assert.ok(both.includes("demo car also failed") && both.includes("The car didn't answer."));
+    assert.ok(both.length < 5000, `${both.length} characters`);
+    const phone = explainProblemPrompt("2006 Volvo V70", { message: "No answer from the car.", profile: "generic-obd2" }, "Simulator stopped.");
+    assert.ok(phone.includes("demo car also failed") && !phone.includes("npx"));
   });
 
   it("gives a phone AI what happened and the traffic, no commands", () => {

@@ -6,6 +6,29 @@ import { useT } from "../useLang";
 
 const CLI_DOCS = "https://github.com/tuffjocke/openhood/blob/main/docs/cli.md";
 const APP_KEY = "openhood.aiApp";
+const DEMO_KEY = "openhood.demoFailed";
+const DEMO_EVENT = "openhood:demo";
+
+/**
+ * The demo car (the simulator) failed in this browser, or started fine again (null). Kept for this
+ * tab, so a later ask for the AI says so: then it's the browser or Openhood, not the car.
+ */
+export function noteDemo(failed: string | null) {
+  try {
+    if (failed) sessionStorage.setItem(DEMO_KEY, failed);
+    else if (sessionStorage.getItem(DEMO_KEY) === null) return;
+    else sessionStorage.removeItem(DEMO_KEY);
+  } catch {}
+  window.dispatchEvent(new Event(DEMO_EVENT));
+}
+
+function demoFailure(): string | undefined {
+  try {
+    return sessionStorage.getItem(DEMO_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Desktop AI apps that run commands on this computer and open a new session with the message
@@ -44,7 +67,8 @@ export function AgentButton({
   onBefore?: () => void;
 }) {
   const t = useT();
-  const text = readCarPrompt(car, untried, problem);
+  const [demoFailed, setDemoFailed] = useState<string>();
+  const text = readCarPrompt(car, untried, problem, demoFailed);
   const [desktop, setDesktop] = useState(true);
   const [app, setApp] = useState<App | null>(null);
   const [picking, setPicking] = useState(false);
@@ -53,11 +77,17 @@ export function AgentButton({
 
   useEffect(() => {
     setDesktop(!/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent));
+    const demo = () => setDemoFailed(demoFailure());
+    demo();
+    window.addEventListener(DEMO_EVENT, demo);
     try {
       const saved = localStorage.getItem(APP_KEY);
       if (isApp(saved)) setApp(saved);
     } catch {}
-    return () => watching.current?.();
+    return () => {
+      window.removeEventListener(DEMO_EVENT, demo);
+      watching.current?.();
+    };
   }, []);
 
   async function copy(what = text) {
@@ -93,7 +123,7 @@ export function AgentButton({
 
   if (!desktop) {
     // Any AI app on the phone, from the share sheet: it explains what went wrong.
-    const explain = problem && explainProblemPrompt(car, problem);
+    const explain = problem && explainProblemPrompt(car, problem, demoFailed);
     async function share() {
       onBefore?.();
       if (explain && navigator.share) {

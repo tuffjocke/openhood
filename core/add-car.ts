@@ -72,18 +72,28 @@ export interface ReadProblem {
 }
 
 /**
+ * The demo car (the simulator, no adapter) also failed in this browser: then it's likely the
+ * browser or Openhood itself, not the car or the adapter. Cut so the prompt still fits a link.
+ */
+function demoLine(demoFailed?: string): string {
+  if (!demoFailed) return "";
+  const said = demoFailed.length > 200 ? `${demoFailed.slice(0, 197)}...` : demoFailed;
+  return `\nThe website's demo car also failed to start in this browser. It runs a simulated car in the page, with no adapter, so the cause is more likely the browser or Openhood itself than the car. It said: "${said}" Put that in any issue too.\n`;
+}
+
+/**
  * For an AI app on a phone, picked from the share sheet: it can't reach the adapter or run
  * anything, so it gets what happened and the traffic, and explains it.
  */
-export function explainProblemPrompt(car: string, problem: ReadProblem): string {
+export function explainProblemPrompt(car: string, problem: ReadProblem, demoFailed?: string): string {
   const traffic = problem.traffic?.length ? `\n\nLast traffic with the car (-> sent, <- answered):\n${problem.traffic.join("\n")}` : "";
   return `I tried to read my car's fault codes with Openhood (${REPO}), a free fault code reader in the browser, and it went wrong.
 
 Car: ${car || "(not given)"}
 Openhood profile: ${problem.profile}${problem.adapter ? `\nConnected through: ${problem.adapter}` : ""}
 What it said: "${problem.message}"${traffic}
-
-I am not a mechanic or a programmer. In plain words: what most likely went wrong, and what should I try first (the adapter, the plug, the ignition, a setting)? If it looks like a problem in Openhood itself, help me write a short GitHub issue about it.`;
+${demoLine(demoFailed)}
+I am not a mechanic or a programmer. In plain words: what most likely went wrong, and what should I try first (the adapter, the plug, the ignition, a setting)? If it looks like a problem in Openhood itself, help me write a short GitHub issue about it, or a comment on an open issue at ${REPO}/issues if one is about the same problem.`;
 }
 
 /**
@@ -94,8 +104,9 @@ I am not a mechanic or a programmer. In plain words: what most likely went wrong
  * `untried`: Openhood isn't proven on this car (profiles/car-reports.ts `needsTest`). The agent is then
  * asked to run Openhood's test with the person first, through the MCP server.
  * `problem`: the website tried and failed. The agent is asked to find out why with the MCP server.
+ * `demoFailed`: what the demo car said when it failed to start in this browser.
  */
-export function readCarPrompt(car: string, untried = false, problem?: ReadProblem): string {
+export function readCarPrompt(car: string, untried = false, problem?: ReadProblem, demoFailed?: string): string {
   // The end of the website's traffic, cut to fit a link (Claude Code takes up to 5,000 characters).
   const lines = problem?.traffic?.slice(-12).map((l) => (l.length > 90 ? `${l.slice(0, 87)}...` : l)) ?? [];
   const traffic = lines.length ? `\nThe website's last traffic with the car (-> sent, <- answered):\n${lines.join("\n")}\n` : "";
@@ -122,8 +133,8 @@ I am not a programmer. Do the technical steps yourself, one at a time, and tell 
 
 5. Add my car to Openhood's shared knowledge, so others with the same car know what works: npx -y openhood@latest record --profile <id> --port <port> --make <make> --model <model> --year <year> --adapter-model "<what my adapter is sold as, ask me>". It only keeps the car, the adapter, the connection and whether it worked: no VIN, no fault codes. It prints a link to a ready-made GitHub issue: give it to me and help me send it if I want to (it needs a GitHub account).
 
-${failed}${first}
-Rules: read only. Never clear codes or send anything that changes the car without asking me first. The commands are described in docs/cli.md in the repository.
+${failed}${first}${demoLine(demoFailed)}
+Rules: read only. Never clear codes or send anything that changes the car without asking me first. The commands are described in docs/cli.md in the repository. Before a new GitHub issue, look at the open ones (${REPO}/issues): if one is about the same problem, like the website not reading a car the commands read, add what you found to it as a comment instead.
 
 My car is ${car || "(ask me which car it is)"}.`;
 }
