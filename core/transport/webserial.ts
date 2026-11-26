@@ -1,4 +1,4 @@
-import { ByteQueue, sleep, type ByteStream, type Transport } from "./types";
+import { bounded, ByteQueue, sleep, takeEcho, WRITE_STUCK, writeLimitMs, type ByteStream, type Transport } from "./types";
 
 /** Bluetooth classic serial (SPP), used by many ELM327 adapters once paired with the computer. */
 const SPP = "00001101-0000-1000-8000-00805f9b34fb";
@@ -20,6 +20,9 @@ export class WebSerialTransport implements Transport, ByteStream {
   private rx = new ByteQueue();
   private reading = false;
   private pumping: Promise<void> = Promise.resolve();
+  /** Bytes from the cable since the port was last opened, and what went wrong reading it: said in the wake-up line (#21). */
+  private received = 0;
+  private readErrors: string[] = [];
 
   /** Pass a port already chosen by the person, or let open() ask for one. */
   constructor(private opts: { baudRate: number; echo?: boolean; port?: SerialPort; parity?: "none" | "even" }) {
@@ -47,24 +50,46 @@ export class WebSerialTransport implements Transport, ByteStream {
     });
     this.opened = true;
     this.reading = true;
+    this.received = 0;
+    this.readErrors = [];
     this.pumping = this.pump();
   }
 
   private async pump() {
-    while (this.reading && this.port?.readable) {
-      this.reader = this.port.readable.getReader();
+    while (this.reading) {
+      const readable = this.port?.readable;
+      if (!readable) {
+        // Gone for good (the device went away): nothing more will come.
+        if (this.reading) this.readError("the browser stopped reading the port");
+        return;
+      }
+      this.reader = readable.getReader();
       try {
         for (;;) {
           const { value, done } = await this.reader.read();
           if (done) break;
-          if (value) this.rx.push(value);
+          if (value) {
+            this.received += value.length;
+            this.rx.push(value);
+          }
         }
-      } catch {
-        // Framing errors during fast init are normal; keep reading.
+      } catch (e) {
+        // Framing errors during fast init are normal; keep reading, and keep them for the wake-up line.
+        if (this.reading) this.readError(e instanceof Error ? e.name : String(e));
+        await sleep(1); // never spin, should errors come one after another
       } finally {
         this.reader.releaseLock();
       }
     }
+  }
+
+  private readError(what: string) {
+    if (this.readErrors.length < 5) this.readErrors.push(what);
+  }
+
+  /** What came from the cable since the port was opened, for the traffic: "0 bytes from the cable, read errors: BreakError". */
+  private heard() {
+    return `${this.received} bytes from the cable${this.readErrors.length ? `, read errors: ${this.readErrors.join(", ")}` : ""}`;
   }
 
   async close() {
@@ -108,6 +133,7 @@ export class WebSerialTransport implements Transport, ByteStream {
     let echo = true;
     let sent = 0;
     let lowEnd = 0;
+    let heard360 = "";
     try {
       this.rx.clear();
       sent = performance.now();
@@ -115,6 +141,7 @@ export class WebSerialTransport implements Transport, ByteStream {
       // The echo comes back once the byte is on the line, so the low pulse is over. No echo: wait it out.
       await this.rx.take(1, 150).catch(() => ((echo = false), sleep(30)));
       lowEnd = performance.now();
+      heard360 = this.heard();
     } finally {
       await this.setBaudRate(baudRate);
     }
@@ -122,7 +149,8 @@ export class WebSerialTransport implements Transport, ByteStream {
     this.rx.clear();
     const ms = (n: number) => `${Math.round(n)} ms`;
     // The pulse itself is the UART's 25 ms; "echo after" includes the cable's USB latency.
-    return `0x00 at 360 baud, reopen ${ms(reopen)}, ${echo ? `echo after ${ms(lowEnd - sent)}` : "no echo"}, then high ${ms(performance.now() - lowEnd)}`;
+    // No echo: say whether anything came from the cable at all, and how reading it went (#21).
+    return `0x00 at 360 baud, reopen ${ms(reopen)}, ${echo ? `echo after ${ms(lowEnd - sent)}` : `no echo (${heard360})`}, then high ${ms(performance.now() - lowEnd)}`;
   }
 
   /** Fast init by holding BREAK for 25 ms with JS timers: runs a few ms long on macOS. */
@@ -142,7 +170,7 @@ export class WebSerialTransport implements Transport, ByteStream {
     if (!this.port?.writable) throw new Error("Port not open");
     const w = this.port.writable.getWriter();
     try {
-      await w.write(bytes);
+      await bounded(w.write(bytes), writeLimitMs(bytes.length), WRITE_STUCK);
     } finally {
       w.releaseLock();
     }
@@ -171,21 +199,19 @@ export class WebSerialTransport implements Transport, ByteStream {
     if (!this.port?.writable) throw new Error("Port not open");
     const w = this.port.writable.getWriter();
     try {
+      // A cable that stops taking data must not hold the page forever (#38).
       if (interByteMs > 0) {
         for (let i = 0; i < bytes.length; i++) {
-          await w.write(bytes.subarray(i, i + 1));
+          await bounded(w.write(bytes.subarray(i, i + 1)), writeLimitMs(1), WRITE_STUCK);
           if (i < bytes.length - 1) await sleep(interByteMs);
         }
       } else {
-        await w.write(bytes);
+        await bounded(w.write(bytes), writeLimitMs(bytes.length), WRITE_STUCK);
       }
     } finally {
       w.releaseLock();
     }
-    if (this.opts.echo !== false) {
-      // ~1 ms per byte at 10400 baud, plus slack.
-      await this.rx.take(bytes.length, 50 + bytes.length * 2);
-    }
+    if (this.opts.echo !== false) await takeEcho(this.rx, bytes.length);
   }
 
   readUntil(byte: number, timeoutMs: number) {
