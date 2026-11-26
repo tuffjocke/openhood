@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { NO_ECHO, WRITE_STUCK } from "../core/transport/types";
 import { WebSerialTransport } from "../core/transport/webserial";
 
 class FakePort {
@@ -16,19 +17,21 @@ class FakePort {
   writable: WritableStream<Uint8Array> | null = null;
   private baudRate = 0;
 
-  constructor(private refuse360 = false) {}
+  /** refuse360: can't open at 360 baud. silent: sends nothing back. stuck: writes never finish. */
+  constructor(private o: { refuse360?: boolean; silent?: boolean; stuck?: boolean } = {}) {}
 
   async open(o: { baudRate: number }) {
     if (this.readable) throw new DOMException("The port is already open.", "InvalidStateError");
     this.opens.push(o.baudRate);
-    if (this.refuse360 && o.baudRate === 360) throw new DOMException("Failed to open serial port.", "NetworkError");
+    if (this.o.refuse360 && o.baudRate === 360) throw new DOMException("Failed to open serial port.", "NetworkError");
     this.baudRate = o.baudRate;
     let echo: ReadableStreamDefaultController<Uint8Array> | undefined;
     this.readable = new ReadableStream<Uint8Array>({ start: (c) => void (echo = c) });
     this.writable = new WritableStream<Uint8Array>({
       write: (chunk) => {
+        if (this.o.stuck) return new Promise<void>(() => {});
         this.written.push({ baudRate: this.baudRate, bytes: [...chunk] });
-        echo?.enqueue(chunk.slice()); // the K-line echo
+        if (!this.o.silent) echo?.enqueue(chunk.slice()); // the K-line echo
       },
     });
   }
@@ -66,7 +69,7 @@ describe("Web Serial fast init", () => {
   });
 
   it("falls back to BREAK when the cable can't open at 360 baud", async () => {
-    const port = new FakePort(true);
+    const port = new FakePort({ refuse360: true });
     const t = transport(port);
     await t.open();
     const how = await t.fastInit();
@@ -76,6 +79,26 @@ describe("Web Serial fast init", () => {
     assert.deepEqual(port.breaks, [false, true, false]);
     await t.write(Uint8Array.of(0x81, 0x13, 0xf7, 0x81, 0x0c));
     assert.equal(port.written.at(-1)?.baudRate, 10400);
+    await t.close();
+  });
+
+  // Issue #21: in Chrome on macOS nothing came back from the cable, not even the echo, so the site
+  // said the car didn't answer. Now it says which side is silent.
+  it("tells a cable that sends nothing back from a car that doesn't answer", async () => {
+    const port = new FakePort({ silent: true });
+    const t = transport(port);
+    await t.open();
+    assert.match(String(await t.fastInit()), /no echo \(0 bytes from the cable\)/);
+    await assert.rejects(t.write(Uint8Array.of(0x81, 0x13, 0xf7, 0x81, 0x0c)), { message: NO_ECHO });
+    await t.close();
+  });
+
+  it("gives up on a write the cable never finishes", async () => {
+    const t = transport(new FakePort({ stuck: true }));
+    await t.open();
+    const t0 = performance.now();
+    await assert.rejects(t.write(Uint8Array.of(0x81, 0x13, 0xf7, 0x81, 0x0c)), { message: WRITE_STUCK });
+    assert.ok(performance.now() - t0 < 2000);
     await t.close();
   });
 });

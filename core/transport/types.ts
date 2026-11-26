@@ -75,6 +75,11 @@ export class ByteQueue {
     this.buf = [];
   }
 
+  /** Bytes waiting to be read. */
+  get size() {
+    return this.buf.length;
+  }
+
   /** Resolve when new bytes arrive or after `ms`, whichever comes first. */
   private wait(ms: number) {
     return new Promise<void>((resolve) => {
@@ -132,5 +137,38 @@ export class ByteQueue {
 export class TimeoutError extends Error {
   constructor(wanted: number, got: number, message?: string) {
     super(message ?? `K-line timeout: wanted ${wanted} bytes, got ${got}`);
+  }
+}
+
+/**
+ * Nothing came back from a KKL cable, not even the echo of what was sent. A KKL cable in the car's
+ * socket with the ignition on always sends it back, so the car isn't the problem: the cable or the
+ * computer side is (issue #21). Told apart from "echo, but no answer", which is the car.
+ */
+export const NO_ECHO =
+  "The cable sent nothing back, not even what Openhood sent. Check that it's pushed all the way into the car's socket and the ignition is on.";
+
+/** The cable has stopped taking data: a write that never finishes (issue #38). */
+export const WRITE_STUCK = "The cable stopped taking data. Is it still plugged in?";
+
+/** `p`, or a TimeoutError with `message` if it hasn't settled after `ms`. */
+export function bounded<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new TimeoutError(0, 0, message)), ms);
+  });
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
+}
+
+/** How long a write of `n` bytes may take before the cable counts as stuck. */
+export const writeLimitMs = (n: number) => 1000 + n * 10;
+
+/** The K-line echo of `n` bytes just sent (about 1 ms a byte at 10400 baud, plus slack). None at all: NO_ECHO. */
+export async function takeEcho(rx: ByteQueue, n: number) {
+  try {
+    await rx.take(n, 50 + n * 2);
+  } catch (e) {
+    if (e instanceof TimeoutError && rx.size === 0) throw new TimeoutError(n, 0, NO_ECHO);
+    throw e;
   }
 }

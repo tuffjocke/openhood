@@ -70,7 +70,9 @@ the ECU refuses `81` with `7F 81 10`, and every refused start keeps the old sess
 the CLI's `NodeSerialTransport` does that, and so does the website (it reopens the Web Serial port at
 360 baud and back). On the car the website hasn't woken the ECU yet (#21): its traffic now says how it
 woke the line ("fast init: 0x00 at 360 baud, reopen … ms, echo after … ms, then high … ms", or BREAK if
-the cable didn't open at 360 baud), so a read in Chrome can be compared with the CLI's.
+the cable didn't open at 360 baud), so a read in Chrome can be compared with the CLI's. With no echo it also
+says how many bytes came from the cable and any read errors. In the one website trace so far nothing came back at
+all, not even to the `ATI` probes after it, so the browser wasn't receiving from the cable.
 
 ## Known gaps
 
