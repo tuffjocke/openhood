@@ -29,6 +29,10 @@ For every check with the engine running:
 - Hands, hair, sleeves and the adapter's cable away from the fan and the belts.
 - Nobody in front of the car.
 
+Start the engine before you tell the agent you're ready, not during the check. Cranking dips the
+battery voltage, and some cars or cables stop answering for a moment. If that happens, the check
+ends and says the car stopped answering; the next check connects again by itself.
+
 ## The checks
 
 | Check | What you do | What it shows |

@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { handle } from "../cli/mcp";
 import { Runtime } from "../cli/runtime";
+import { sleep, TimeoutError } from "@/core/transport/types";
 import { correlation, guideAt, standardChecks, unverifiedCheck, type CarCheck } from "@/core/checks";
 import { needsTest, type CarReport } from "@/profiles/car-reports";
 import { getProfile, PROFILES } from "@/profiles";
@@ -143,5 +144,65 @@ describe("test checks over MCP", () => {
     const withCodes = (await call(rt, "test_report", { includeFaults: true })) as { url: string };
     assert.match(new URL(withCodes.url).searchParams.get("body")!, /Air flow/);
     await call(rt, "disconnect");
+  });
+
+  // Issue #38: the engine was started during a check, the car stopped answering, and run_check never came back.
+  type Inner = {
+    session: { readGroup: (id: string) => Promise<unknown>; closeWaitMs: number; link: { request: () => Promise<unknown> } } | null;
+    quietMs: number;
+  };
+
+  it("ends a check with connection lost when the car stops answering, and connects again for the next", async () => {
+    const rt = new Runtime({ keepAlive: true });
+    const inner = rt as unknown as Inner;
+    inner.quietMs = 300;
+    const shown: { status: string; findings: unknown }[] = [];
+    rt.watch((e) => e.type === "state" && shown.push({ status: e.state.status, findings: e.state.check?.findings ?? null }));
+    await call(rt, "connect", { profile: "land-rover-td5" });
+    const read = inner.session!.readGroup.bind(inner.session);
+    let reads = 0;
+    // Answers for a moment, then no echo from the cable (what cranking did to it).
+    inner.session!.readGroup = (id) => (++reads > 5 ? Promise.reject(new TimeoutError(4, 0)) : read(id));
+    const t0 = performance.now();
+    const idle = (await call(rt, "run_check", { id: "idle" })) as { connectionLost: boolean; findings: { verdict: string; text: string }[]; readings: { rpm?: unknown }; next: string };
+    assert.ok(performance.now() - t0 < 3000, "ends soon after the car goes quiet, not after the check's 30 s");
+    assert.equal(idle.connectionLost, true);
+    assert.equal(idle.findings[0].verdict, "unclear");
+    assert.match(idle.findings[0].text, /stopped answering/);
+    assert.ok(idle.readings.rpm, "what it read before is kept");
+    const last = shown[shown.length - 1];
+    assert.equal(last.status, "lost", "the live view says the car is gone");
+    assert.ok(last.findings, "and keeps the check on screen with what it found");
+
+    const again = (await call(rt, "run_check", { id: "idle", seconds: 1 })) as { connectionLost?: boolean; findings: { verdict: string }[] };
+    assert.ok(!again.connectionLost, "the next run_check connected again first");
+    await call(rt, "disconnect");
+  });
+
+  it("never waits forever for a read that doesn't come back", async () => {
+    const rt = new Runtime({ keepAlive: true });
+    const inner = rt as unknown as Inner;
+    inner.quietMs = 300;
+    await call(rt, "connect", { profile: "land-rover-td5" });
+    inner.session!.closeWaitMs = 200;
+    inner.session!.link.request = () => new Promise(() => {}); // a write the cable never finishes, holding the queue
+    const t0 = performance.now();
+    const idle = (await call(rt, "run_check", { id: "idle" })) as { connectionLost: boolean };
+    assert.equal(idle.connectionLost, true);
+    await call(rt, "disconnect");
+    assert.ok(performance.now() - t0 < 3000, `${Math.round(performance.now() - t0)} ms`);
+  });
+
+  it("stops a running check at once on disconnect", async () => {
+    const rt = new Runtime({ keepAlive: true });
+    await call(rt, "connect", { profile: "land-rover-td5" });
+    const t0 = performance.now();
+    const running = handle(rt, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "run_check", arguments: { id: "idle" } } });
+    await sleep(200);
+    await rt.disconnect();
+    const r = (await running) as { result: { content: { text: string }[]; isError?: boolean } };
+    assert.ok(r.result.isError);
+    assert.match(r.result.content[0].text, /stopped/);
+    assert.ok(performance.now() - t0 < 3000, "not after the check's 30 s");
   });
 });

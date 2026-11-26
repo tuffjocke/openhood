@@ -21,7 +21,8 @@ link to the person once, in case no window opened, so they can watch the reading
 makes the dials move.
 Openhood's test comes first on cars it isn't proven on: when connect returns test.recommended, say why in plain
 words and, with the person's okay, run it before anything else: list_checks, then each check with run_check one at a
-time (tell the person what to do and wait until they're ready), then test_report with make, model and year. Say the
+time (tell the person what to do and wait until they're ready; for a check with the engine running, until the engine
+is running), then test_report with make, model and year. Say the
 safety note before any check with the engine running. The test is how readings get verified, so ask the person whether
 the car's own gauges agree with the readings not verified yet.`;
 
@@ -128,7 +129,7 @@ export const TOOLS: Tool[] = [
   {
     name: "run_check",
     description:
-      "Run one test step from list_checks, after telling the person what to do and hearing they're ready. Reads for the step's seconds (up to 120), shows it on the live view (with a pacer for the rev test) and returns findings: ok, look or unclear, each with a plain sentence.",
+      "Run one test step from list_checks, after telling the person what to do and hearing they're ready. Reads for the step's seconds (up to 120), shows it on the live view (with a pacer for the rev test) and returns findings: ok, look or unclear, each with a plain sentence. If the car stops answering, the check ends with connectionLost and what to do next.",
     inputSchema: {
       type: "object",
       properties: {
@@ -247,14 +248,16 @@ export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: bo
   let chain = Promise.resolve();
   lines.on("line", (line) => {
     if (!line.trim()) return;
+    let msg: Json;
+    try {
+      msg = JSON.parse(line) as Json;
+    } catch {
+      chain = chain.then(() => void send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }));
+      return;
+    }
+    // A cancelled call or a disconnect can't wait its turn behind a running check: stop it now (#38).
+    if (msg.method === "notifications/cancelled" || (msg.method === "tools/call" && (msg.params as Json | undefined)?.name === "disconnect")) rt.stopCheck();
     chain = chain.then(async () => {
-      let msg: Json;
-      try {
-        msg = JSON.parse(line) as Json;
-      } catch {
-        send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
-        return;
-      }
       if (!opened && rt.liveView && msg.method === "tools/call" && (msg.params as Json | undefined)?.name === "connect") {
         opened = true;
         if (!rt.watching) openInBrowser(rt.liveView);
