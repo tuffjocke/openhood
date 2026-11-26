@@ -293,7 +293,10 @@ Follow docs/adding-a-vehicle.md. In short:
 - Web Serial needs a user gesture and works in Chrome/Edge desktop and Chrome 148+ Android. Not Safari.
 - The MCP server (`Runtime` with `keepAlive`) reads the profile's first scheduled group after 1 s without a tool
   call on a KWP2000 K-line session, so ECUs like the Td5 don't end it, and on a timeout checks the car still answers;
-  if not, it connects again once and repeats the call (never a clear). Keep-alive lines are noted "keep-alive" and left
+  if not, it connects again once and repeats the call (never a clear, never a check: a check whose car goes quiet for
+  5 s ends with `connectionLost`, the live view says "lost", and the next call connects again). Nothing may wait forever:
+  cable writes and closes have time limits, `Session.disconnect` closes the link after 2 s even if a request is stuck,
+  and a cancelled call or `disconnect` stops a running check at once instead of queueing behind it (#38). Keep-alive lines are noted "keep-alive" and left
   out of the `traffic` tool. `openhood watch` does the same; the CLI's one-shot commands don't.
 - The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
   `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It

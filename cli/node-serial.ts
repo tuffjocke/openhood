@@ -1,5 +1,5 @@
 import { SerialPort } from "serialport";
-import { ByteQueue, sleep, type ByteStream, type Transport } from "../core/transport/types";
+import { ByteQueue, sleep, TimeoutError, type ByteStream, type Transport } from "../core/transport/types";
 
 /** What the transport uses of a serial port, so tests can hand it serialport's mock. */
 export type Port = Pick<SerialPort, "isOpen" | "open" | "close" | "write" | "drain" | "set" | "update" | "on">;
@@ -40,7 +40,8 @@ export class NodeSerialTransport implements Transport, ByteStream {
   async close() {
     const port = this.port;
     this.port = null;
-    if (port?.isOpen) await new Promise<void>((resolve) => port.close(() => resolve()));
+    // A cable that went away may never call back: give up waiting after a second.
+    if (port?.isOpen) await bounded(new Promise<void>((resolve) => port.close(() => resolve())), 1000).catch(() => {});
   }
 
   private set(brk: boolean) {
@@ -107,8 +108,14 @@ export class NodeSerialTransport implements Transport, ByteStream {
     await this.open();
   }
 
+  /**
+   * Write and wait until the bytes are out. A cable that stops taking data (its car side browned out
+   * while cranking, or it was pulled) never finishes the write: fail it, so nothing waits forever (#38).
+   */
   private send(bytes: Uint8Array) {
-    return new Promise<void>((resolve, reject) => this.port!.write(Buffer.from(bytes), (e) => (e ? reject(e) : this.port!.drain(() => resolve()))));
+    const port = this.port!;
+    const out = new Promise<void>((resolve, reject) => port.write(Buffer.from(bytes), (e) => (e ? reject(e) : port.drain(() => resolve()))));
+    return bounded(out, 1000 + bytes.length * 10);
   }
 
   async fiveBaud(address: number) {
@@ -152,4 +159,13 @@ export class NodeSerialTransport implements Transport, ByteStream {
   flush() {
     this.rx.clear();
   }
+}
+
+/** `p`, or a TimeoutError if it hasn't settled after `ms`. */
+function bounded<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new TimeoutError(0, 0, "The cable stopped taking data. Is it still plugged in?")), ms);
+  });
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
 }

@@ -157,12 +157,21 @@ export class Session {
     await this.exclusive(() => f.clear!(this.link));
   }
 
+  /**
+   * End the session and close the link. Never waits more than `closeWaitMs` for the queue: a request
+   * stuck on a cable that stopped answering must not keep the port open forever (issue #38).
+   */
   async disconnect() {
     this.stop();
     const end = this.profile.disconnect;
-    if (this.connected && end) await this.exclusive(() => end(this.link)).catch(() => {});
+    const ending = this.connected && end ? this.exclusive(() => end(this.link)).catch(() => {}) : this.queue;
     this.connected = false;
-    await this.queue;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([ending.then(() => this.queue), new Promise<void>((r) => (timer = setTimeout(r, this.closeWaitMs)))]);
+    clearTimeout(timer);
     await this.link.close();
   }
+
+  /** How long disconnect waits for what's still queued before closing the link anyway. */
+  closeWaitMs = 2000;
 }

@@ -1,5 +1,5 @@
 import { basicChecks, ENGINE_SAFETY, unverifiedCheck, type CarCheck, type Finding, type Verdict } from "../core/checks";
-import { hex } from "../core/kwp2000/frame";
+import { hex, NegativeResponse } from "../core/kwp2000/frame";
 import { ElmLink, elmModeFor } from "../core/link/elm327";
 import { kLineLink } from "../core/link/kline";
 import { detectAdapter } from "../core/link/open";
@@ -10,7 +10,7 @@ import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
 import { SimulatedElm } from "../core/transport/simulated-elm";
-import { TimeoutError } from "../core/transport/types";
+import { sleep, TimeoutError } from "../core/transport/types";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { carReportUrl, checkReportUrl } from "../core/report";
 import { CMD } from "./command";
@@ -23,6 +23,48 @@ const TRAFFIC_LINES = 500;
 /** Idle time before the MCP server reads something to keep a K-line session open. ISO 14230's P3max is 5 s; a Td5 drops sooner. */
 const KEEP_ALIVE_MS = 1000;
 const KEEP_ALIVE_NOTE = "keep-alive";
+/** A check's fault read may ask many modules one by one: much longer than a live read. */
+const CHECK_FAULTS_MS = 60_000;
+
+/** Disconnect or a cancelled call stopped the check. */
+class CheckStopped extends Error {}
+/** The car gave no good answer for too long during a check. */
+class CarQuiet extends Error {}
+
+/**
+ * One running check, so disconnect and a cancelled call can end it at once, and a read that never
+ * comes back can't hold it forever (issue #38).
+ */
+class CheckRun {
+  stopped = false;
+  private wake = new Set<() => void>();
+
+  stop() {
+    this.stopped = true;
+    for (const w of this.wake) w();
+  }
+
+  /** `p`, or CarQuiet after `ms`, or CheckStopped as soon as the check is stopped. */
+  within<T>(p: Promise<T>, ms: number): Promise<T> {
+    if (this.stopped) return Promise.reject(new CheckStopped());
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let wake = () => {};
+    const end = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new CarQuiet()), ms);
+      wake = () => reject(new CheckStopped());
+      this.wake.add(wake);
+    });
+    return Promise.race([p, end]).finally(() => {
+      clearTimeout(timer);
+      this.wake.delete(wake);
+    });
+  }
+
+  /** Wait `ms`, unless stopped first. */
+  pause(ms: number) {
+    return this.within(sleep(ms), ms + 1000);
+  }
+}
 
 export interface ConnectOptions {
   /** Profile id, e.g. "generic-obd2" or "land-rover-td5". */
@@ -52,6 +94,10 @@ export class Runtime {
   private keepAliveMisses = 0;
   /** When the check on the live view started (performance.now()), while it runs. */
   private checkStarted = 0;
+  /** The check running now, if any. */
+  private running: CheckRun | null = null;
+  /** No good answer for this long during a check: the car has stopped answering (#38). */
+  private quietMs = 5000;
   /** The last result of each check run on this connection, for test_report. */
   private results = new Map<string, { title: string; findings: Finding[] }>();
   private traffic: TrafficEvent[] = [];
@@ -298,7 +344,13 @@ export class Runtime {
       : kLineLink(profile, new NodeSerialTransport({ path, baudRate: profile.link.baudRate, parity: profile.link.parity }), this.log);
   }
 
+  /** Stop the check that's running, if any. Called at once for a cancelled call or a disconnect, which can't wait their turn. */
+  stopCheck() {
+    this.running?.stop();
+  }
+
   async disconnect() {
+    this.stopCheck();
     this.lastConnect = null;
     await this.drop();
     return { connected: false };
@@ -369,15 +421,27 @@ export class Runtime {
    * seen, in order. With `keys`, after the first round only the groups that gave one of them are
    * read, so a check samples its readings as fast as the line allows.
    */
-  private async sample(s: Session, seconds: number, keys?: string[]) {
+  private async sample(s: Session, seconds: number, keys?: string[], check?: { run: CheckRun; seen: Record<string, number[]> }) {
     let ids = [...new Set(s.profile.schedule)].filter((id) => s.isActive(id));
     const end = performance.now() + seconds * 1000;
-    const seen: Record<string, number[]> = {};
+    const seen: Record<string, number[]> = check?.seen ?? {};
     let first = true;
+    let lastGood = performance.now();
     do {
       const useful: string[] = [];
       for (const id of ids) {
-        const got = await s.readGroup(id);
+        let got: Values;
+        if (!check) got = await s.readGroup(id);
+        else
+          try {
+            // During a check a missed answer is no reason to stop, but a car that stays quiet is.
+            got = await check.run.within(s.readGroup(id), this.quietMs);
+            lastGood = performance.now();
+          } catch (e) {
+            if (e instanceof CheckStopped || performance.now() - lastGood >= this.quietMs) throw e instanceof CheckStopped ? e : new CarQuiet();
+            await check.run.pause(100);
+            continue;
+          }
         this.gotValues(got);
         for (const [k, v] of Object.entries(got)) (seen[k] ??= []).push(v);
         if (!keys || Object.keys(got).some((k) => keys.includes(k))) useful.push(id);
@@ -437,7 +501,7 @@ export class Runtime {
   listChecks() {
     const s = this.s;
     return {
-      how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. Explain each finding. The live view shows the check and, for the rev test, when to rev. Finish with test_report.",
+      how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. For a check with the engine running, they start the engine before saying ready: starting it during a check can make the car stop answering. Explain each finding. The live view shows the check and, for the rev test, when to rev. Finish with test_report.",
       safety: ENGINE_SAFETY,
       checks: this.checksFor(s).map((c) => ({ id: c.id, title: c.title, ask: c.ask, seconds: c.seconds, engineRunning: !!c.engineRunning, done: this.results.has(c.id) })),
     };
@@ -450,30 +514,67 @@ export class Runtime {
     return this.use(async (s) => {
       // Shorter on request (a quick look, tests), never longer than the check says.
       const seconds = Math.min(Math.max(o.seconds ?? check.seconds, 0), check.seconds, 120);
+      const run = new CheckRun();
+      this.running = run;
       this.checkStarted = performance.now();
       this.setView({ check: { id: check.id, title: check.title, ask: check.ask, seconds, elapsedMs: 0, findings: null } });
+      const watch = check.watch.filter((k) => !s.unavailableChannels.has(k));
+      const seen: Record<string, number[]> = {};
+      const readings = () => {
+        const out: Record<string, unknown> = {};
+        for (const c of s.profile.channels) {
+          const v = seen[c.key];
+          if (!v || !watch.includes(c.key)) continue;
+          const r = (x: number) => Number(x.toFixed(c.decimals));
+          out[c.key] = { label: c.label, unit: c.unit, min: r(Math.min(...v)), max: r(Math.max(...v)), last: r(v[v.length - 1]), samples: v.length };
+        }
+        return out;
+      };
       try {
-        const faultsBefore = check.faults ? await s.readFaults() : undefined;
+        const faultsBefore = check.faults ? await run.within(s.readFaults(), CHECK_FAULTS_MS) : undefined;
         if (faultsBefore) this.gotFaults(faultsBefore, this.view.pending, this.view.readiness);
-        const watch = check.watch.filter((k) => !s.unavailableChannels.has(k));
-        const seen = seconds > 0 && watch.length ? await this.sample(s, seconds, watch) : {};
-        const faultsAfter = check.faults && seconds > 0 ? await s.readFaults() : undefined;
+        if (seconds > 0 && watch.length) await this.sample(s, seconds, watch, { run, seen });
+        const faultsAfter = check.faults && seconds > 0 ? await run.within(s.readFaults(), CHECK_FAULTS_MS) : undefined;
         if (faultsAfter) this.gotFaults(faultsAfter, this.view.pending, this.view.readiness);
         const series = Object.fromEntries(watch.filter((k) => seen[k]).map((k) => [k, seen[k]]));
         const findings = check.judge({ series, faultsBefore, faultsAfter });
         this.results.set(check.id, { title: check.title, findings });
         this.setView({ check: { ...this.view.check!, findings } });
-        const readings: Record<string, unknown> = {};
-        for (const c of s.profile.channels) {
-          const v = series[c.key];
-          if (!v) continue;
-          const r = (x: number) => Number(x.toFixed(c.decimals));
-          readings[c.key] = { label: c.label, unit: c.unit, min: r(Math.min(...v)), max: r(Math.max(...v)), last: r(v[v.length - 1]), samples: v.length };
-        }
-        return { id: check.id, title: check.title, findings, readings };
+        return { id: check.id, title: check.title, findings, readings: readings() };
       } catch (e) {
-        this.setView({ check: null });
-        throw e;
+        if (e instanceof CheckStopped) {
+          this.setView({ check: null });
+          throw new UserError("The check was stopped.");
+        }
+        if (e instanceof UserError || e instanceof NegativeResponse) {
+          this.setView({ check: null });
+          throw e;
+        }
+        // The car went quiet (or the cable stopped taking data): end the check and say so, instead of
+        // reading on, or connecting again behind the person's back and starting the check over.
+        const after = Math.round((performance.now() - this.checkStarted) / 1000);
+        const findings: Finding[] = [
+          {
+            verdict: "unclear",
+            text: `The car stopped answering ${after} s into the check, so it couldn't finish. ${
+              check.engineRunning
+                ? "Starting the engine often does this: the battery voltage dips while cranking. Start the engine first, then run the check again."
+                : "Check the plug and that the ignition is on, then run the check again."
+            }`,
+          },
+        ];
+        this.results.set(check.id, { title: check.title, findings });
+        this.setView({ status: "lost", error: "The car stopped answering.", check: { ...this.view.check!, findings } });
+        return {
+          id: check.id,
+          title: check.title,
+          connectionLost: true,
+          findings,
+          readings: readings(),
+          next: "Tell the person the car stopped answering, in plain words. The next run_check connects again by itself first. For a check with the engine running, have the engine running before you run it.",
+        };
+      } finally {
+        if (this.running === run) this.running = null;
       }
     });
   }
