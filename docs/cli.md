@@ -39,7 +39,8 @@ npx -y openhood@latest faults --profile generic-obd2 --port /dev/ttyUSB0
 npx -y openhood@latest live   --profile generic-obd2 --port COM3 --seconds 5
 npx -y openhood@latest request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C"
 
-# the live view in your browser, no agent or MCP setup: dials, charts, faults, traffic until Ctrl+C
+# the live view in your browser, no agent or MCP setup: dials, charts, faults, traffic until Ctrl+C,
+# and Openhood's test run from the page
 npx -y openhood@latest watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI
 
 # read the car and share what worked (from npm: prints a link to a ready-made GitHub issue;
@@ -121,13 +122,16 @@ your browser the first time the agent connects to a car (not when the server sta
 it with every session), and `connect` also hands the agent the link. The next free port is used if 4848
 is taken.
 
-- It only shows what the agent reads: the dials move while it runs `read_live` with `seconds`, and
-  slowly between tool calls from the keep-alive reads. "Lost the car" means the car stopped answering;
-  the next read connects again.
+- It shows what the agent reads: the dials move while it runs `read_live` with `seconds`, and
+  slowly between tool calls from the keep-alive reads. "Lost the car" means the car stopped answering:
+  press Reconnect, or the next read connects again.
+- Openhood's test runs from the page too: the steps, what to do, Start, Stop, Skip. The agent sees the
+  same results, and only one check runs at a time.
 - "Refused to connect" in the browser means the MCP server isn't running: the page only exists while
   the agent's session has it. Start the agent, then ask it to connect.
-- It is on this computer only (127.0.0.1) and read-only: the page can't send anything to the car,
-  and the server answers only requests addressed to itself, with no access for other websites.
+- It is on this computer only (127.0.0.1) and read-only: the page can only run, skip and stop the
+  test's checks and reconnect, never clear codes or send its own requests. The server answers only
+  requests addressed to itself, and only its own page can send it commands.
 - The page is the website's own build, shipped in the npm package. In a clone, run
   `npm run build:npm` once to build it.
 - Keep it but don't open it by itself with `npx -y openhood@latest mcp --no-open`; turn it off with `--no-watch`.

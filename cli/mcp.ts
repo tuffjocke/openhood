@@ -17,8 +17,9 @@ It is read-only: request only sends read services, and clear_faults needs the pe
 Values marked confidence "guess" or "community" are not proven; compare them with the car's own dashboard
 before calling them right. Remind the person to test with the car parked.
 The first connect opens a live view in the person's browser, and connect returns its link (liveView): give the
-link to the person once, in case no window opened, so they can watch the readings, fault codes and traffic. It only shows what you read; read_live with seconds
-makes the dials move.
+link to the person once, in case no window opened, so they can watch the readings, fault codes and traffic. It shows what you read; read_live with seconds
+makes the dials move. The person can also run Openhood's test there themselves (Start, Stop, Skip, Reconnect): list_checks
+says which checks are done or skipped, and only one check runs at a time.
 Openhood's test comes first on cars it isn't proven on: when connect returns test.recommended, say why in plain
 words and, with the person's okay, run it before anything else: list_checks, then each check with run_check one at a
 time (tell the person what to do and wait until they're ready; for a check with the engine running, until the engine

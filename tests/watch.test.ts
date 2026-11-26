@@ -1,6 +1,7 @@
 /**
  * The MCP server's live view (cli/watch-server.ts): it streams what the runtime reads, serves the
- * site, and stays read-only and private (127.0.0.1, its own Host only, no way out of the site folder).
+ * site, takes the page's test commands, and stays private (127.0.0.1, its own Host only, no way out
+ * of the site folder, commands only from its own page with the stream's token, all read-only).
  * Also `openhood watch` (cli/watch-car.ts), the same page without an agent.
  */
 import assert from "node:assert/strict";
@@ -24,6 +25,23 @@ function get(port: number, path: string, o: { method?: string; host?: string } =
     });
     req.on("error", reject);
     req.end();
+  });
+}
+
+/** Post a command the way the page does, or with any part of that missing or wrong. */
+function post(port: number, body: string, o: { origin?: string | null; token?: string | null; type?: string } = {}) {
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const headers: Record<string, string> = { host: `127.0.0.1:${port}`, "content-type": o.type ?? "application/json" };
+    const origin = o.origin === undefined ? `http://127.0.0.1:${port}` : o.origin;
+    if (origin) headers.origin = origin;
+    if (o.token) headers["x-openhood-token"] = o.token;
+    const req = request({ host: "127.0.0.1", port, path: "/command", method: "POST", headers }, (res) => {
+      let text = "";
+      res.on("data", (d) => (text += d));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: text }));
+    });
+    req.on("error", reject);
+    req.end(body);
   });
 }
 
@@ -80,7 +98,7 @@ describe("live view", () => {
     assert.equal((await get(port, "/watch")).headers.location, "/watch/");
   });
 
-  it("is read-only and answers nobody else", async () => {
+  it("takes nothing but test commands, and answers nobody else", async () => {
     assert.equal((await get(port, "/events", { method: "POST" })).status, 405);
     assert.equal((await get(port, "/events", { host: "evil.example" })).status, 403, "DNS rebinding: another name for this address");
     assert.equal((await get(port, "/events", { host: `evil.example:${port}` })).status, 403);
@@ -91,7 +109,7 @@ describe("live view", () => {
 
   it("streams what the agent reads: connect, values, faults, disconnect", async () => {
     const s = await stream(`http://127.0.0.1:${port}/events`);
-    const first = await s.next();
+    const first = await s.next((e) => e.type === "state");
     assert.ok(first.type === "state" && first.state.status === "idle", "starts with the state so far");
 
     const answer = await rt.connect({ profile: "land-rover-td5" });
@@ -117,6 +135,58 @@ describe("live view", () => {
     s.close();
   });
 
+  it("takes test commands only from its own page, with the stream's token", async () => {
+    const s = await stream(`http://127.0.0.1:${port}/events`);
+    const control = await s.next();
+    assert.ok(control.type === "control" && /^[0-9a-f]{32}$/.test(control.token), "the token comes first, on the stream only");
+    const token = control.token;
+    const run = JSON.stringify({ action: "run", id: "faults" });
+    assert.equal((await post(port, run, { token, origin: null })).status, 403, "no Origin: not a page");
+    assert.equal((await post(port, run, { token, origin: "https://evil.example" })).status, 403, "another website");
+    assert.equal((await post(port, run, { token: null })).status, 403, "no token");
+    assert.equal((await post(port, run, { token: "0".repeat(32) })).status, 403, "wrong token");
+    assert.equal((await post(port, run, { token, type: "text/plain" })).status, 415, "a form or a beacon can't send JSON");
+    for (const bad of ["{", JSON.stringify({ action: "clear" }), JSON.stringify({ action: "run", id: "../x" }), JSON.stringify({ action: "request", hex: "14 FF 00" })])
+      assert.equal((await post(port, bad, { token })).status, 400, bad);
+    assert.equal((await post(port, run, { token })).status, 409, "not connected yet");
+    s.close();
+  });
+
+  it("runs Openhood's test from the page: start, findings, skip, stop, reconnect", async () => {
+    const s = await stream(`http://127.0.0.1:${port}/events`);
+    const control = await s.next();
+    const token = control.type === "control" ? control.token : "";
+    const send = (c: object) => post(port, JSON.stringify(c), { token });
+    await rt.connect({ profile: "land-rover-td5" });
+    const ready = await s.next((e) => e.type === "state" && e.state.status === "connected");
+    assert.ok(ready.type === "state" && ready.state.test?.steps[0].id === "faults" && ready.state.test.steps.every((x) => x.result === null), "the steps, none done");
+    assert.match(ready.type === "state" ? ready.state.test!.safety : "", /handbrake/);
+
+    assert.equal((await send({ action: "run", id: "faults" })).status, 202, "answers at once");
+    const done = await s.next((e) => e.type === "state" && !!e.state.check?.findings);
+    assert.ok(done.type === "state" && done.state.test?.steps[0].result === "look", "the simulator has faults stored");
+    assert.equal((rt.listChecks().checks[0] as { done: boolean }).done, true, "the agent sees it done too");
+
+    assert.equal((await send({ action: "skip", id: "ignition" })).status, 202);
+    const skipped = await s.next((e) => e.type === "state" && e.state.test?.steps[1].result === "skipped");
+    assert.ok(skipped.type === "state");
+
+    assert.equal((await send({ action: "run", id: "idle" })).status, 202);
+    await s.next((e) => e.type === "state" && e.state.check?.id === "idle" && !e.state.check.findings);
+    assert.equal((await send({ action: "run", id: "revs" })).status, 409, "one check at a time");
+    assert.throws(() => rt.runCheck("revs"), /already running/, "for the agent too");
+    assert.equal((await send({ action: "stop" })).status, 202);
+    const stopped = await s.next((e) => e.type === "state" && e.state.check === null);
+    assert.ok(stopped.type === "state" && stopped.state.test?.steps.find((x) => x.id === "idle")?.result === null, "a stopped check isn't done");
+
+    assert.equal((await send({ action: "reconnect" })).status, 202);
+    await s.next((e) => e.type === "state" && e.state.status === "connecting");
+    const back = await s.next((e) => e.type === "state" && e.state.status === "connected");
+    assert.ok(back.type === "state" && back.state.test?.steps[0].result === "look", "results survive a reconnect");
+    s.close();
+    await rt.disconnect();
+  });
+
   it("knows how to open the browser on each platform", () => {
     const url = "http://127.0.0.1:4848/watch/";
     assert.deepEqual(browserCommand("darwin", url), ["open", [url]]);
@@ -128,7 +198,7 @@ describe("live view", () => {
     await rt.connect({ profile: "land-rover-td5" });
     await rt.live();
     const s = await stream(`http://127.0.0.1:${port}/events`);
-    const first = await s.next();
+    const first = await s.next((e) => e.type === "state");
     assert.ok(first.type === "state" && first.state.status === "connected" && first.state.values.rpm !== undefined);
     s.close();
     await rt.disconnect();

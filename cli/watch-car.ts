@@ -11,7 +11,8 @@ const RETRY_MS = 5000;
 /**
  * `openhood watch`: the live view without an agent or MCP setup. Opens the page, connects, reads
  * the faults once, then keeps reading live values until `signal` aborts (Ctrl+C). A car that stops
- * answering is connected again every few seconds; a port that can't be opened ends it.
+ * answering is connected again every few seconds; a port that can't be opened ends it. Openhood's
+ * test runs from the page: while a check runs, it does the reading and this waits.
  */
 export async function watchCar(
   rt: Runtime,
@@ -31,10 +32,11 @@ export async function watchCar(
         if (!connected) {
           await rt.connect(car);
           connected = true;
-          o.say("Connected. Reading until you press Ctrl+C.");
+          o.say("Connected. Reading until you press Ctrl+C. Openhood's test runs from the live view.");
           await rt.faults({ pending: true });
         }
-        await rt.live({ seconds: READ_SECONDS });
+        if (rt.checking) await sleep(250);
+        else await rt.live({ seconds: READ_SECONDS });
       } catch (e) {
         if (e instanceof UserError) throw e;
         const msg = (e instanceof Error ? e.message : String(e)).split("\n")[0];

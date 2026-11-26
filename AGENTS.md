@@ -58,17 +58,22 @@ profiles/                 one folder per vehicle/ECU, all vehicle knowledge live
 cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-written JSON-RPC),
                           runtime.ts (connection shared by both), node-serial.ts (serial port from Node),
                           command.ts (`npx -y openhood@latest` or `npm run openhood --` in messages)
-                          watch-server.ts (the MCP server's live view on 127.0.0.1: the site and an event stream)
-                          watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C)
+                          watch-server.ts (the MCP server's live view on 127.0.0.1: the site, an event stream, and
+                          POST /command for the page's test commands)
+                          watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C; the
+                          test runs from the page)
 core/checks.ts            test checks (#25): what the person does, what to read, how to judge it; standardChecks
                           builds the usual set from a profile's channel keys. Profiles list theirs in `checks`; the
-                          MCP tools list_checks, run_check, test_report run them, the live view shows only the running
-                          check on the live screen's own dials and charts. It comes first on cars Openhood isn't proven
+                          MCP tools list_checks, run_check, test_report run them, and so does the live view (#37): the
+                          steps, what to do, Start, Stop, Skip, Reconnect. A running check is the whole page, on the
+                          live screen's own dials and charts. One check at a time, whoever starts it. It comes first on cars Openhood isn't proven
                           on (`needsTest` in profiles/car-reports.ts: no test run, or readings not verified): `connect`
                           recommends it and the AI hand-off asks for it. "Readings not verified yet" is added to every
                           profile with such readings, and is how they get verified
-core/watch.ts             what the live view streams (state, values, faults, traffic): one way, car to page
-components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, read-only
+core/watch.ts             what the live view streams (state, values, faults, traffic, the test's steps) and the only
+                          commands the page may send back (run, skip, stop a check, reconnect)
+components/Watch          the live view page (app/watch): what an agent reads, no header, the same dense layout, and
+                          Openhood's test run from the page
 scripts/build-npm.mjs     bundles the CLI with esbuild into the npm package `openhood` (dist/npm): one file with
                           every profile, only serialport at runtime. Agents and people run `npx -y openhood@latest ...`;
                           .github/workflows/npm.yml stages it when package.json's version is new on npm (bump the
@@ -157,7 +162,8 @@ tests/npm.test.ts         the npm package builds and runs on its own
 tests/node-serial.test.ts CLI serial transport on serialport's mock: fast init as 0x00 at 360 baud, BREAK fallback
 tests/webserial.test.ts   website serial transport on a strict fake Web Serial port: the same fast init, reopening
 tests/checks.test.ts      test checks: how each judges its readings, the rev pacer, the MCP tools on the Td5
-tests/watch.test.ts       the live view: streams connect, values, faults; read-only, own Host only, no way out
+tests/watch.test.ts       the live view: streams connect, values, faults; test commands only from its own page with
+                          the token, a test run from the page; own Host only, no way out
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte
 tests/volvo.test.ts       Volvo keyword D3 B0 known answers (published frames) and a session
 tests/slabs.test.ts       Land Rover SLABS fault bits (published sniff) and a session
@@ -302,8 +308,10 @@ Follow docs/adding-a-vehicle.md. In short:
   out of the `traffic` tool. `openhood watch` does the same; the CLI's one-shot commands don't.
 - The MCP server's live view (`cli/watch-server.ts`) serves `dist/npm/site`: the site built at the root with
   `NEXT_PUBLIC_OPENHOOD_LOCAL=1` (no service worker) by `npm run build:npm`, shipped in the npm package. It
-  stays on 127.0.0.1, GET only, answers its own Host only and sends no CORS headers. Nothing on the watch page
-  may talk to the car: it only shows what the runtime emits (`Runtime.watch`). `serve` opens it in the browser at
+  stays on 127.0.0.1, answers its own Host only and sends no CORS headers. The page shows what the runtime emits
+  (`Runtime.watch`) and may send only the commands in core/watch.ts (`parseCommand`), all read-only: POST /command
+  with its own Origin, a JSON body and the token the stream sends first. Never add a command that writes, clears or
+  sends raw requests. `serve` opens it in the browser at
   the first `connect` (once, not if a page is open, never at start), `--no-open` keeps it closed.
 - The app is a static export with `basePath` from `BASE_PATH` (set to `/openhood` in CI). Use relative
   imports and Next APIs, never hard-coded absolute asset paths.
