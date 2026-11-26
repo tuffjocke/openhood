@@ -125,7 +125,7 @@ export function standardChecks(channels: Channel[], c: CheckChannels): CarCheck[
       judge: (r) => {
         const f = r.faultsBefore ?? [];
         return f.length
-          ? [{ verdict: "look", text: `${f.length} stored: ${f.map(faultText).join("; ")}. Explain each one before going on; some are normal on some cars.` }]
+          ? [{ verdict: "look", text: `${f.length} stored: ${f.map(faultText).join("; ")}. Some are normal on some cars, so see what each one means before going on.` }]
           : [{ verdict: "ok", text: "No faults stored." }];
       },
     },

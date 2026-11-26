@@ -5,7 +5,7 @@ import { kLineLink } from "../core/link/kline";
 import { detectAdapter } from "../core/link/open";
 import type { Link, TrafficEvent } from "../core/link/types";
 import type { AdapterKind, Fault, Readiness, Values, VehicleProfile } from "../core/profile";
-import { emptyWatchState, type WatchEvent, type WatchState } from "../core/watch";
+import { emptyWatchState, type WatchCommand, type WatchEvent, type WatchState, type WatchTest } from "../core/watch";
 import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
@@ -25,6 +25,8 @@ const KEEP_ALIVE_MS = 1000;
 const KEEP_ALIVE_NOTE = "keep-alive";
 /** A check's fault read may ask many modules one by one: much longer than a live read. */
 const CHECK_FAULTS_MS = 60_000;
+
+const STOPPED = "The check was stopped.";
 
 /** Disconnect or a cancelled call stopped the check. */
 class CheckStopped extends Error {}
@@ -88,6 +90,8 @@ export class Runtime {
   private session: Session | null = null;
   /** How the agent last connected, to connect the same way again when the car drops the session. */
   private lastConnect: ConnectOptions | null = null;
+  /** The last connect tried, worked or not, for "Try again" on the live view. */
+  private lastTried: ConnectOptions | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   /** Tool calls in progress; the keep-alive waits for none. */
   private calls = 0;
@@ -100,6 +104,8 @@ export class Runtime {
   private quietMs = 5000;
   /** The last result of each check run on this connection, for test_report. */
   private results = new Map<string, { title: string; findings: Finding[] }>();
+  /** Checks the person skipped on the live view. */
+  private skipped = new Set<string>();
   private traffic: TrafficEvent[] = [];
   /** What the live view shows (core/watch.ts), and who is watching. */
   private view: WatchState = emptyWatchState();
@@ -283,8 +289,10 @@ export class Runtime {
   }
 
   async connect(o: ConnectOptions, { again = false } = {}) {
+    if (!again) this.stopCheck();
     await this.drop();
     this.lastConnect = null;
+    this.lastTried = o;
     const profile = getProfile(o.profile);
     if (!profile) throw new UserError(`No profile "${o.profile}". Known: ${PROFILES.map((p) => p.id).join(", ")}.`);
     if (!again) this.traffic = [];
@@ -294,10 +302,20 @@ export class Runtime {
       const s = new Session(profile, link, this.log);
       await s.connect();
       this.session = s;
-      if (!again) this.results.clear();
+      if (!again) {
+        this.results.clear();
+        this.skipped.clear();
+      }
       this.lastConnect = o;
       this.keepAliveMisses = 0;
-      this.setView({ status: "connected", adapter: link.adapter, unavailable: [...s.unavailableChannels], values: { ...this.view.values, ...this.shownValues(s.state) } });
+      this.setView({
+        status: "connected",
+        error: null,
+        adapter: link.adapter,
+        unavailable: [...s.unavailableChannels],
+        values: { ...this.view.values, ...this.shownValues(s.state) },
+        test: this.testState(s),
+      });
       this.startKeepAlive();
       return {
         profile: profile.id,
@@ -352,6 +370,7 @@ export class Runtime {
   async disconnect() {
     this.stopCheck();
     this.lastConnect = null;
+    this.lastTried = null;
     await this.drop();
     return { connected: false };
   }
@@ -503,19 +522,93 @@ export class Runtime {
     return {
       how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. For a check with the engine running, they start the engine before saying ready: starting it during a check can make the car stop answering. Explain each finding. The live view shows the check and, for the rev test, when to rev. Finish with test_report.",
       safety: ENGINE_SAFETY,
-      checks: this.checksFor(s).map((c) => ({ id: c.id, title: c.title, ask: c.ask, seconds: c.seconds, engineRunning: !!c.engineRunning, done: this.results.has(c.id) })),
+      checks: this.checksFor(s).map((c) => ({
+        id: c.id,
+        title: c.title,
+        ask: c.ask,
+        seconds: c.seconds,
+        engineRunning: !!c.engineRunning,
+        done: this.results.has(c.id),
+        ...(this.skipped.has(c.id) ? { skipped: true } : {}),
+      })),
+      liveView: "The person can also run, skip and stop checks on the live view; done and skipped say how far they got.",
     };
+  }
+
+  /** The test as the live view shows it: every step, and how its last run went. */
+  private testState(s: Session): WatchTest {
+    const worst = (f: Finding[]): Verdict => (f.some((x) => x.verdict === "look") ? "look" : f.some((x) => x.verdict === "unclear") ? "unclear" : "ok");
+    const steps = this.checksFor(s);
+    // Every step run or skipped: the report is ready to send from the page (no fault codes, no car name).
+    const done = this.results.size > 0 && steps.every((c) => this.results.has(c.id) || this.skipped.has(c.id));
+    return {
+      safety: ENGINE_SAFETY,
+      ...(done ? { reportUrl: this.testReport({}).url } : {}),
+      steps: steps.map((c) => {
+        const r = this.results.get(c.id);
+        return {
+          id: c.id,
+          title: c.title,
+          ask: c.ask,
+          seconds: c.seconds,
+          engineRunning: !!c.engineRunning,
+          result: r ? worst(r.findings) : this.skipped.has(c.id) ? "skipped" : null,
+        };
+      }),
+    };
+  }
+
+  /** A check is running, started by the agent or on the live view. */
+  get checking() {
+    return this.running !== null;
+  }
+
+  /**
+   * A command from the live view (core/watch.ts). Answers at once: a check runs on in the
+   * background and the page follows it on the stream. Read-only, like everything the page can ask.
+   */
+  command(c: WatchCommand): { ok: true } {
+    if (c.action === "stop") {
+      this.stopCheck();
+      return { ok: true };
+    }
+    if (c.action === "reconnect") {
+      const o = this.lastConnect ?? this.lastTried;
+      if (!o) throw new UserError("Nothing to connect to again: connect from the agent or the command line first.");
+      if (this.view.status === "connecting") throw new UserError("Connecting already.");
+      this.stopCheck();
+      this.setView({ notice: null });
+      void this.connect(o, { again: true }).catch(() => {}); // a failure shows as "failed" with its reason
+      return { ok: true };
+    }
+    const s = this.s;
+    if (!this.checksFor(s).some((x) => x.id === c.id)) throw new UserError(`No check "${c.id}".`);
+    if (c.action === "skip") {
+      if (this.running) throw new UserError("A check is running. Stop it first.");
+      this.skipped.add(c.id);
+      this.setView({ test: this.testState(s), notice: null });
+      return { ok: true };
+    }
+    if (this.running) throw new UserError("A check is already running.");
+    this.setView({ notice: null });
+    void this.runCheck(c.id).catch((e: unknown) => {
+      if (!(e instanceof UserError && e.message === STOPPED)) this.setView({ notice: (e instanceof Error ? e.message : String(e)).split("\n")[0] });
+    });
+    return { ok: true };
   }
 
   /** Run one check: read faults and live values as it says, judge them, show it on the live view. */
   runCheck(id: string, o: { seconds?: number } = {}) {
     const check = this.checksFor(this.s).find((c) => c.id === id);
     if (!check) throw new UserError(`No check "${id}". Known: ${this.checksFor(this.s).map((c) => c.id).join(", ")}.`);
+    // One at a time, whoever starts it: the agent, or the person on the live view.
+    if (this.running) throw new UserError("A check is already running, maybe started on the live view. Wait for it to finish.");
+    const run = new CheckRun();
+    this.running = run;
+    this.skipped.delete(id);
     return this.use(async (s) => {
       // Shorter on request (a quick look, tests), never longer than the check says.
       const seconds = Math.min(Math.max(o.seconds ?? check.seconds, 0), check.seconds, 120);
-      const run = new CheckRun();
-      this.running = run;
       this.checkStarted = performance.now();
       this.setView({ check: { id: check.id, title: check.title, ask: check.ask, seconds, elapsedMs: 0, findings: null } });
       const watch = check.watch.filter((k) => !s.unavailableChannels.has(k));
@@ -539,12 +632,12 @@ export class Runtime {
         const series = Object.fromEntries(watch.filter((k) => seen[k]).map((k) => [k, seen[k]]));
         const findings = check.judge({ series, faultsBefore, faultsAfter });
         this.results.set(check.id, { title: check.title, findings });
-        this.setView({ check: { ...this.view.check!, findings } });
+        this.setView({ check: { ...this.view.check!, findings }, test: this.testState(s) });
         return { id: check.id, title: check.title, findings, readings: readings() };
       } catch (e) {
         if (e instanceof CheckStopped) {
           this.setView({ check: null });
-          throw new UserError("The check was stopped.");
+          throw new UserError(STOPPED);
         }
         if (e instanceof UserError || e instanceof NegativeResponse) {
           this.setView({ check: null });
@@ -564,7 +657,7 @@ export class Runtime {
           },
         ];
         this.results.set(check.id, { title: check.title, findings });
-        this.setView({ status: "lost", error: "The car stopped answering.", check: { ...this.view.check!, findings } });
+        this.setView({ status: "lost", error: "The car stopped answering.", check: { ...this.view.check!, findings }, test: this.testState(s) });
         return {
           id: check.id,
           title: check.title,
@@ -576,6 +669,9 @@ export class Runtime {
       } finally {
         if (this.running === run) this.running = null;
       }
+    }).finally(() => {
+      // Also when it never got going (not connected, or connecting again failed).
+      if (this.running === run) this.running = null;
     });
   }
 

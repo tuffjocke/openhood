@@ -1,13 +1,17 @@
 /**
  * The live view: what the MCP server (cli/watch-server.ts) streams to the watch page
- * (components/Watch.tsx) while an agent reads the car. One way only, from the car to the page:
- * the page can't ask the car anything. Both sides ship in the same npm package, so they match.
+ * (components/Watch.tsx) while an agent reads the car, and the few commands the page may send back
+ * to run Openhood's test from the page itself (issue #37): run a check, skip it, stop it, reconnect.
+ * All read-only, like the checks. Both sides ship in the same npm package, so they match.
  */
-import type { Finding } from "./checks";
+import type { Finding, Verdict } from "./checks";
 import type { Fault, Readiness, Values } from "./profile";
 
 /** Where the page gets the stream, on the same origin it was served from. */
 export const WATCH_EVENTS = "/events";
+/** Where the page posts a WatchCommand, with the stream's token in this header. */
+export const WATCH_COMMAND = "/command";
+export const TOKEN_HEADER = "X-Openhood-Token";
 /** The page, as the MCP server's live view link points at it. */
 export const WATCH_PAGE = "/watch/";
 
@@ -30,9 +34,35 @@ export interface WatchState {
   faults: Fault[] | null;
   pending: Fault[] | null;
   readiness: Readiness | null;
-  /** The test check the agent is running (core/checks.ts), or null. */
+  /** The test check running or last run (core/checks.ts), or null. */
   check: WatchCheck | null;
+  /** Openhood's test for the connected car: every step and how it went. null before connecting. */
+  test: WatchTest | null;
+  /** Why the page's last command didn't go through, in plain words. */
+  notice: string | null;
 }
+
+/** The steps of Openhood's test, in order, as list_checks gives them to an agent. */
+export interface WatchTest {
+  /** Said before the first check with the engine running. */
+  safety: string;
+  steps: WatchStep[];
+  /** Once every step has run or been skipped: the test report as a GitHub issue link, without fault codes. */
+  reportUrl?: string;
+}
+
+export interface WatchStep {
+  id: string;
+  title: string;
+  ask: string;
+  seconds: number;
+  engineRunning: boolean;
+  /** The worst finding of its last run, "skipped", or null before it has run. */
+  result: Verdict | "skipped" | null;
+}
+
+/** What the page may ask for. Nothing else: no raw requests, no clearing, nothing that writes. */
+export type WatchCommand = { action: "run"; id: string } | { action: "skip"; id: string } | { action: "stop" } | { action: "reconnect" };
 
 /** A check on the live view: what the person should do, and once done, what it found. */
 export interface WatchCheck {
@@ -52,7 +82,9 @@ export type WatchEvent =
   | { type: "state"; state: WatchState; traffic: string[] }
   | { type: "values"; values: Values }
   | { type: "faults"; faults: Fault[]; pending: Fault[] | null; readiness: Readiness | null }
-  | { type: "traffic"; line: string };
+  | { type: "traffic"; line: string }
+  /** First on every stream: the token the page sends with its commands. Only a page that can read the stream has it. */
+  | { type: "control"; token: string };
 
 export const emptyWatchState = (): WatchState => ({
   status: "idle",
@@ -65,4 +97,16 @@ export const emptyWatchState = (): WatchState => ({
   pending: null,
   readiness: null,
   check: null,
+  test: null,
+  notice: null,
 });
+
+/** Check that something posted to the live view is a WatchCommand, and nothing more. */
+export function parseCommand(v: unknown): WatchCommand | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const id = typeof o.id === "string" && /^[a-z0-9-]{1,40}$/.test(o.id) ? o.id : null;
+  if ((o.action === "run" || o.action === "skip") && id) return { action: o.action, id };
+  if (o.action === "stop" || o.action === "reconnect") return { action: o.action };
+  return null;
+}

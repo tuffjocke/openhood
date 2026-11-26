@@ -6,7 +6,9 @@ revs, whether the alternator keeps up. Every check is read-only: it reads faults
 never changes anything in the car.
 
 The easiest way is to let an AI agent run them with Openhood's MCP server (see [cli.md](cli.md)). It
-walks you through one check at a time. While a check runs, the live view in your browser shows only that
+walks you through one check at a time. You can also run them yourself on the live view in your browser,
+with an agent or with `npx -y openhood@latest watch` and no agent at all: it lists the steps, says what to
+do, and has Start, Stop, Skip and Reconnect. While a check runs, the live view shows only that
 check: what to do, the time left and the check's readings on the same dials and charts as the live screen.
 In the rev test the rpm dial carries a yellow mark that says where to take the revs, with "Rev to 2,500"
 or "Let it drop" over it.

@@ -5,7 +5,18 @@ import { guideAt, type CarCheck } from "@/core/checks";
 import type { Values } from "@/core/profile";
 import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units";
 import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
-import { emptyWatchState, WATCH_EVENTS, type WatchCheck, type WatchEvent, type WatchState } from "@/core/watch";
+import {
+  emptyWatchState,
+  TOKEN_HEADER,
+  WATCH_COMMAND,
+  WATCH_EVENTS,
+  type WatchCheck,
+  type WatchCommand,
+  type WatchEvent,
+  type WatchState,
+  type WatchStep,
+  type WatchTest,
+} from "@/core/watch";
 import { getProfile } from "@/profiles";
 import { Dial } from "./Dial";
 import { dialLayout, DialRow } from "./Dials";
@@ -22,10 +33,14 @@ const nearBottom = (el: HTMLElement) => el.scrollHeight - el.scrollTop - el.clie
 /** The top-right corner of the cluster, as on the dashboard. */
 const LINK_LINES: Record<string, string> = { simulator: "Demo car", kkl: "KKL cable, KWP2000", elm327: "ELM327 adapter" };
 
+/** A running check with no reading for this long says so, and greys its instruments. */
+const QUIET_MS = 3000;
+
 /**
  * The live view: what an agent reads through Openhood's MCP server, as it reads it. Served by the
  * MCP server itself on this computer (cli/watch-server.ts), which streams core/watch.ts events.
- * Only shows: nothing here can talk to the car, so there is no connect, clear or read button.
+ * Openhood's test runs from here too (issue #37): the steps, what to do, Start, Stop, Skip and
+ * Reconnect, sent back as core/watch.ts commands. All read-only: no clear, no raw requests.
  */
 export function Watch() {
   const t = useT();
@@ -41,6 +56,17 @@ export function Watch() {
   /** When the running check started, on this page's clock. */
   const checkStart = useRef(0);
   const traffic = useRef<string[]>([]);
+  /** The token commands need, from the stream: only this page can read it. */
+  const token = useRef<string | null>(null);
+  /** When the last reading came in, on this page's clock. */
+  const lastValues = useRef(0);
+  /** Why the page's own last command didn't go through. */
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  /** The check running now, as last seen on the stream. */
+  const following = useRef<string | null>(null);
+  /** The test step picked on the page; by default the next one to do. */
+  const [picked, setPicked] = useState<string | null>(null);
   const log = useRef<HTMLPreElement>(null);
   /** Keep the traffic log at its newest line, unless the person scrolled up to read. */
   const follow = useRef(true);
@@ -52,6 +78,11 @@ export function Watch() {
     es.onmessage = (m) => {
       const e = JSON.parse(m.data as string) as WatchEvent;
       if (e.type === "state") {
+        // A check that just started, whoever started it: follow it, whatever step was picked.
+        const c = e.state.check;
+        const runningId = c && !c.findings ? c.id : null;
+        if (runningId && runningId !== following.current) setPicked(null);
+        following.current = runningId;
         // A new connection starts the charts over; the same one (page reconnecting) keeps them.
         setView((old) => {
           if (old.profileId !== e.state.profileId || e.state.status === "connecting") history.current = {};
@@ -60,8 +91,11 @@ export function Watch() {
           return e.state;
         });
         traffic.current = e.traffic.slice(-LOG_LINES);
+      } else if (e.type === "control") {
+        token.current = e.token;
       } else if (e.type === "values") {
         const at = performance.now();
+        lastValues.current = at;
         for (const [k, v] of Object.entries(e.values)) {
           const h = (history.current[k] ??= []);
           h.push({ t: at, v });
@@ -109,22 +143,66 @@ export function Watch() {
   );
   const linkLine = view.adapter ? t(LINK_LINES[view.adapter] ?? view.adapter) : "";
   const checkDef = view.check ? profile?.checks?.find((c) => c.id === view.check!.id) : undefined;
+  const canSend = stream === "open" && token.current !== null;
+
+  /** Send one test command to the server this page came from. */
+  async function send(c: WatchCommand) {
+    if (!token.current) return;
+    setSending(true);
+    try {
+      const r = await fetch(WATCH_COMMAND, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", [TOKEN_HEADER]: token.current },
+        body: JSON.stringify(c),
+      });
+      setSendError(r.ok ? null : (await r.text()).trim());
+    } catch {
+      setSendError("Openhood isn\u2019t answering. Is it still running?");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const running = !!view.check && !view.check.findings;
+  const quietFor = running && lastValues.current ? now - Math.max(lastValues.current, checkStart.current) : 0;
+  const quiet = view.status === "connected" && quietFor > QUIET_MS;
+  const problem = sendError ?? view.notice;
+  // How the connection is, in one line, with the one thing to do about it.
+  const banner = (
+    <>
+      {stream === "lost" && (
+        <p className="notice" role="alert">
+          {t("Lost the agent. Is it still running? This page will pick it up again by itself.")}
+        </p>
+      )}
+      {(view.status === "lost" || view.status === "failed") && (
+        <p className="notice conn-banner" role="alert">
+          <span>{view.status === "lost" ? t("The car stopped answering.") : <>{t("The car didn\u2019t answer:")} {view.error}</>}</span>
+          {canSend && view.test && (
+            <button className="primary" onClick={() => send({ action: "reconnect" })} disabled={sending}>
+              {t("Reconnect")}
+            </button>
+          )}
+        </p>
+      )}
+      {view.status === "connecting" && view.test && <p className="notice conn-banner">{t("Connecting to the car…")}</p>}
+      {quiet && (
+        <p className="notice conn-banner" role="alert">
+          {t("No answer from the car for {n} s.", { n: Math.floor(quietFor / 1000) })}
+        </p>
+      )}
+      {problem && <p className="notice">{t(problem)}</p>}
+    </>
+  );
 
   // While a check runs, the page is only the check: what to do is the one thing on screen.
   if (view.check && !view.check.findings && profile && shown) {
     return (
       <main className="shell dense check-focus">
-        {stream === "lost" && (
-          <p className="notice" role="alert">
-            {t("Lost the agent. Is it still running? This page will pick it up again by itself.")}
-          </p>
-        )}
-        {view.status === "lost" && (
-          <p className="notice" role="alert">
-            {t("The car stopped answering. Openhood connects again at the next read.")}
-          </p>
-        )}
+        {banner}
         <CheckFocus
+          quiet={quiet}
+          onStop={canSend ? () => send({ action: "stop" }) : undefined}
           check={view.check}
           def={checkDef}
           profile={shown}
@@ -150,27 +228,23 @@ export function Watch() {
         </p>
       )}
 
-      {stream === "lost" && (
-        <p className="notice" role="alert">
-          {t("Lost the agent. Is it still running? This page will pick it up again by itself.")}
-        </p>
-      )}
       {stream === "unreachable" && (
         <p className="notice">{t("This page shows what an AI agent reads with Openhood. Open it from the link the agent gives you.")}</p>
       )}
-      {view.status === "lost" && (
-        <p className="notice" role="alert">
-          {t("The car stopped answering. Openhood connects again at the next read.")}
-        </p>
-      )}
-      {view.status === "failed" && view.error && (
-        <p className="notice" role="alert">
-          {t("The car didn’t answer the agent:")} {view.error}
-        </p>
-      )}
+      {banner}
 
-      {view.check && profile && (
-        <CheckCard check={view.check} />
+      {view.test && profile ? (
+        <TestPanel
+          test={view.test}
+          check={view.check}
+          picked={picked}
+          onPick={setPicked}
+          canSend={canSend && view.status === "connected"}
+          sending={sending}
+          send={send}
+        />
+      ) : (
+        view.check && profile && <CheckCard check={view.check} />
       )}
 
       {!profile || !shown ? (
@@ -267,13 +341,7 @@ function CheckCard({ check }: { check: WatchCheck }) {
         <span className="check-time">{check.findings && t("Done")}</span>
       </p>
       {check.findings ? (
-        <ul className="check-findings">
-          {check.findings.map((f) => (
-            <li key={f.text} className={`verdict-${f.verdict}`}>
-              {f.text}
-            </li>
-          ))}
-        </ul>
+        <Findings findings={check.findings} />
       ) : (
         <p className="check-ask">{check.ask}</p>
       )}
@@ -288,6 +356,8 @@ function CheckCard({ check }: { check: WatchCheck }) {
  * pacer runs on this page's clock from when the check started, so it keeps time between readings.
  */
 function CheckFocus({
+  quiet,
+  onStop,
   check,
   def,
   profile,
@@ -298,6 +368,10 @@ function CheckFocus({
   points,
   now,
 }: {
+  /** No reading for a while: the instruments are greyed. */
+  quiet: boolean;
+  /** Stop the check, when this page can send commands. */
+  onStop?: () => void;
   check: WatchCheck;
   def?: CarCheck;
   /** In the person's units. */
@@ -327,7 +401,7 @@ function CheckFocus({
       </p>
       <p className="check-ask">{check.ask}</p>
       {(dials.length > 0 || charts.length > 0) && (
-        <div className="binnacle check-instruments">
+        <div className={`binnacle check-instruments${quiet ? " quiet" : ""}`}>
           {cue && <p className={`check-cue${cue.up ? " up" : ""}`}>{t(cue.text)}</p>}
           {dials.length > 0 && (
             <div className="dials">
@@ -352,7 +426,159 @@ function CheckFocus({
           )}
         </div>
       )}
+      {onStop && (
+        <div className="check-actions">
+          <button className="stop big" onClick={onStop}>
+            {t("Stop")}
+          </button>
+        </div>
+      )}
     </section>
+  );
+}
+
+/**
+ * Openhood's test on the live view: every step with how it went, and the step at hand with what to
+ * do and one button. The person can run the whole test from here; the agent sees the same results.
+ */
+function TestPanel({
+  test,
+  check,
+  picked,
+  onPick,
+  canSend,
+  sending,
+  send,
+}: {
+  test: WatchTest;
+  /** The check running or last run. */
+  check: WatchCheck | null;
+  picked: string | null;
+  onPick: (id: string | null) => void;
+  /** Connected, and this page can send commands. */
+  canSend: boolean;
+  sending: boolean;
+  send: (c: WatchCommand) => void;
+}) {
+  const t = useT();
+  const next = test.steps.find((s) => s.result === null);
+  // Just run: its findings stay up until the person moves on. Otherwise the picked step, or the next one.
+  const shownId = picked ?? (check?.findings ? check.id : next?.id);
+  const step = test.steps.find((s) => s.id === shownId);
+  const justRun = !!step && check?.id === step.id && !!check.findings;
+  // What's left: the next step not done after this one, else any left before it.
+  const after = step && (test.steps.slice(test.steps.indexOf(step) + 1).find((s) => s.result === null) ?? test.steps.find((s) => s.result === null && s !== step));
+
+  return (
+    <section className="check test" aria-live="polite">
+      <ol className="test-steps" aria-label={t("Openhood's test")}>
+        {test.steps.map((s) => (
+          <li key={s.id} className={`step-${s.result ?? "todo"}${s.id === shownId ? " now" : ""}`}>
+            <button className="link-button" onClick={() => onPick(s.id)} aria-current={s.id === shownId ? "step" : undefined}>
+              {t(s.title)}
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      {!step ? (
+        <>
+          <p className="check-head">
+            <span className="check-title">{t("All done")}</span>
+          </p>
+          {test.reportUrl && (
+            <div className="check-actions">
+              <a className="button primary" href={test.reportUrl} target="_blank" rel="noreferrer">
+                {t("Send the test report")}
+              </a>
+            </div>
+          )}
+          <p className="check-note">{t("No fault codes go into the report. It opens as a public GitHub issue for you to check first.")}</p>
+        </>
+      ) : justRun && check?.findings ? (
+        <>
+          <p className="check-head">
+            <span className="check-title">{t(step.title)}</span>
+            <span className="check-time">{t("Done")}</span>
+          </p>
+          <Findings findings={check.findings} />
+          <div className="check-actions">
+            {after ? (
+              <button className="primary" onClick={() => onPick(after.id)}>
+                {t("Next: {step}", { step: t(after.title) })}
+              </button>
+            ) : (
+              <button className="primary" onClick={() => onPick("")}>
+                {t("Finish")}
+              </button>
+            )}
+            <button className="quiet" disabled={!canSend || sending} onClick={() => send({ action: "run", id: step.id })}>
+              {t("Run again")}
+            </button>
+          </div>
+        </>
+      ) : (
+        <StepToDo
+          step={step}
+          safety={step.engineRunning ? test.safety : null}
+          canSend={canSend}
+          sending={sending}
+          send={send}
+          onSkip={() => (send({ action: "skip", id: step.id }), onPick(after?.id ?? ""))}
+        />
+      )}
+    </section>
+  );
+}
+
+/** One step before it runs: what to do, the safety note for an engine step, and Start. */
+function StepToDo({
+  step,
+  safety,
+  canSend,
+  sending,
+  send,
+  onSkip,
+}: {
+  step: WatchStep;
+  safety: string | null;
+  canSend: boolean;
+  sending: boolean;
+  send: (c: WatchCommand) => void;
+  onSkip: () => void;
+}) {
+  const t = useT();
+  return (
+    <>
+      <p className="check-head">
+        <span className="check-title">{t(step.title)}</span>
+        <span className="check-time">{step.seconds > 0 ? t("{n} s", { n: step.seconds }) : ""}</span>
+      </p>
+      <p className="check-ask">{step.ask}</p>
+      {safety && <p className="check-safety">{safety}</p>}
+      {step.engineRunning && <p className="check-note">{t("Start the engine first. Press Start once it\u2019s running.")}</p>}
+      <div className="check-actions">
+        <button className="primary" disabled={!canSend || sending} onClick={() => send({ action: "run", id: step.id })}>
+          {t(step.result ? "Run again" : "Start")}
+        </button>
+        <button className="link-button" disabled={!canSend || sending} onClick={onSkip}>
+          {t("Skip")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** What a check found, one dot per finding in the fault cards' colours. */
+function Findings({ findings }: { findings: NonNullable<WatchCheck["findings"]> }) {
+  return (
+    <ul className="check-findings">
+      {findings.map((f) => (
+        <li key={f.text} className={`verdict-${f.verdict}`}>
+          {f.text}
+        </li>
+      ))}
+    </ul>
   );
 }
 

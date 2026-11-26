@@ -197,8 +197,29 @@ export const SV: Record<string, string> = {
     "Tappade kontakten med agenten. Körs den fortfarande? Sidan kopplar upp sig igen av sig själv.",
   "This page shows what an AI agent reads with Openhood. Open it from the link the agent gives you.":
     "Den här sidan visar vad en AI-agent läser av med Openhood. Öppna den från länken som agenten ger dig.",
-  "The car didn’t answer the agent:": "Bilen svarade inte agenten:",
   "Lost the car": "Tappade bilen",
+  // Openhood's test, run from the live view
+  "The car stopped answering.": "Bilen slutade svara.",
+  "The car didn’t answer:": "Bilen svarade inte:",
+  Reconnect: "Anslut igen",
+  "Connecting to the car…": "Ansluter till bilen…",
+  "No answer from the car for {n} s.": "Inget svar från bilen på {n} s.",
+  Stop: "Stoppa",
+  "Openhood's test": "Openhoods test",
+  "All done": "Klart",
+  "Send the test report": "Skicka testrapporten",
+  "No fault codes go into the report. It opens as a public GitHub issue for you to check first.":
+    "Inga felkoder följer med i rapporten. Den öppnas som ett publikt GitHub-ärende som du kollar först.",
+  "Next: {step}": "Nästa: {step}",
+  Finish: "Avsluta",
+  "Run again": "Kör igen",
+  "{n} s": "{n} s",
+  "Start the engine first. Press Start once it’s running.": "Starta motorn först. Tryck Starta när den går.",
+  Skip: "Hoppa över",
+  "Openhood isn’t answering. Is it still running?": "Openhood svarar inte. Körs det fortfarande?",
+  "A check is already running.": "Ett test körs redan.",
+  "A check is running. Stop it first.": "Ett test körs. Stoppa det först.",
+  "Connecting already.": "Ansluter redan.",
   // Test checks on the live view (core/checks.ts): titles and the rev cues; what to do stays English for now
   "{n} s left": "{n} s kvar",
   "Ignition on, engine off": "Tändning på, motorn av",
@@ -211,8 +232,6 @@ export const SV: Record<string, string> = {
   Readings: "Avläsningar",
   "Rev to 2,500": "Varva till 2 500",
   "Let it drop": "Släpp gasen",
-  "The car stopped answering. Openhood connects again at the next read.":
-    "Bilen slutade svara. Openhood ansluter igen vid nästa avläsning.",
   "The agent hasn’t connected to a car yet.": "Agenten har inte anslutit till någon bil än.",
   "The agent hasn’t read the fault codes yet.": "Agenten har inte läst felkoderna än.",
 
