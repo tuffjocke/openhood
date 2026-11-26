@@ -11,7 +11,7 @@ import { Session } from "@/core/session";
 import { SimulatedTransport } from "@/core/transport/simulated";
 import { dialLayout, DialRow, GROUP_NAMES } from "./Dials";
 import { LiveChart, type Point } from "./LiveChart";
-import { AgentButton } from "./landing/AgentButton";
+import { AgentButton, noteDemo } from "./landing/AgentButton";
 import { CableArt, PlugInArt } from "./landing/Art";
 import { EngineLight } from "./landing/EngineLight";
 import type { ReadProblem } from "@/core/add-car";
@@ -41,6 +41,7 @@ function useDemoCar(profile: VehicleProfile, running: boolean) {
     (async () => {
       try {
         await s.connect();
+        noteDemo(null);
         if (profile.faults) {
           const faults = await s.readFaults();
           // The most telling one: explained, and "fix soon" before the rest.
@@ -65,8 +66,9 @@ function useDemoCar(profile: VehicleProfile, running: boolean) {
             });
           }
         }
-      } catch {
-        // Only a demo: if the simulator stops, the page just stays still.
+      } catch (e) {
+        // Only a demo: if the simulator stops, the page just stays still. Noted for the AI, though.
+        if (alive) noteDemo(e instanceof Error ? e.message : String(e));
       }
     })();
     return () => {
