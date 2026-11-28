@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { guideAt, type CarCheck } from "@/core/checks";
+import type { CarCheck } from "@/core/checks";
+import type { TestRun } from "@/core/test-history";
 import type { Values } from "@/core/profile";
 import { profileIn, UNIT_NAMES, UNITS, valuesIn, type Units } from "@/core/units";
 import { LANG_NAMES, LANGS, type Lang } from "@/core/i18n";
@@ -23,6 +24,7 @@ import { dialLayout, DialRow } from "./Dials";
 import { FaultPanel } from "./FaultPanel";
 import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
+import { Findings, runDate, TestHistory } from "./TestHistory";
 import { labelsIn, useLang, useT } from "./useLang";
 import { useUnits } from "./useUnits";
 
@@ -236,6 +238,8 @@ export function Watch() {
       {view.test && profile ? (
         <TestPanel
           test={view.test}
+          earlier={view.history?.runs ?? []}
+          saving={!!view.history?.saving}
           check={view.check}
           picked={picked}
           onPick={setPicked}
@@ -296,6 +300,13 @@ export function Watch() {
                 onForgetHistory={() => {}}
               />
             )}
+            {!!view.history?.runs.length && (
+              <TestHistory
+                runs={view.history.runs}
+                saving={view.history.saving}
+                deleteHint={t("Delete them all with: {command}", { command: "npx -y openhood@latest history --delete" })}
+              />
+            )}
             {/* Open by default: watching the conversation is half the point here. Newest at the bottom. */}
             <details className="log" open>
               <summary>{t("Traffic with the car")}</summary>
@@ -351,9 +362,10 @@ function CheckCard({ check }: { check: WatchCheck }) {
 
 /**
  * A running test check, as the whole page: what to do and the time left, then the check's readings
- * on the same instruments as the live screen (dials stay dials, charts stay charts). With a pacer
- * (the rev test) the cue sits over the dial and a yellow mark on the dial shows where to take it. The
- * pacer runs on this page's clock from when the check started, so it keeps time between readings.
+ * on the same instruments as the live screen (dials stay dials, charts stay charts). A check with
+ * steps (the rev test, the pedals) shows the one thing to do now over the instruments, moved on by
+ * the runtime as the car's readings show each step done, and a yellow mark on the dial where to take
+ * it. A step to hold counts down on this page's clock from when the reading became right.
  */
 function CheckFocus({
   quiet,
@@ -386,8 +398,9 @@ function CheckFocus({
 }) {
   const t = useT();
   const left = Math.max(0, Math.ceil(check.seconds - seconds));
-  const guide = def?.guide;
-  const cue = guide && seconds < check.seconds ? guideAt(guide, Math.max(0, seconds)) : null;
+  // The one thing to do now, moved on by the car's readings (core/checks.ts steps), not a clock.
+  const step = check.step ?? null;
+  const holding = step?.hold && step.since !== null ? Math.max(1, Math.ceil(step.hold - (seconds - step.since))) : null;
   const layout = dialLayout(profile);
   const watch = def?.watch ?? [];
   const dials = layout.dials.filter((d) => watch.includes(d.channel.key));
@@ -400,19 +413,24 @@ function CheckFocus({
         <span className="check-time">{check.seconds > 0 ? t("{n} s left", { n: left }) : ""}</span>
       </p>
       <p className="check-ask">{check.ask}</p>
-      {(dials.length > 0 || charts.length > 0) && (
+      {(dials.length > 0 || charts.length > 0 || step) && (
         <div className={`binnacle check-instruments${quiet ? " quiet" : ""}`}>
-          {cue && <p className={`check-cue${cue.up ? " up" : ""}`}>{t(cue.text)}</p>}
+          {step && (
+            <p className={`check-cue${holding ? " holding" : ""}`}>
+              {holding ? `${t("Hold it")} ${holding}` : t(step.say)}
+              {step.rounds > 1 && <span className="check-round">{t("{n} of {total}", { n: step.round, total: step.rounds })}</span>}
+            </p>
+          )}
           {dials.length > 0 && (
             <div className="dials">
               {dials.map(({ channel }) => (
                 <Dial
                   key={channel.key}
                   channel={channel}
-                  big={channel.key === guide?.channel || dials.length === 1}
+                  big={channel.key === step?.channel || dials.length === 1}
                   value={latest[channel.key]}
                   unavailable={unavailable.has(channel.key)}
-                  target={cue && channel.key === guide?.channel ? toShown(channel.key, cue.target) : undefined}
+                  target={step?.target !== undefined && channel.key === step.channel ? toShown(channel.key, step.target) : undefined}
                 />
               ))}
             </div>
@@ -443,6 +461,8 @@ function CheckFocus({
  */
 function TestPanel({
   test,
+  earlier,
+  saving,
   check,
   picked,
   onPick,
@@ -451,6 +471,10 @@ function TestPanel({
   send,
 }: {
   test: WatchTest;
+  /** This car's earlier runs, newest first, to compare a check with the last time. */
+  earlier: TestRun[];
+  /** This run is being saved on this computer. */
+  saving: boolean;
   /** The check running or last run. */
   check: WatchCheck | null;
   picked: string | null;
@@ -468,6 +492,9 @@ function TestPanel({
   const justRun = !!step && check?.id === step.id && !!check.findings;
   // What's left: the next step not done after this one, else any left before it.
   const after = step && (test.steps.slice(test.steps.indexOf(step) + 1).find((s) => s.result === null) ?? test.steps.find((s) => s.result === null && s !== step));
+  // The same check the last time it ran on this car, if it has.
+  const lastRun = step && earlier.find((r) => r.checks.some((c) => c.id === step.id));
+  const last = lastRun?.checks.find((c) => c.id === step?.id);
 
   return (
     <section className="check test" aria-live="polite">
@@ -494,6 +521,7 @@ function TestPanel({
             </div>
           )}
           <p className="check-note">{t("No fault codes go into the report. It opens as a public GitHub issue for you to check first.")}</p>
+          {saving && <p className="check-note">{t("This test is saved on this computer only.")}</p>}
         </>
       ) : justRun && check?.findings ? (
         <>
@@ -502,6 +530,12 @@ function TestPanel({
             <span className="check-time">{t("Done")}</span>
           </p>
           <Findings findings={check.findings} />
+          {lastRun && last && (
+            <details className="check-last">
+              <summary>{t("Last time, {date}", { date: runDate(last.at) })}</summary>
+              <Findings findings={last.findings} />
+            </details>
+          )}
           <div className="check-actions">
             {after ? (
               <button className="primary" onClick={() => onPick(after.id)}>
@@ -566,19 +600,6 @@ function StepToDo({
         </button>
       </div>
     </>
-  );
-}
-
-/** What a check found, one dot per finding in the fault cards' colours. */
-function Findings({ findings }: { findings: NonNullable<WatchCheck["findings"]> }) {
-  return (
-    <ul className="check-findings">
-      {findings.map((f) => (
-        <li key={f.text} className={`verdict-${f.verdict}`}>
-          {f.text}
-        </li>
-      ))}
-    </ul>
   );
 }
 

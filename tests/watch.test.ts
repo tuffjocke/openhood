@@ -130,8 +130,8 @@ describe("live view", () => {
     assert.ok(faults.type === "faults" && faults.faults.length > 0);
 
     await rt.disconnect();
-    const idle = await s.next((e) => e.type === "state");
-    assert.ok(idle.type === "state" && idle.state.status === "idle" && idle.state.faults?.length, "what was read stays on the page");
+    const idle = await s.next((e) => e.type === "state" && e.state.status === "idle");
+    assert.ok(idle.type === "state" && idle.state.faults?.length, "what was read stays on the page");
     s.close();
   });
 

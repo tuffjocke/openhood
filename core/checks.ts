@@ -24,6 +24,8 @@ export interface CheckReading {
   /** With `faults`: the faults read before and after the readings. */
   faultsBefore?: Fault[];
   faultsAfter?: Fault[];
+  /** With `steps`: how many the person got through before the check ended, of how many. */
+  steps?: { done: number; of: number };
 }
 
 export interface CarCheck {
@@ -33,26 +35,100 @@ export interface CarCheck {
   ask: string;
   /** The engine runs during this check: say the safety note first. */
   engineRunning?: boolean;
-  /** How long to read live values. 0: no live reading (faults only). At most 120. */
+  /** How long to read live values; with `steps`, the time limit. 0: no live reading (faults only). At most 120. */
   seconds: number;
   /** Channel keys to read. Unknown or unsupported ones are skipped. */
   watch: string[];
   /** Read the faults before (and, with seconds, after) the readings. */
   faults?: boolean;
   /**
-   * A pacer the live view shows while the check runs, so the person knows what to do when: every
-   * `period` seconds, `up` (take `channel` to about `high`) for the first half, then `down` (back to
-   * `low`). The rev test: rev to 2,500 rpm, let it drop, four times.
+   * One thing at a time for the person to do, each done when the car's reading shows it (the brake
+   * switch on, the revs up), `rounds` times over. The live view shows only the step at hand. The
+   * check ends once the last one is done, or after `seconds` at the latest.
    */
-  guide?: { channel: string; low: number; high: number; period: number; up: string; down: string };
+  steps?: CheckStep[];
+  /** How many times to go through `steps`, counted on screen ("2 of 4"). Default 1. */
+  rounds?: number;
+  /** `ask` worded for this car and connection: the part to touch, the adapter it has. */
+  askFor?: (c: CheckContext) => string;
+  /** Said instead of the usual when the car stops answering during this check. */
+  lost?: string;
   judge(r: CheckReading): Finding[];
 }
 
-/** Where a check's pacer is `seconds` into the check: the target, and whether it's the "up" half. */
-export function guideAt(g: NonNullable<CarCheck["guide"]>, seconds: number) {
-  const phase = (seconds % g.period) / g.period;
-  const up = phase < 0.5;
-  return { up, target: up ? g.high : g.low, text: up ? g.up : g.down, next: g.period * (up ? 0.5 : 1) - (seconds % g.period) };
+/** One step of a check: what to do now, and the reading that shows it was done. */
+export interface CheckStep {
+  /** What to do now, in a few words: "Press the brake pedal". */
+  say: string;
+  /** The reading that shows it was done. */
+  channel: string;
+  /** Done when the reading is at least this, */
+  above?: number;
+  /** or at most this, */
+  below?: number;
+  /** and has stayed so for this many seconds, counted down on screen. */
+  hold?: number;
+  /** Where to take the reading, marked on its dial: 2,500 rpm in the rev test. */
+  target?: number;
+}
+
+/** What a check's wording can depend on. */
+export interface CheckContext {
+  /** How the car is connected: "kkl", "elm327" or "simulator". */
+  adapter: string;
+  /** The faults stored now as last read, or null before a read. */
+  faults: Fault[] | null;
+  /** A fault's everyday name, from the profile's explanations. */
+  faultName?: (f: Fault) => string;
+}
+
+/** What to tell the person before a check, worded for this car and connection when known. */
+export const askOf = (c: CarCheck, ctx?: CheckContext) => (ctx && c.askFor ? c.askFor(ctx) : c.ask);
+
+/** How far a check with steps has got: the step at hand (counted over all rounds), and since when its reading has been right. */
+export interface StepProgress {
+  at: number;
+  /** Seconds into the check the step's reading became right, for `hold`; null while it isn't. */
+  since: number | null;
+}
+
+/** The step at hand, as the live view shows it. */
+export interface StepCue {
+  say: string;
+  channel: string;
+  target?: number;
+  /** This round and how many in all, from 1. */
+  round: number;
+  rounds: number;
+  hold?: number;
+  /** Seconds into the check the reading became right, while it holds. */
+  since: number | null;
+}
+
+export const stepCount = (c: CarCheck) => (c.steps?.length ?? 0) * (c.rounds ?? 1);
+export const stepsDone = (c: CarCheck, p: StepProgress) => p.at >= stepCount(c);
+
+/**
+ * Move a check's steps on with one reading, `t` seconds into the check: the step at hand is done
+ * once its channel has been right for its `hold`. At most one step per reading. A reading without
+ * the step's channel changes nothing.
+ */
+export function advanceSteps(c: CarCheck, p: StepProgress, values: Record<string, number>, t: number): StepProgress {
+  if (!c.steps?.length || stepsDone(c, p)) return p;
+  const step = c.steps[p.at % c.steps.length];
+  const v = values[step.channel];
+  if (v === undefined) return p;
+  const right = (step.above === undefined || v >= step.above) && (step.below === undefined || v <= step.below);
+  if (!right) return p.since === null ? p : { at: p.at, since: null };
+  const since = p.since ?? t;
+  return t - since >= (step.hold ?? 0) ? { at: p.at + 1, since: null } : { at: p.at, since };
+}
+
+/** The step at hand for the live view, or null with no steps or all of them done. */
+export function stepCue(c: CarCheck, p: StepProgress): StepCue | null {
+  if (!c.steps?.length || stepsDone(c, p)) return null;
+  const s = c.steps[p.at % c.steps.length];
+  return { say: s.say, channel: s.channel, target: s.target, round: Math.floor(p.at / c.steps.length) + 1, rounds: c.rounds ?? 1, hold: s.hold, since: p.since };
 }
 
 /** Said before any check with the engine running. */
@@ -91,6 +167,10 @@ export function correlation(a: number[], b: number[]): number | null {
 const has = (r: CheckReading, key?: string): key is string => !!key && (r.series[key]?.length ?? 0) > 0;
 const notRead = (what: string): Finding => ({ verdict: "unclear", text: `${what} didn't answer, so this couldn't be checked.` });
 const faultText = (f: Fault) => [f.code, f.name, f.state && `(${f.state})`].filter(Boolean).join(" ");
+
+/** The connection to wiggle, named after the hardware the person has. */
+export const connectionPart = (adapter: string) =>
+  adapter === "elm327" ? "the adapter where it plugs into the car" : adapter === "kkl" ? "the KKL cable's connector where it plugs into the car" : "the cable's connector where it plugs into the car";
 
 // ---- the standard checks ----------------------------------------------------------------------
 
@@ -208,10 +288,16 @@ export function standardChecks(channels: Channel[], c: CheckChannels): CarCheck[
       checks.push({
         id: "revs",
         title: "Rev test",
-        ask: "In neutral, rev the engine to about 2,500 rpm and let it drop back, four times over 20 seconds.",
+        ask: "In neutral, rev the engine to about 2,500 rpm and let it drop back to idle, four times. Openhood follows the revs and says when.",
         engineRunning: true,
-        seconds: 20,
-        guide: { channel: rpm, low: 800, high: 2500, period: 5, up: "Rev to 2,500", down: "Let it drop" },
+        // A time limit: the check ends after the fourth rev.
+        seconds: 45,
+        // Up counts from 2,300 and back from 1,500, so a cold engine's higher idle still counts as back.
+        steps: [
+          { say: "Rev up", channel: rpm, above: 2300, target: 2500 },
+          { say: "Let go", channel: rpm, below: 1500, target: 800 },
+        ],
+        rounds: 4,
         watch: [rpm, ...c.followRevs],
         judge: (r) => {
           if (!has(r, rpm)) return [notRead(label(rpm))];
@@ -255,7 +341,17 @@ export function standardChecks(channels: Channel[], c: CheckChannels): CarCheck[
     checks.push({
       id: "wiggle",
       title: "Wiggle test",
-      ask: "Engine idling. For 30 seconds, gently wiggle the plug and wiring of a sensor that has a stored fault (or that you suspect).",
+      ask: "Engine idling. For 30 seconds, gently wiggle the plug and wiring of the part a stored fault names or, with none stored, the adapter where it plugs into the car.",
+      // The part to touch: what a stored fault names, else the connection itself, named after the hardware.
+      askFor: ({ adapter, faults, faultName }) => {
+        if (faults?.length) {
+          const names = [...new Set(faults.map((f) => faultName?.(f) ?? faultText(f)))];
+          const list = names.length > 3 ? `${names.slice(0, 3).join("; ")} and ${names.length - 3} more` : names.join("; ");
+          return `Engine idling. For 30 seconds, gently wiggle the plug and wiring of the part ${names.length > 1 ? "each stored fault names" : "the stored fault names"}: ${list}.`;
+        }
+        return `Engine idling. No fault is stored, so test the connection: for 30 seconds, gently wiggle ${connectionPart(adapter)}.`;
+      },
+      lost: "The car stopped answering while you wiggled, so a contact is loose: most likely the plug you were moving. Check it, then run this again.",
       engineRunning: true,
       seconds: 30,
       watch: [rpm],
