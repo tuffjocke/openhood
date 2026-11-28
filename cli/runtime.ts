@@ -1,11 +1,27 @@
-import { basicChecks, ENGINE_SAFETY, unverifiedCheck, type CarCheck, type Finding, type Verdict } from "../core/checks";
+import {
+  advanceSteps,
+  askOf,
+  basicChecks,
+  ENGINE_SAFETY,
+  stepCount,
+  stepCue,
+  stepsDone,
+  unverifiedCheck,
+  type CarCheck,
+  type CheckContext,
+  type Finding,
+  type StepProgress,
+} from "../core/checks";
+import { carName, runsFor, saveCheck, worstOf, type SavedReading, type TestRun } from "../core/test-history";
+import { loadRuns, saveRuns } from "./test-history";
 import { hex, NegativeResponse } from "../core/kwp2000/frame";
 import { ElmLink, elmModeFor } from "../core/link/elm327";
 import { kLineLink } from "../core/link/kline";
 import { detectAdapter } from "../core/link/open";
 import type { Link, TrafficEvent } from "../core/link/types";
 import type { AdapterKind, Fault, Readiness, Values, VehicleProfile } from "../core/profile";
-import { emptyWatchState, type WatchCommand, type WatchEvent, type WatchState, type WatchTest } from "../core/watch";
+import { emptyWatchState, type WatchCommand, type WatchEvent, type WatchHistory, type WatchState, type WatchTest } from "../core/watch";
+import { randomUUID } from "node:crypto";
 import { checkReadOnly } from "../core/safety";
 import { Session } from "../core/session";
 import { SimulatedTransport } from "../core/transport/simulated";
@@ -77,6 +93,8 @@ export interface ConnectOptions {
   adapter?: "auto" | AdapterKind;
   /** Simulator only: pretend to be an ELM327 on a CAN car (true) or a K-line car (false). Default: KKL simulator. */
   simulateElmCan?: boolean;
+  /** The name the person gives the car for its test history, e.g. "My Defender". Never a VIN or registration. */
+  car?: string;
 }
 
 /** Thrown for things the person or agent should fix; the message is meant to be shown as is. */
@@ -106,6 +124,12 @@ export class Runtime {
   private results = new Map<string, { title: string; findings: Finding[] }>();
   /** Checks the person skipped on the live view. */
   private skipped = new Set<string>();
+  /** Profile and port the results are for: a connect to the same car keeps them (#47). */
+  private resultsFor: string | null = null;
+  /** The name the person gave the car, for the test history. */
+  private car: string | null = null;
+  /** The test run being saved now, from its first check. */
+  private run: Omit<TestRun, "checks"> | null = null;
   private traffic: TrafficEvent[] = [];
   /** What the live view shows (core/watch.ts), and who is watching. */
   private view: WatchState = emptyWatchState();
@@ -119,8 +143,9 @@ export class Runtime {
    * `unsafe` lets raw requests through without the read-only check. Never the default.
    * `keepAlive` (the MCP server): between tool calls, read something about once a second so a
    * K-line session stays open, and if the car drops it anyway, connect again once by itself.
+   * `history`: the file to save each test run in (cli/test-history.ts); none, no saving.
    */
-  constructor(private opts: { unsafe?: boolean; keepAlive?: boolean } = {}) {}
+  constructor(private opts: { unsafe?: boolean; keepAlive?: boolean; history?: string } = {}) {}
 
   private log = (e: TrafficEvent) => {
     this.traffic.push(e);
@@ -177,6 +202,11 @@ export class Runtime {
   private gotFaults(faults: Fault[], pending: Fault[] | null, readiness: Readiness | null) {
     this.view = { ...this.view, faults, pending, readiness };
     this.emit({ type: "faults", faults, pending, readiness });
+    // Some steps name the part to touch from the faults (the wiggle test): the page gets the new wording.
+    if (this.view.test && this.session) {
+      const test = this.testState(this.session);
+      if (test.steps.some((st, i) => st.ask !== this.view.test?.steps[i]?.ask)) this.setView({ test });
+    }
   }
 
   private get s(): Session {
@@ -295,6 +325,27 @@ export class Runtime {
     this.lastTried = o;
     const profile = getProfile(o.profile);
     if (!profile) throw new UserError(`No profile "${o.profile}". Known: ${PROFILES.map((p) => p.id).join(", ")}.`);
+    let car: string | null;
+    try {
+      car = carName(o.car);
+    } catch (e) {
+      throw new UserError((e as Error).message);
+    }
+    // The same car (profile and port) keeps its test results: turning the key off between checks
+    // means connecting again, and that mustn't lose the checks already done (#47).
+    const key = `${profile.id}|${o.port ?? "simulator"}`;
+    const keep = again || key === this.resultsFor;
+    if (!keep) {
+      this.results.clear();
+      this.skipped.clear();
+      this.run = null;
+      this.car = null;
+    }
+    this.resultsFor = key;
+    if (car && car !== this.car) {
+      this.car = car;
+      if (this.run) this.run = { ...this.run, car };
+    }
     if (!again) this.traffic = [];
     this.setView(again ? { status: "connecting", error: null } : { ...emptyWatchState(), status: "connecting", profileId: profile.id });
     try {
@@ -302,10 +353,6 @@ export class Runtime {
       const s = new Session(profile, link, this.log);
       await s.connect();
       this.session = s;
-      if (!again) {
-        this.results.clear();
-        this.skipped.clear();
-      }
       this.lastConnect = o;
       this.keepAliveMisses = 0;
       this.setView({
@@ -315,14 +362,18 @@ export class Runtime {
         unavailable: [...s.unavailableChannels],
         values: { ...this.view.values, ...this.shownValues(s.state) },
         test: this.testState(s),
+        history: this.historyView(s),
       });
       this.startKeepAlive();
+      const kept = [...this.results.keys()];
       return {
         profile: profile.id,
         connectedThrough: link.adapter,
         init: s.init,
         unavailableChannels: [...s.unavailableChannels],
         ...(o.port ? { test: this.testAdvice(s) } : {}),
+        // Connecting to the same car again keeps the checks done; another car or port starts over.
+        ...(kept.length ? { checksKept: kept } : {}),
         ...(this.update
           ? {
               update: {
@@ -440,13 +491,19 @@ export class Runtime {
    * seen, in order. With `keys`, after the first round only the groups that gave one of them are
    * read, so a check samples its readings as fast as the line allows.
    */
-  private async sample(s: Session, seconds: number, keys?: string[], check?: { run: CheckRun; seen: Record<string, number[]> }) {
+  private async sample(
+    s: Session,
+    seconds: number,
+    keys?: string[],
+    /** During a check; `got` sees each reading and returns true when the check is done early (its steps are). */
+    check?: { run: CheckRun; seen: Record<string, number[]>; got?: (v: Values) => boolean },
+  ) {
     let ids = [...new Set(s.profile.schedule)].filter((id) => s.isActive(id));
     const end = performance.now() + seconds * 1000;
     const seen: Record<string, number[]> = check?.seen ?? {};
     let first = true;
     let lastGood = performance.now();
-    do {
+    reading: do {
       const useful: string[] = [];
       for (const id of ids) {
         let got: Values;
@@ -464,6 +521,7 @@ export class Runtime {
         this.gotValues(got);
         for (const [k, v] of Object.entries(got)) (seen[k] ??= []).push(v);
         if (!keys || Object.keys(got).some((k) => keys.includes(k))) useful.push(id);
+        if (check?.got?.(got)) break reading;
       }
       if (first && keys && useful.length) ids = useful;
       first = false;
@@ -516,18 +574,33 @@ export class Runtime {
     return at < 0 ? [...own, open] : [...own.slice(0, at + 1), open, ...own.slice(at + 1)];
   }
 
+  /** What the checks' wording depends on: the hardware, and the faults as last read. */
+  private ctx(s: Session): CheckContext {
+    const explanations = s.profile.faults?.explanations;
+    return {
+      adapter: s.link.adapter,
+      faults: this.view.faults,
+      faultName: (f) => {
+        const title = explanations?.[f.id]?.title ?? f.name;
+        return f.code ? `${title} (${f.code})` : title;
+      },
+    };
+  }
+
   /** The test steps for the connected car, in order, with what to tell the person before each. */
   listChecks() {
     const s = this.s;
+    const ctx = this.ctx(s);
     return {
-      how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. For a check with the engine running, they start the engine before saying ready: starting it during a check can make the car stop answering. Explain each finding. The live view shows the check and, for the rev test, when to rev. Finish with test_report.",
+      how: "One check at a time: tell the person what to do in plain words (and the safety note first when the engine runs), wait until they say they're ready, then run_check. For a check with the engine running, they start the engine before saying ready: starting it during a check can make the car stop answering. Explain each finding. In a check with steps (the rev test, pedals) the live view shows one thing to do at a time, moves on when the car's readings show it was done, and ends after the last step (seconds is then the time limit). Finish with test_report.",
       safety: ENGINE_SAFETY,
       checks: this.checksFor(s).map((c) => ({
         id: c.id,
         title: c.title,
-        ask: c.ask,
+        ask: askOf(c, ctx),
         seconds: c.seconds,
         engineRunning: !!c.engineRunning,
+        ...(c.steps ? { steps: stepCount(c) } : {}),
         done: this.results.has(c.id),
         ...(this.skipped.has(c.id) ? { skipped: true } : {}),
       })),
@@ -537,8 +610,8 @@ export class Runtime {
 
   /** The test as the live view shows it: every step, and how its last run went. */
   private testState(s: Session): WatchTest {
-    const worst = (f: Finding[]): Verdict => (f.some((x) => x.verdict === "look") ? "look" : f.some((x) => x.verdict === "unclear") ? "unclear" : "ok");
     const steps = this.checksFor(s);
+    const ctx = this.ctx(s);
     // Every step run or skipped: the report is ready to send from the page (no fault codes, no car name).
     const done = this.results.size > 0 && steps.every((c) => this.results.has(c.id) || this.skipped.has(c.id));
     return {
@@ -549,12 +622,63 @@ export class Runtime {
         return {
           id: c.id,
           title: c.title,
-          ask: c.ask,
+          ask: askOf(c, ctx),
           seconds: c.seconds,
           engineRunning: !!c.engineRunning,
-          result: r ? worst(r.findings) : this.skipped.has(c.id) ? "skipped" : null,
+          result: r ? worstOf(r.findings) : this.skipped.has(c.id) ? "skipped" : null,
         };
       }),
+    };
+  }
+
+  /**
+   * Save a check's result in this car's test run, on this computer only (cli/test-history.ts).
+   * Never the demo's made-up readings, and never what identifies the car: the person's name for
+   * it, the profile, the findings and the readings' ranges.
+   */
+  private saveToHistory(s: Session, check: CarCheck, findings: Finding[], readings: Record<string, SavedReading & { samples: number }>) {
+    const file = this.opts.history;
+    if (!file || s.link.adapter === "simulator") return;
+    this.run ??= { id: randomUUID(), date: new Date().toISOString(), car: this.car, profile: s.profile.id, adapter: s.link.adapter };
+    const plain: Record<string, SavedReading> = {};
+    for (const [k, r] of Object.entries(readings)) plain[k] = { label: r.label, unit: r.unit, min: r.min, max: r.max, last: r.last };
+    try {
+      saveRuns(file, saveCheck(loadRuns(file), this.run, { id: check.id, title: check.title, at: new Date().toISOString(), findings, readings: plain }));
+    } catch (e) {
+      this.setView({ notice: `Couldn't save the test history: ${(e instanceof Error ? e.message : String(e)).split("\n")[0]}` });
+    }
+  }
+
+  /** This car's earlier test runs for the live view; null for the demo car. */
+  private historyView(s: Session): WatchHistory | null {
+    if (s.link.adapter === "simulator") return null;
+    const file = this.opts.history;
+    if (!file) return { saving: false, runs: [] };
+    let runs: TestRun[] = [];
+    try {
+      runs = runsFor(loadRuns(file), s.profile.id, this.car).filter((r) => r.id !== this.run?.id);
+    } catch {} // a damaged file shows no history; `openhood history` says what's wrong
+    return { saving: true, runs: runs.slice(0, 10) };
+  }
+
+  /** Earlier test runs saved on this computer: this car's while connected, else all of them. */
+  testHistory() {
+    const file = this.opts.history;
+    if (!file) return { saving: false, runs: [], note: "Saving is off (--no-history), so there is no history." };
+    let all: TestRun[];
+    try {
+      all = loadRuns(file);
+    } catch (e) {
+      throw new UserError(`The test history file is damaged (${(e as Error).message}). ${CMD} history --delete removes it.`);
+    }
+    const s = this.session;
+    const runs = s ? runsFor(all, s.profile.id, this.car) : all;
+    return {
+      saving: true,
+      where: "On this computer only, in ~/.openhood/test-history.json. Nothing is sent anywhere.",
+      runs: runs.slice(0, 10),
+      ...(runs.length > 10 ? { more: runs.length - 10 } : {}),
+      delete: `The person can delete it all with: ${CMD} history --delete`,
     };
   }
 
@@ -610,11 +734,25 @@ export class Runtime {
       // Shorter on request (a quick look, tests), never longer than the check says.
       const seconds = Math.min(Math.max(o.seconds ?? check.seconds, 0), check.seconds, 120);
       this.checkStarted = performance.now();
-      this.setView({ check: { id: check.id, title: check.title, ask: check.ask, seconds, elapsedMs: 0, findings: null } });
       const watch = check.watch.filter((k) => !s.unavailableChannels.has(k));
+      // A check with steps moves on as the car's readings show each one done, and ends after the last.
+      const withSteps = !!check.steps?.length && check.steps.every((st) => watch.includes(st.channel));
+      let progress: StepProgress = { at: 0, since: null };
+      this.setView({
+        check: { id: check.id, title: check.title, ask: askOf(check, this.ctx(s)), seconds, elapsedMs: 0, findings: null, ...(withSteps ? { step: stepCue(check, progress) } : {}) },
+      });
+      const moveOn = (v: Values) => {
+        const next = advanceSteps(check, progress, v, (performance.now() - this.checkStarted) / 1000);
+        // Only a new step, or the reading becoming right or wrong, is news for the page.
+        if (next.at !== progress.at || (next.since === null) !== (progress.since === null)) {
+          progress = next;
+          this.setView({ check: { ...this.view.check!, step: stepCue(check, progress) } });
+        } else progress = next;
+        return stepsDone(check, progress);
+      };
       const seen: Record<string, number[]> = {};
-      const readings = () => {
-        const out: Record<string, unknown> = {};
+      const summary = (): Record<string, SavedReading & { samples: number }> => {
+        const out: Record<string, SavedReading & { samples: number }> = {};
         for (const c of s.profile.channels) {
           const v = seen[c.key];
           if (!v || !watch.includes(c.key)) continue;
@@ -623,17 +761,22 @@ export class Runtime {
         }
         return out;
       };
+      const done = (findings: Finding[]) => {
+        this.results.set(check.id, { title: check.title, findings });
+        this.saveToHistory(s, check, findings, summary());
+      };
       try {
         const faultsBefore = check.faults ? await run.within(s.readFaults(), CHECK_FAULTS_MS) : undefined;
         if (faultsBefore) this.gotFaults(faultsBefore, this.view.pending, this.view.readiness);
-        if (seconds > 0 && watch.length) await this.sample(s, seconds, watch, { run, seen });
+        if (seconds > 0 && watch.length) await this.sample(s, seconds, watch, { run, seen, ...(withSteps ? { got: moveOn } : {}) });
         const faultsAfter = check.faults && seconds > 0 ? await run.within(s.readFaults(), CHECK_FAULTS_MS) : undefined;
         if (faultsAfter) this.gotFaults(faultsAfter, this.view.pending, this.view.readiness);
         const series = Object.fromEntries(watch.filter((k) => seen[k]).map((k) => [k, seen[k]]));
-        const findings = check.judge({ series, faultsBefore, faultsAfter });
-        this.results.set(check.id, { title: check.title, findings });
-        this.setView({ check: { ...this.view.check!, findings }, test: this.testState(s) });
-        return { id: check.id, title: check.title, findings, readings: readings() };
+        const stepsNow = withSteps ? { steps: { done: Math.min(progress.at, stepCount(check)), of: stepCount(check) } } : {};
+        const findings = check.judge({ series, faultsBefore, faultsAfter, ...stepsNow });
+        done(findings);
+        this.setView({ check: { ...this.view.check!, findings }, test: this.testState(s), history: this.historyView(s) });
+        return { id: check.id, title: check.title, findings, readings: summary(), ...stepsNow };
       } catch (e) {
         if (e instanceof CheckStopped) {
           this.setView({ check: null });
@@ -650,20 +793,21 @@ export class Runtime {
           {
             verdict: "unclear",
             text: `The car stopped answering ${after} s into the check, so it couldn't finish. ${
-              check.engineRunning
+              check.lost ??
+              (check.engineRunning
                 ? "Starting the engine often does this: the battery voltage dips while cranking. Start the engine first, then run the check again."
-                : "Check the plug and that the ignition is on, then run the check again."
+                : "Check the plug and that the ignition is on, then run the check again.")
             }`,
           },
         ];
-        this.results.set(check.id, { title: check.title, findings });
-        this.setView({ status: "lost", error: "The car stopped answering.", check: { ...this.view.check!, findings }, test: this.testState(s) });
+        done(findings);
+        this.setView({ status: "lost", error: "The car stopped answering.", check: { ...this.view.check!, findings }, test: this.testState(s), history: this.historyView(s) });
         return {
           id: check.id,
           title: check.title,
           connectionLost: true,
           findings,
-          readings: readings(),
+          readings: summary(),
           next: "Tell the person the car stopped answering, in plain words. The next run_check connects again by itself first. For a check with the engine running, have the engine running before you run it.",
         };
       } finally {
@@ -690,7 +834,6 @@ export class Runtime {
     const car = o.car ?? ([o.make, o.model, o.year, o.engine].filter(Boolean).join(" ") || undefined);
     const url = checkReportUrl({ car, adapterModel: o.adapterModel, profile: s.profile, connection: protocol, results });
     // The shared car list learns this car has been tested: each check's worst finding, nothing personal.
-    const worst = (f: Finding[]): Verdict => (f.some((x) => x.verdict === "look") ? "look" : f.some((x) => x.verdict === "unclear") ? "unclear" : "ok");
     const real = s.link.adapter === "kkl" || s.link.adapter === "elm327";
     const carReport =
       real && o.make && o.model && o.year
@@ -705,7 +848,7 @@ export class Runtime {
             ...(o.adapterModel ? { adapterModel: o.adapterModel } : {}),
             protocol,
             result: "worked",
-            checks: Object.fromEntries(results.map((r) => [r.id, worst(r.findings)])),
+            checks: Object.fromEntries(results.map((r) => [r.id, worstOf(r.findings)])),
           })
         : undefined;
     return { results, url, ...(carReport ? { carReport } : {}) };

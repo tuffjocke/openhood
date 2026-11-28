@@ -191,7 +191,7 @@ a {
   margin-top: 20px;
 }
 
-/* The pacer's cue over the dial: what to do with the pedal right now. Orange while it says "up". */
+/* A check's step over the dial: the one thing to do right now. Orange while it counts a hold down. */
 .check-cue {
   margin: 0 0 20px;
   text-align: center;
@@ -199,8 +199,16 @@ a {
   color: var(--cl-ink);
 }
 
-.check-cue.up {
+.check-cue.holding {
   color: var(--needle);
+}
+
+/* "2 of 4" under the step. */
+.check-round {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  color: var(--cl-muted);
 }
 
 .check-findings {
@@ -233,6 +241,17 @@ a {
 
 .check-findings .verdict-look::before {
   background: var(--sign);
+}
+
+/* The same check the last time it ran on this car, folded under today's findings. */
+.check-last {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.check-last > summary {
+  cursor: pointer;
 }
 
 /* A running check whose car has gone quiet: the frozen numbers are greyed, never shown as live. */
@@ -2654,6 +2673,57 @@ span.fault-label {
 
 .history-file .small {
   margin: 8px 0 0;
+}
+
+/* Earlier runs of Openhood's test, next to the fault history: a line per run with a dot per check. */
+.test-history {
+  margin-top: 24px;
+  font-size: 14px;
+}
+
+.test-history > summary,
+.test-runs summary {
+  cursor: pointer;
+}
+
+.test-history .small {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.test-runs {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.test-runs > li {
+  margin-top: 6px;
+}
+
+.test-runs summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.test-runs .test-steps {
+  gap: 4px;
+  margin: 0;
+}
+
+.test-runs .test-steps li {
+  padding-left: 9px;
+}
+
+.test-run-check {
+  margin: 10px 0 0 16px;
+}
+
+.test-run-title {
+  margin: 0;
+  font-weight: 600;
 }
 
 .log {

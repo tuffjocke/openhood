@@ -9,8 +9,16 @@ import { channels } from "./data";
 const pedalSwitches: CarCheck = {
   id: "switches",
   title: "Pedal switches",
-  ask: "Ignition on or idling. Press the brake pedal for 3 seconds and let go, then the clutch pedal for 3 seconds.",
-  seconds: 15,
+  ask: "Ignition on or idling. Press the brake pedal, hold it 3 seconds and let go, then the same with the clutch. Openhood says each step.",
+  // A time limit: the check ends once both pedals have been pressed and let go.
+  seconds: 40,
+  // The switch bits from 21 1E (data.ts): 1 while the pedal is pressed.
+  steps: [
+    { say: "Press the brake pedal", channel: "brake", above: 1, hold: 3 },
+    { say: "Let go of it", channel: "brake", below: 0 },
+    { say: "Now press the clutch pedal", channel: "clutch", above: 1, hold: 3 },
+    { say: "Let go of it", channel: "clutch", below: 0 },
+  ],
   watch: ["brake", "clutch"],
   judge: (r) =>
     (["brake", "clutch"] as const).map((k) => {

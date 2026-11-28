@@ -25,7 +25,9 @@ words and, with the person's okay, run it before anything else: list_checks, the
 time (tell the person what to do and wait until they're ready; for a check with the engine running, until the engine
 is running), then test_report with make, model and year. Say the
 safety note before any check with the engine running. The test is how readings get verified, so ask the person whether
-the car's own gauges agree with the readings not verified yet.`;
+the car's own gauges agree with the readings not verified yet. Connecting again with the same profile and port keeps
+the checks already done. Each test run is saved on this computer only: ask the person what to call the car ("My
+Defender", never a VIN or registration) and pass it to connect as car; test_history has the earlier runs to compare with.`;
 
 type Json = Record<string, unknown>;
 
@@ -65,6 +67,7 @@ export const TOOLS: Tool[] = [
           type: "boolean",
           description: "Simulator only: go through a simulated ELM327 on a CAN car (true) or a K-line car (false).",
         },
+        car: str('Optional: the name the person gives the car, e.g. "My Defender", so its test runs are saved under it on this computer. Never a VIN or registration.'),
       },
       required: ["profile"],
     },
@@ -74,6 +77,7 @@ export const TOOLS: Tool[] = [
         port: a.port ? String(a.port) : undefined,
         adapter: a.adapter as "auto" | "kkl" | "elm327" | undefined,
         simulateElmCan: typeof a.simulateElmCan === "boolean" ? a.simulateElmCan : undefined,
+        car: typeof a.car === "string" ? a.car : undefined,
       }),
   },
   {
@@ -130,7 +134,7 @@ export const TOOLS: Tool[] = [
   {
     name: "run_check",
     description:
-      "Run one test step from list_checks, after telling the person what to do and hearing they're ready. Reads for the step's seconds (up to 120), shows it on the live view (with a pacer for the rev test) and returns findings: ok, look or unclear, each with a plain sentence. If the car stops answering, the check ends with connectionLost and what to do next.",
+      "Run one test step from list_checks, after telling the person what to do and hearing they're ready. Reads for the step's seconds (up to 120), shows it on the live view and returns findings: ok, look or unclear, each with a plain sentence. A check with steps (rev test, pedals) shows one action at a time, moves on when the car's readings show it done and ends after the last (seconds is then the time limit; steps says how many were done). If the car stops answering, the check ends with connectionLost and what to do next.",
     inputSchema: {
       type: "object",
       properties: {
@@ -167,6 +171,13 @@ export const TOOLS: Tool[] = [
         adapterModel: typeof a.adapterModel === "string" ? a.adapterModel : undefined,
         includeFaults: a.includeFaults === true,
       }),
+  },
+  {
+    name: "test_history",
+    description:
+      "Earlier runs of Openhood's test, saved on this computer only (never sent anywhere): the connected car's, or every car's when not connected. Each has the date, each check's findings and key readings, to compare with today's. The person deletes it with the history --delete command.",
+    inputSchema: { type: "object", properties: {} },
+    run: (rt) => rt.testHistory(),
   },
   {
     name: "clear_faults",
@@ -220,8 +231,8 @@ export async function handle(rt: Runtime, msg: Json): Promise<Json | null> {
   }
 }
 
-export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean; updateCheck?: boolean }) {
-  const rt = new Runtime({ unsafe: opts.unsafe, keepAlive: true });
+export async function serve(opts: { unsafe?: boolean; watch?: boolean; open?: boolean; updateCheck?: boolean; history?: string }) {
+  const rt = new Runtime({ unsafe: opts.unsafe, keepAlive: true, history: opts.history });
   // From npm only (a clone is as new as its checkout). In the background: the agent never waits for it.
   if (FROM_NPM && opts.updateCheck !== false)
     void latestVersion().then((latest) => {

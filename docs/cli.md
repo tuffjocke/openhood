@@ -41,7 +41,12 @@ npx -y openhood@latest request --profile generic-obd2 --port /dev/ttyUSB0 "01 0C
 
 # the live view in your browser, no agent or MCP setup: dials, charts, faults, traffic until Ctrl+C,
 # and Openhood's test run from the page
-npx -y openhood@latest watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI
+npx -y openhood@latest watch --profile land-rover-td5 --port /dev/tty.usbserial-A50285BI --car "My Defender"
+
+# the test runs saved on this computer only (~/.openhood/test-history.json): list, copy, delete
+npx -y openhood@latest history
+npx -y openhood@latest history --export openhood-tests.json
+npx -y openhood@latest history --delete
 
 # read the car and share what worked (from npm: prints a link to a ready-made GitHub issue;
 # in a clone: adds it to profiles/car-reports.json for a pull request)
@@ -107,6 +112,7 @@ The agent gets these tools:
 | `request` | One raw read request, e.g. `21 09`, and the answers |
 | `traffic` | The last lines of raw traffic |
 | `list_checks`, `run_check`, `test_report` | Test the car step by step, shown on the live view, and make a test report ([testing-a-car.md](testing-a-car.md)) |
+| `test_history` | Earlier test runs of the car, saved on this computer only |
 | `clear_faults` | Clear codes, only with `confirm: true` after the person said yes |
 | `explain_code` | A code in plain words, no car needed |
 
@@ -126,7 +132,12 @@ is taken.
   slowly between tool calls from the keep-alive reads. "Lost the car" means the car stopped answering:
   press Reconnect, or the next read connects again.
 - Openhood's test runs from the page too: the steps, what to do, Start, Stop, Skip. The agent sees the
-  same results, and only one check runs at a time.
+  same results, and only one check runs at a time. Connecting again to the same profile and port keeps
+  the checks done.
+- Each test run is saved on this computer only, in `~/.openhood/test-history.json` (yours to read only),
+  under the name given to `connect` as `car` (or `watch --car`) and the profile: findings and key
+  readings, never a VIN. The page lists earlier runs under "Earlier tests". `history` lists, exports and
+  deletes them; `mcp --no-history` or `watch --no-history` stops saving.
 - "Refused to connect" in the browser means the MCP server isn't running: the page only exists while
   the agent's session has it. Start the agent, then ask it to connect.
 - It is on this computer only (127.0.0.1) and read-only: the page can only run, skip and stop the

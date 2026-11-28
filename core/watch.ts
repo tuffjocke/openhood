@@ -4,7 +4,8 @@
  * to run Openhood's test from the page itself (issue #37): run a check, skip it, stop it, reconnect.
  * All read-only, like the checks. Both sides ship in the same npm package, so they match.
  */
-import type { Finding, Verdict } from "./checks";
+import type { Finding, StepCue, Verdict } from "./checks";
+import type { TestRun } from "./test-history";
 import type { Fault, Readiness, Values } from "./profile";
 
 /** Where the page gets the stream, on the same origin it was served from. */
@@ -40,6 +41,15 @@ export interface WatchState {
   test: WatchTest | null;
   /** Why the page's last command didn't go through, in plain words. */
   notice: string | null;
+  /** Earlier test runs of this car, saved on this computer (core/test-history.ts). null before connecting. */
+  history: WatchHistory | null;
+}
+
+export interface WatchHistory {
+  /** Off when started with --no-history. */
+  saving: boolean;
+  /** The car's earlier runs, newest first, not the one going on now. */
+  runs: TestRun[];
 }
 
 /** The steps of Openhood's test, in order, as list_checks gives them to an agent. */
@@ -73,6 +83,8 @@ export interface WatchCheck {
   seconds: number;
   /** How far into the check it was when this was sent, so a page can run the pacer itself. */
   elapsedMs: number;
+  /** For a check with steps: the one thing to do now, as the car's readings move it on. null once they're done. */
+  step?: StepCue | null;
   /** null while it runs. */
   findings: Finding[] | null;
 }
@@ -99,6 +111,7 @@ export const emptyWatchState = (): WatchState => ({
   check: null,
   test: null,
   notice: null,
+  history: null,
 });
 
 /** Check that something posted to the live view is a WatchCommand, and nothing more. */

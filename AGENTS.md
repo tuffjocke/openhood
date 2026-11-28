@@ -62,11 +62,18 @@ cli/                      openhood.ts (CLI), mcp.ts (MCP server on stdio, hand-w
                           POST /command for the page's test commands)
                           watch-car.ts (`openhood watch`: the same live view with no agent, reads until Ctrl+C; the
                           test runs from the page)
+                          test-history.ts (each test run saved in ~/.openhood/test-history.json, mode 600;
+                          `openhood history` lists, exports, `--delete` deletes it; `--no-history` stops saving)
 core/checks.ts            test checks (#25): what the person does, what to read, how to judge it; standardChecks
                           builds the usual set from a profile's channel keys. Profiles list theirs in `checks`; the
                           MCP tools list_checks, run_check, test_report run them, and so does the live view (#37): the
                           steps, what to do, Start, Stop, Skip, Reconnect. A running check is the whole page, on the
-                          live screen's own dials and charts. One check at a time, whoever starts it. It comes first on cars Openhood isn't proven
+                          live screen's own dials and charts. Where the person acts, a check has `steps` (#47): one
+                          action at a time, moved on by the car's readings (rev test: up to 2,300 rpm, back under
+                          1,500, four times; Td5 pedals: each held 3 s, then let go), `seconds` the time limit.
+                          `askFor` words it for the hardware and stored faults (the wiggle test names the part, else
+                          the KKL connector or adapter). A connect to the same profile and port keeps the results.
+                          One check at a time, whoever starts it. It comes first on cars Openhood isn't proven
                           on (`needsTest` in profiles/car-reports.ts: no test run, or readings not verified): `connect`
                           recommends it and the AI hand-off asks for it. "Readings not verified yet" is added to every
                           profile with such readings, and is how they get verified
@@ -87,7 +94,7 @@ components/Dashboard.tsx  the whole UI, driven by the selected profile. While ru
                           other reading as a chart, its name coloured by group, no colour key) and beside it (`.live-side`,
                           stacked under 900px) the faults panel, one ask after a real read ("Did this match your
                           car?" Yes = car report, No = test report), "Help add this car" only for unlisted cars, and
-                          fault history export/import, traffic and profile details behind "More". A real car moving faster than walking
+                          fault history export/import (and imported test runs), traffic and profile details behind "More". A real car moving faster than walking
                           pace gets one line, "Moving. Let a passenger watch the screen."; the readings stay
 components/CarChooser     make, model, year (any car: unknown makes and models are typed in and tidied). Several
                           engines: "Which engine?". Profiles for other parts (`system`: ABS, airbag): "What to read?",
@@ -133,6 +140,10 @@ core/units.ts             km/h and °C, mph and °C (UK) or mph and °F (US): co
                           logging only; profiles stay metric. components/useUnits picks from the browser's region,
                           and the footer has the switch
 core/history.ts           fault history: merge, export/import (stored per car in the browser)
+core/test-history.ts      test runs (#47): date, each check's findings and key readings, the person's name for the car
+                          and its profile, never a VIN. On this computer only: the CLI's file, shown on the live view
+                          ("Earlier tests", "Last time"); the website imports that file behind More (browser storage,
+                          Export, Delete all). components/TestHistory shows them in both. Demo runs are never saved
 core/adapters.ts          adapters we recommend by name, with shop searches (no affiliate links); shown on /adapters
                           as tested only when a car report names them (adapterModel)
 core/add-car.ts           the add-your-car AI prompt (same text as docs/adding-a-vehicle.md, tested)
@@ -161,7 +172,8 @@ tests/i18n.test.ts        every t() text has Swedish, no dashes
 tests/npm.test.ts         the npm package builds and runs on its own
 tests/node-serial.test.ts CLI serial transport on serialport's mock: fast init as 0x00 at 360 baud, BREAK fallback
 tests/webserial.test.ts   website serial transport on a strict fake Web Serial port: the same fast init, reopening
-tests/checks.test.ts      test checks: how each judges its readings, the rev pacer, the MCP tools on the Td5
+tests/checks.test.ts      test checks: how each judges its readings, steps moved on by readings (revs, pedals), the
+                          wiggle wording, the MCP tools on the Td5, results kept on reconnect, the test history
 tests/watch.test.ts       the live view: streams connect, values, faults; test commands only from its own page with
                           the token, a test run from the page; own Host only, no way out
 tests/kwp1281.test.ts     KWP1281 known answers (parity, keywords, codes, formulas) and a session byte by byte

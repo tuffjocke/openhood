@@ -11,6 +11,7 @@ import {
   parseExport,
   type HistoryEntry,
 } from "@/core/history";
+import { mergeRuns, parseTestHistory, runsFor, testHistoryFile, TESTS_STORAGE, type TestRun } from "@/core/test-history";
 import { carReportUrl, reportUrl, trafficLines } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
@@ -29,6 +30,7 @@ import { EngineLight } from "./landing/EngineLight";
 import { LiveChart, type Point } from "./LiveChart";
 import { HelpAddCar } from "./CarChooser";
 import { FaultPanel, HistoryFile } from "./FaultPanel";
+import { TestHistory } from "./TestHistory";
 import { FirstRun } from "./FirstRun";
 import { AgentButton, noteDemo } from "./landing/AgentButton";
 import { selectionLabel, VehiclePicker, type Selection } from "./VehiclePicker";
@@ -92,6 +94,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [pending, setPending] = useState<Fault[] | null>(null);
   const [faultHistory, setFaultHistory] = useState<HistoryEntry[]>([]);
+  /** Openhood's test runs imported from the command line's file, every car (core/test-history.ts). */
+  const [testRuns, setTestRuns] = useState<TestRun[]>([]);
   const [busy, setBusy] = useState(false);
   /** Phones show the first four readings (and any past its limit) until asked for the rest. */
   const [allReadings, setAllReadings] = useState(false);
@@ -296,9 +300,45 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     URL.revokeObjectURL(a.href);
   }
 
-  async function importHistory(file: File): Promise<string> {
+  // Test runs stay in this browser only, like the fault history.
+  useEffect(() => {
     try {
-      const data = parseExport(await file.text());
+      setTestRuns(parseTestHistory(localStorage.getItem(TESTS_STORAGE) ?? "").runs);
+    } catch {
+      setTestRuns([]);
+    }
+  }, []);
+
+  function storeTestRuns(runs: TestRun[]) {
+    setTestRuns(runs);
+    try {
+      if (runs.length) localStorage.setItem(TESTS_STORAGE, JSON.stringify(testHistoryFile(runs)));
+      else localStorage.removeItem(TESTS_STORAGE);
+    } catch {}
+  }
+
+  function exportTestRuns() {
+    const blob = new Blob([JSON.stringify(testHistoryFile(testRuns), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `openhood-tests-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importHistory(file: File): Promise<string> {
+    const text = await file.text();
+    // The command line's test history (openhood history --export) comes in through the same button.
+    if (/"kind"\s*:\s*"test-history"/.test(text)) {
+      try {
+        storeTestRuns(mergeRuns(testRuns, parseTestHistory(text).runs));
+        return "Imported the test history.";
+      } catch (e) {
+        return e instanceof Error ? e.message : "Couldn't import that file.";
+      }
+    }
+    try {
+      const data = parseExport(text);
       const keys = Object.keys(data.cars);
       for (const k of keys) {
         const mine = JSON.parse(localStorage.getItem(k) ?? "[]") as HistoryEntry[];
@@ -688,6 +728,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       <details className="more-data">
         <summary>{t("More")}</summary>
       {!demo && <HistoryFile onExport={exportHistory} onImport={importHistory} />}
+      {!demo && runsFor(testRuns, profile.id).length > 0 && (
+        <TestHistory runs={runsFor(testRuns, profile.id)} saving onExport={exportTestRuns} onDelete={() => storeTestRuns([])} />
+      )}
       <details className="log" onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}>
         <summary>{t("Traffic with the car")}</summary>
         {logOpen && (
