@@ -7,7 +7,7 @@ import { hex, shortFrame, addressedFrame } from "@/core/kwp2000/frame";
 import { td5Key } from "@/profiles/land-rover-td5/keygen";
 import { groups } from "@/profiles/land-rover-td5/data";
 import { CLEAR_FAULTS, decodeFaults, explanations } from "@/profiles/land-rover-td5/faults";
-import { TD5_FAULT_MAP } from "@/profiles/land-rover-td5/fault-map";
+import { BLOCK_LENGTH, TD5_FAULT_MAP, TD5_INVALID_BITS } from "@/profiles/land-rover-td5/fault-map";
 
 describe("Land Rover Td5", () => {
   it("computes the key from td5keygen's published example and a sniffed session", () => {
@@ -119,7 +119,9 @@ describe("Land Rover Td5", () => {
     const faults = decodeFaults(res);
     const code = (id: string) => faults.find((f) => f.id === id)?.code;
     assert.equal(code("td5-13.0"), "14-1"); // air conditioning fan drive open load (Current)
-    assert.equal(code("td5-15.6"), "16-7"); // unnamed in every source
+    assert.equal(code("td5-15.6"), "16-7"); // "Invalid Fault" in the Nanocom's list
+    assert.equal(faults.find((f) => f.id === "td5-15.6")?.name, "Not a fault (the Nanocom calls this Invalid Fault)");
+    assert.equal(explanations["td5-15.6"].urgency, "ok");
     assert.equal(faults.length, 12);
     for (const key of ["9.0", "9.2", "9.3", "9.4", "13.0", "13.2", "13.3", "13.4"]) {
       const e = explanations[`td5-${key}`];
@@ -127,6 +129,18 @@ describe("Land Rover Td5", () => {
       assert.match(e.plain, /Defender/, key);
     }
     assert.equal(explanations["td5-23.6"].title, "Problem reported by the automatic gearbox");
+    assert.equal(TD5_FAULT_MAP["11.6"], "glow plug lamp drive open load (Current)"); // 12-7, Nanocom list
+    assert.equal(TD5_FAULT_MAP["13.6"], "glow plug lamp drive open load (Current)"); // 14-7
+  });
+
+  it("names every bit but one: 210 faults and 69 the Nanocom calls Invalid Fault, none both", () => {
+    assert.equal(TD5_INVALID_BITS.size, 69);
+    for (const key of TD5_INVALID_BITS) assert.equal(TD5_FAULT_MAP[key], undefined, key);
+    for (const key of ["15.6", "23.7", "25.3", "25.5"]) assert.ok(TD5_INVALID_BITS.has(key), key);
+    const unnamed: string[] = [];
+    for (let o = 0; o < BLOCK_LENGTH; o++)
+      for (let b = 0; b < 8; b++) if (!TD5_FAULT_MAP[`${o}.${b}`] && !TD5_INVALID_BITS.has(`${o}.${b}`)) unnamed.push(`${o}.${b}`);
+    assert.deepEqual(unnamed, ["20.7"]);
   });
   it("reads cylinder balance as five signed numbers from 21 40", () => {
     const balance = groups.find((g) => g.id === "balance")!;

@@ -31,6 +31,8 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | Pedal 5 V supply `21 1B`, data offset 8, in the 10-byte answer only | community, seen on the car | td5-carplay-gauge (`throttle_supply_v`, "verified when available"); the 1999 Defender answered `03 63 10 50 13 88 00 00 13 A3`, `13 A3` = 5.03 V. discovery2-diag puts it at offset 6, which is 0 on the Defender, so a shorter answer shows no supply |
 | Fault memory `21 3B`: 35-byte block, one bit per fault | verified, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (read on a car) |
 | Fault names, 210 bits (`fault-map.ts`) | community | discovery2-diag, cross-checked with Ekaitza_Itzali and a reference tool |
+| 69 more bits are "Invalid Fault", shown as not a fault (`TD5_INVALID_BITS`) | community | Nanocom firmware fault strings, AULRO list (#50) |
+| `11.6` and `13.6` are the glow plug lamp (discovery2-diag has the relay twice) | community | Nanocom firmware fault strings, AULRO list; matches the logged pair `9.6`/`9.7` |
 | Nanocom codes: byte + 1, bit + 1 (`13.5` = `14-6`) | community | Ekaitza_Itzali (`fault_code_GG_SS`), TD5-Dash (`dtc_lookup.py`) |
 | A/C fan, A/C clutch, tacho and gearbox/ABS open load (bytes 9 and 13) are normal on a Defender | community, seen on the car | TD5-Dash (`_DEFENDER_EXPECTED`) |
 | Clear faults `31 DD` + 18 zeros → `71 DD` | community, known answer | Ekaitza_Itzali sniffed trace, discovery2-diag (cleared on a car) |
@@ -76,9 +78,9 @@ all, not even to the `ATI` probes after it, so the browser wasn't receiving from
 
 ## Known gaps
 
-- **Unnamed bits** `15.6`, `23.7`, `25.5` (Nanocom 16-7, 24-8, 26-6) are set on an early MSB Defender
-  and named by no source; `25.3` (Nanocom 26-4) was set too on a later read of the same car (#21).
-  A Nanocom or Testbook reading of that car would name them.
+- **Unnamed bit** `20.7` (Nanocom 21-8) is named by no source. The bits set on an early MSB Defender,
+  `15.6`, `23.7`, `25.3`, `25.5` (Nanocom 16-7, 24-8, 26-4, 26-6, #21), are "Invalid Fault" in the
+  Nanocom's own list, so the read calls them not a fault (#50).
 - `14.1` and `15.1` are both "high speed crank (Logged)" in every source.
 - **External air temperature** (`21 1A`, third pair) reads -50 °C at 5000 mV when no sensor is fitted
   (early Defender), so it isn't shown.
@@ -101,6 +103,8 @@ all, not even to the `ATI` probes after it, so the browser wasn't receiving from
 - td5-carplay-gauge (GPL-3.0), Raspberry Pi Td5 dash read on a Defender, pedal supply and cylinder
   balance: https://github.com/turetax/td5-carplay-gauge. Facts only, no code copied.
 - discotd5.com, Nanocom log format and boost definition: https://discotd5.com/scripts-and-code
+- OffTrack, "LIST OF FAULT CODES" taken from the Nanocom firmware's fault strings (AULRO, 2 September 2013):
+  https://www.aulro.com/afvb/archive/index.php/t-113075.html. Facts only; the numbers come from user reports
 - Ekaitza_Itzali sniffed sessions (Sniffing/…/Read_Faults_and_clear.log): fault read, clear, second key pair (021C → 4043)
 
 Licences and notices: [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).

@@ -8,6 +8,10 @@
  * read the block on a real Discovery 2 Td5. Names are kept as published.
  * Status suffix: (Current) = present now, (Logged) = stored, (Logged Low) = stored with the
  * signal too low (short), (Logged High) = stored with the signal too high (open circuit).
+ *
+ * `11.6` and `13.6` are the glow plug lamp, not the relay as discovery2-diag has them twice: the
+ * Nanocom list below names 12-7 and 14-7 "Glowplug Lamp Drive Open Load (Current)", which matches
+ * the logged pair `9.6` (lamp) and `9.7` (relay).
  */
 export const BLOCK_LENGTH = 35;
 
@@ -105,7 +109,7 @@ export const TD5_FAULT_MAP: Record<string, string> = {
   "11.3": "gearbox/abs drive open load (Current)",
   "11.4": "air conditioning clutch open load (Current)",
   "11.5": "mil lamp drive open load (Current)",
-  "11.6": "glow plug relay drive open load (Current)",
+  "11.6": "glow plug lamp drive open load (Current)",
   "11.7": "glowplug relay drive open load (Current)",
   "12.0": "cruise control lamp drive over temp. (Current)",
   "12.1": "fuel used output drive over temp. (Current)",
@@ -121,7 +125,7 @@ export const TD5_FAULT_MAP: Record<string, string> = {
   "13.3": "gearbox/abs drive open load (Current)",
   "13.4": "air conditioning clutch open load (Current)",
   "13.5": "mil lamp drive open load (Current)",
-  "13.6": "glow plug relay drive open load (Current)",
+  "13.6": "glow plug lamp drive open load (Current)",
   "13.7": "glowplug relay drive open load (Current)",
   "14.1": "high speed crank (Logged)",
   "15.1": "high speed crank (Logged)",
@@ -223,3 +227,28 @@ export const TD5_FAULT_MAP: Record<string, string> = {
   "34.4": "inj. 5 partial short circuit (Logged)",
   "34.5": "inj. 6 partial short circuit (Logged)",
 };
+
+/**
+ * Bits with no fault behind them: the Nanocom's own fault strings name each "Invalid Fault".
+ * From the list OffTrack took from the Nanocom firmware, AULRO "LIST OF FAULT CODES", 2 September 2013,
+ * https://www.aulro.com/afvb/archive/index.php/t-113075.html (community: the strings are in firmware
+ * order, the numbers come from user reports). Its named entries line up with TD5_FAULT_MAP under
+ * byte + 1, bit + 1, and none of these is named there. Some are set on early Defenders (#21, #50).
+ * Keys are "offset.bit"; the comment on each line gives the Nanocom codes.
+ */
+export const TD5_INVALID_BITS: ReadonlySet<string> = new Set([
+  "5.5", // 6-6
+  "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", // 15-1, 15-3 to 15-8
+  "15.0", "15.2", "15.3", "15.4", "15.5", "15.6", "15.7", // 16-1, 16-3 to 16-8 (16-2 is high speed crank)
+  "16.0", "16.2", "16.3", "16.4", "16.5", "16.6", "16.7", // 17-1, 17-3 to 17-8 (17-2 is high speed crank)
+  "17.0", "17.1", "17.2", "17.3", "17.4", "17.5", "17.6", "17.7", // 18-1 to 18-8
+  "18.0", "18.3", "18.4", "18.6", // 19-1, 19-4, 19-5, 19-7
+  "19.2", "19.5", "19.6", "19.7", "20.0", "20.1", "20.2", // 20-3, 20-6 to 21-3
+  "21.1", "21.3", "21.4", "21.5", // 22-2, 22-4 to 22-6
+  "22.6", "22.7", // 23-7, 23-8
+  "23.5", "23.7", // 24-6, 24-8
+  "24.0", "24.1", "24.2", // 25-1 to 25-3
+  "25.3", "25.4", "25.5", // 26-4 to 26-6
+  "26.7", "27.7", "28.7", "29.7", "30.7", "31.7", "32.7", "33.7", "34.7", // 27-8 to 35-8
+  "30.6", "31.6", "32.6", "33.6", "34.6", // 31-7 to 35-7
+]);
