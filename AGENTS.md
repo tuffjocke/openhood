@@ -146,6 +146,7 @@ app/                      Next.js shell + globals.css (all styling), /adapters a
 public/                   manifest, icons, sw.js (offline service worker, bump VERSION when its logic changes)
 components/ServiceWorker  registers sw.js in production builds
 tests/profiles.test.ts    contract tests, run for every registered profile automatically
+tests/session.test.ts     polling wakes a K-line ECU that went quiet (#46), gives up cleanly, Reconnect on the same link
 tests/obd.test.ts         known-answer tests for standard OBD-II pieces
 tests/history.test.ts     fault history, export/import
 tests/report.test.ts      test report contents and link length
@@ -291,6 +292,11 @@ Follow docs/adding-a-vehicle.md. In short:
 - BMW DS2 (`link.protocol: "ds2"`, `link.parity: "even"`) has no wake-up and no tester address: requests are
   [module address, control, ...data], answers [status, ...data] with A0 for done; other statuses throw
   NegativeResponse. Every module listens on the same line, so a profile asks them one by one.
+- `Session.poll` gives up after 5 misses in a row, except on a K-line session the ECU ends by itself
+  (`Session.canWake`, KlineLink's `wakeAgain`): there 2 misses wake it again (the profile's disconnect, the
+  wake-up, the profile's connect), twice at most, noted in the traffic. If the car had answered, the error is
+  `StoppedAnswering` and the website offers Reconnect (`Session.reconnect`, same link). The simulator's
+  `dropAfter` / `staysQuiet` options play a car that goes quiet.
 - `link.init` can be "fast", "slow" (5-baud, about 2 s) or "auto" (fast, then slow). After a slow init
   the session switches to ISO 9141-2 framing when the key bytes say so (08 08 / 94 94): frames have no
   length byte and are split by silence. Profiles never see framing; `connect` gets the InitResult.

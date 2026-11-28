@@ -27,6 +27,11 @@ export interface Link extends EcuLink {
   /** Open the connection, wake the ECU and run the profile's connect with the result. */
   open(connect: (ecu: EcuLink, init: InitResult) => Promise<void>): Promise<void>;
   close(): Promise<void>;
+  /**
+   * Only on a K-line session that the ECU ends when it hears nothing for a while (KWP2000, ISO 9141-2):
+   * the wake-up and the profile's connect again, on the port already open.
+   */
+  wakeAgain?(connect: (ecu: EcuLink, init: InitResult) => Promise<void>): Promise<void>;
 }
 
 /**

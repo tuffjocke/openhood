@@ -4,6 +4,14 @@ import { ds2Frame, parseDs2Frame } from "../link/ds2";
 import { SimulatedKwp1281 } from "./simulated-kwp1281";
 import { ByteQueue, sleep, type Transport } from "./types";
 
+/** For tests of a car that goes quiet: by default the simulated ECU always answers. */
+export interface SimulatedOptions {
+  /** Requests answered after each wake-up; then the ECU ends its session and ignores everything until woken again. */
+  dropAfter?: number;
+  /** Once it has gone quiet, ignore wake-ups too: a car that stays silent. */
+  staysQuiet?: boolean;
+}
+
 /**
  * A K-line with a profile's simulated ECU on the other end.
  * Handles framing and timing; the profile's simulator only sees payloads.
@@ -13,7 +21,20 @@ export class SimulatedTransport implements Transport {
   private rx = new ByteQueue();
   private ecu: SimulatedEcu | null = null;
 
-  constructor(private profile: VehicleProfile) {}
+  /** Requests answered since the last wake-up, and whether the ECU has gone quiet (SimulatedOptions). */
+  private answered = 0;
+  private quiet = false;
+
+  constructor(
+    private profile: VehicleProfile,
+    private opts: SimulatedOptions = {},
+  ) {}
+
+  /** A wake-up the ECU ignores: it has gone quiet for good (staysQuiet). */
+  private deaf() {
+    this.answered = 0;
+    return this.quiet && !!this.opts.staysQuiet;
+  }
 
   async open() {}
 
@@ -27,6 +48,7 @@ export class SimulatedTransport implements Transport {
 
   async fastInit() {
     await sleep(50);
+    if (this.deaf()) return void (this.ecu = null);
     const ecu = this.profile.simulator(); // a fresh ECU on every wake-up
     this.kwp1281 = null;
     this.ecu = ecu.wakeup?.fast === false ? null : ecu;
@@ -40,6 +62,7 @@ export class SimulatedTransport implements Transport {
     const ecu = this.profile.simulator();
     this.ecu = null;
     this.kwp1281 = null;
+    if (this.deaf()) return;
     const kb = ecu.wakeup?.slow;
     if (!kb) return; // doesn't do slow init: silence
     if (this.profile.link.protocol === "kwp1281") {
@@ -81,6 +104,11 @@ export class SimulatedTransport implements Transport {
       return;
     }
     if (!this.ecu) return; // asleep: silence, the session will time out
+    if (this.opts.dropAfter !== undefined && ++this.answered > this.opts.dropAfter) {
+      this.ecu = null; // ended its session: silence until the next wake-up
+      this.quiet = true;
+      return;
+    }
     const iso = bytes[0] === 0x68;
     const req = iso ? parseIso9141(bytes) : parseFrame(bytes);
     const res = this.ecu.handle(req.payload);

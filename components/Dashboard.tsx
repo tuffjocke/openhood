@@ -15,7 +15,7 @@ import { carReportUrl, reportUrl, trafficLines } from "@/core/report";
 import type { Channel, Fault, Readiness, Values } from "@/core/profile";
 import { openLink, WrongAdapterError, type ConnectVia } from "@/core/link/open";
 import { AdapterError } from "@/core/link/elm327";
-import { Session, type TrafficEvent } from "@/core/session";
+import { Session, StoppedAnswering, type TrafficEvent } from "@/core/session";
 import { TimeoutError } from "@/core/transport/types";
 import { BluetoothTransport } from "@/core/transport/bluetooth";
 import { WebSerialTransport } from "@/core/transport/webserial";
@@ -59,6 +59,8 @@ function linkLine(s: Session): string {
 function explain(e: unknown): string | null {
   if (e instanceof DOMException && e.name === "NotFoundError") return null; // picker cancelled
   if (e instanceof WrongAdapterError || e instanceof AdapterError) return e.message;
+  // It answered on this session, so it isn't the ignition or the plug (#46).
+  if (e instanceof StoppedAnswering) return "The car stopped answering after reading fine. Press Reconnect.";
   // The ELM327 link words its own timeouts; the K-line one is raw.
   if (e instanceof TimeoutError && !e.message.startsWith("K-line timeout")) return e.message;
   if (e instanceof TimeoutError)
@@ -110,6 +112,8 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
   const [confirmClear, setConfirmClear] = useState(false);
   /** What went wrong reading a real car: the AI on their computer is offered to find out why. */
   const [problem, setProblem] = useState<string | null>(null);
+  /** The car answered, then stopped: Reconnect, through the same adapter, is the next step. */
+  const [lost, setLost] = useState(false);
 
   // Readings are kept in metric, as the profile gives them, and converted only to show and log.
   const [units, setUnits] = useUnits();
@@ -178,16 +182,39 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
     setStatus("connecting");
     setUnplugOk(false);
     setProblem(null);
+    setLost(false);
     setAdapter(undefined);
-    // The demo going wrong says the browser or Openhood is at fault: noted for any later ask for the AI.
-    const flag = (msg: string) => (kind === "simulator" ? noteDemo(msg) : setProblem(msg));
     latest.current = {};
     history.current = {};
     traffic.current = [];
-    try {
+    await reading(kind, async () => {
       const s = new Session(profile, await openLink(profile, kind, onTraffic), onTraffic);
       session.current = s;
       await s.connect();
+      return s;
+    });
+  }
+
+  /** The car stopped answering: connect again through the same adapter, keeping the traffic. */
+  async function reconnect() {
+    const s = session.current;
+    if (!s || !source) return;
+    setError(null);
+    setProblem(null);
+    setLost(false);
+    setStatus("connecting");
+    await reading(source, async () => {
+      await s.reconnect();
+      return s;
+    });
+  }
+
+  /** Connect with `open`, then read the faults and keep reading the live data. */
+  async function reading(kind: Source, open: () => Promise<Session>) {
+    // The demo going wrong says the browser or Openhood is at fault: noted for any later ask for the AI.
+    const flag = (msg: string) => (kind === "simulator" ? noteDemo(msg) : setProblem(msg));
+    try {
+      const s = await open();
       setAdapter(describeAdapter(s));
       if (kind === "simulator") noteDemo(null);
       setUnavailable(new Set(s.unavailableChannels));
@@ -198,6 +225,7 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
       void refreshFaults(s).then((ok) => ok || flag("Connected, but the fault codes couldn\u2019t be read."));
       void s.poll(onValues, (e) => {
         setStatus("error");
+        setLost(e instanceof StoppedAnswering);
         setError(explain(e) ?? "Lost the ECU.");
         flag(explain(e) ?? "Lost the ECU.");
       });
@@ -510,7 +538,9 @@ export default function Dashboard({ page = "home" }: { page?: "home" | "read" })
                 {status === "error" && t("Stopped")}
               </span>
             </span>
-            {status === "idle" || status === "error" ? (
+            {status === "error" && lost && session.current ? (
+              <button onClick={reconnect}>{t("Reconnect")}</button>
+            ) : status === "idle" || status === "error" ? (
               <span className="action-buttons">
                 {bluetoothOk && (profile.adapters ?? ["kkl"]).includes("elm327") && (
                   <button className="quiet" onClick={() => connect("bluetooth")}>

@@ -1,11 +1,30 @@
 import { kLineLink } from "./link/kline";
 import { isLink, type Link, type TrafficEvent } from "./link/types";
-import type { Fault, InitResult, Readiness, Values, VehicleProfile } from "./profile";
-import type { Transport } from "./transport/types";
+import type { EcuLink, Fault, InitResult, Readiness, Values, VehicleProfile } from "./profile";
+import { NO_ECHO, TimeoutError, WRITE_STUCK, type Transport } from "./transport/types";
 
 export type { TrafficEvent };
 
 const SLOW_EVERY = 150; // poll cycles between slow group reads
+/** Reads missed in a row before polling gives up. */
+const GIVE_UP_AFTER = 5;
+/** Reads missed in a row before a session that can be woken again (Session.canWake) is woken. */
+const WAKE_AFTER = 2;
+/** Wake-ups tried, one after the other, before giving up on a car that has gone quiet. */
+const WAKES = 2;
+
+/**
+ * The car answered on this session, then stopped (the cable still echoes, so it's the car's side).
+ * `reason` is the last error.
+ */
+export class StoppedAnswering extends Error {
+  constructor(readonly reason: unknown) {
+    super("The car stopped answering.");
+  }
+}
+
+/** A timeout from the car, not from the cable or computer side. */
+const carWentQuiet = (e: unknown) => e instanceof TimeoutError && e.message !== NO_ECHO && e.message !== WRITE_STUCK;
 
 /**
  * Runs one connection to one ECU using a VehicleProfile.
@@ -14,7 +33,8 @@ const SLOW_EVERY = 150; // poll cycles between slow group reads
  */
 export class Session {
   private queue: Promise<unknown> = Promise.resolve();
-  private polling = false;
+  /** Counts up on every poll() and stop(): a poll loop runs while it is still its own number. */
+  private run = 0;
   private connected = false;
   readonly state: Values = {};
   /** Group ids the ECU supports, decided after connect. */
@@ -28,7 +48,7 @@ export class Session {
   constructor(
     readonly profile: VehicleProfile,
     linkOrTransport: Link | Transport,
-    onTraffic: (e: TrafficEvent) => void = () => {},
+    private onTraffic: (e: TrafficEvent) => void = () => {},
   ) {
     this.link = isLink(linkOrTransport) ? linkOrTransport : kLineLink(profile, linkOrTransport, onTraffic);
   }
@@ -44,9 +64,16 @@ export class Session {
     return run;
   }
 
+  /** The profile's connect, run on the link with this session's state. */
+  private start = (ecu: EcuLink, init: InitResult) => this.profile.connect(ecu, this.state, init);
+
   async connect() {
+    await this.connectWith(() => this.link.open(this.start));
+  }
+
+  private async connectWith(open: () => Promise<void>) {
     try {
-      await this.exclusive(() => this.link.open((ecu, init) => this.profile.connect(ecu, this.state, init)));
+      await this.exclusive(open);
       this.connected = true;
       this.decideAvailability();
       for (const id of this.profile.slowGroups ?? []) if (this.activeGroups.has(id)) await this.readGroup(id);
@@ -55,6 +82,47 @@ export class Session {
       await this.link.close();
       throw e;
     }
+  }
+
+  /**
+   * A K-line session the ECU ends when it hears nothing for a while, and that the wake-up starts
+   * again (KWP2000 or ISO 9141-2 through a KKL cable or the simulator). Adapters keep their own.
+   */
+  get canWake() {
+    return !!this.link.wakeAgain;
+  }
+
+  private note(text: string) {
+    this.onTraffic({ t: performance.now(), dir: "tx", bytes: new Uint8Array(0), note: text });
+  }
+
+  /** End the old session if the profile does (the ECU may not hear it), then the wake-up and connect again. */
+  private async again(open: () => Promise<void>) {
+    const end = this.profile.disconnect;
+    if (end) await end(this.link).catch(() => {});
+    await open();
+  }
+
+  /**
+   * Wake an ECU that has ended its session, on the link already open, and log in again (the profile's
+   * connect). Only where `canWake`. Noted in the traffic.
+   */
+  async wake() {
+    const wake = this.link.wakeAgain?.bind(this.link);
+    if (!wake) throw new Error("This connection can't wake the car again.");
+    this.note("the car stopped answering, waking it again");
+    await this.exclusive(() => this.again(() => wake(this.start)));
+  }
+
+  /**
+   * Connect again on the same link, for a person's Reconnect after the car stopped answering: stop
+   * polling, end the old session, then connect as before. No new device to pick.
+   */
+  async reconnect() {
+    this.stop();
+    this.note("connecting again");
+    const wake = this.link.wakeAgain?.bind(this.link);
+    await this.connectWith(() => this.again(() => (wake ? wake(this.start) : this.link.open(this.start))));
   }
 
   private decideAvailability() {
@@ -83,7 +151,12 @@ export class Session {
     return v;
   }
 
-  /** Poll live data until stop(). Gives up after 5 failures in a row. */
+  /**
+   * Poll live data until stop(). Gives up after 5 failures in a row. Where the session can be woken
+   * again (`canWake`), 2 misses in a row wake the ECU instead (#46): a K-line ECU that has ended its
+   * session ignores everything until it gets the wake-up again. If that doesn't bring it back, it gives
+   * up, with StoppedAnswering when the car had answered before.
+   */
   async poll(onValues: (v: Values) => void, onError: (e: unknown) => void) {
     const schedule = this.profile.schedule.filter((id) => this.activeGroups.has(id));
     const slowGroups = (this.profile.slowGroups ?? []).filter((id) => this.activeGroups.has(id));
@@ -93,28 +166,54 @@ export class Session {
       onError(new Error("The ECU doesn't support any of the values this profile reads."));
       return;
     }
-    this.polling = true;
+    const run = ++this.run;
     let i = 0;
     let misses = 0;
-    while (this.polling) {
+    /** A read worked on this poll. */
+    let read = false;
+    /** Woken since the last read that worked: another miss means waking doesn't help. */
+    let woke = false;
+    while (this.run === run) {
       const slow = slowGroups.length && i % SLOW_EVERY === SLOW_EVERY - 1;
       const id = slow ? slowGroups[(i / SLOW_EVERY) % slowGroups.length | 0] : schedule[i % schedule.length];
       i++;
       try {
         onValues(await this.readGroup(id));
         misses = 0;
+        read = true;
+        woke = false;
       } catch (e) {
-        if (++misses >= 5) {
-          this.polling = false;
-          onError(e);
-          return;
-        }
+        if (this.run !== run) return; // stopped meanwhile
+        misses++;
+        if (this.canWake) {
+          if (misses < WAKE_AFTER) continue;
+          if (!woke) {
+            woke = true;
+            misses = 0;
+            if (await this.tryWakes(run)) continue;
+            if (this.run !== run) return;
+          }
+        } else if (misses < GIVE_UP_AFTER) continue;
+        this.run++;
+        onError(read && carWentQuiet(e) ? new StoppedAnswering(e) : e);
+        return;
       }
     }
   }
 
+  /** Up to WAKES wake-ups, one after the other. True once the ECU has answered one and logged in again. */
+  private async tryWakes(run: number) {
+    for (let n = 0; n < WAKES && this.run === run; n++) {
+      try {
+        await this.wake();
+        return true;
+      } catch {}
+    }
+    return false;
+  }
+
   stop() {
-    this.polling = false;
+    this.run++;
   }
 
   /**
