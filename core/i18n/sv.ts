@@ -183,6 +183,7 @@ export const SV: Record<string, string> = {
   "The car didn't answer. Check that the ignition is on and the plug is pushed all the way into the socket.":
     "Bilen svarade inte. Kolla att tändningen är på och att kontakten sitter i ända in.",
   "Lost the ECU.": "Tappade kontakten med bilen.",
+  "The car stopped answering after reading fine. Press Reconnect.": "Bilen slutade svara efter att ha läst bra. Tryck på Anslut igen.",
   "The cable sent nothing back, not even what Openhood sent. Check that it's pushed all the way into the car's socket and the ignition is on.":
     "Kabeln skickade inget tillbaka, inte ens det Openhood skickade. Kolla att den sitter i ända in i bilens uttag och att tändningen är på.",
   "The cable stopped taking data. Is it still plugged in?": "Kabeln slutade ta emot data. Sitter den fortfarande i?",

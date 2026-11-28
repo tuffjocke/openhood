@@ -40,6 +40,16 @@ export class KlineLink implements Link {
 
   async open(connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
     await this.transport.open();
+    await this.wakeUp(connect);
+  }
+
+  /** Wake an ECU that has ended its session, on the port already open: the bus idle first (W5), then the same wake-up. */
+  async wakeAgain(connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
+    await sleep(300);
+    await this.wakeUp(connect);
+  }
+
+  private async wakeUp(connect: (ecu: EcuLink, init: InitResult) => Promise<void>) {
     const mode = this.profile.link.init;
     if (mode === "fast" || mode === "auto") {
       try {

@@ -207,9 +207,9 @@ export class Runtime {
     }
   }
 
-  /** A K-line session that ends when nothing is sent for a few seconds (KWP2000). KWP1281 links keep themselves alive, DS2 has no session, adapters keep their own. */
+  /** A K-line session that ends when nothing is sent for a few seconds (KWP2000, Session.canWake). KWP1281 links keep themselves alive, DS2 has no session, adapters keep their own. */
   private needsKeepAlive(s: Session) {
-    return !!this.opts.keepAlive && s.init.kind !== "adapter" && (s.profile.link.protocol ?? "kwp2000") === "kwp2000";
+    return !!this.opts.keepAlive && s.canWake;
   }
 
   /** The cheapest thing to read: the first group in the profile's schedule the ECU supports. */
