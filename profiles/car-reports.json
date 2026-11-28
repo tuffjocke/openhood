@@ -40,5 +40,29 @@
     "result": "worked",
     "values": 20,
     "notes": "Read with the CLI (npx openhood 0.1.13). The website in Chrome on macOS still didn't wake the ECU on the same cable (issue 21)."
+  },
+  {
+    "make": "Land Rover",
+    "model": "Defender",
+    "year": 1999,
+    "engine": "2.5 Td5",
+    "profile": "land-rover-td5",
+    "date": "2026-11-28",
+    "adapter": "kkl",
+    "adapterModel": "VAG-COM KKL 409.1",
+    "protocol": "KWP2000 fast init",
+    "result": "worked",
+    "checks": {
+      "faults": "look",
+      "ignition": "unclear",
+      "idle": "ok",
+      "unverified": "ok",
+      "revs": "ok",
+      "charging": "ok",
+      "wiggle": "ok",
+      "warmup": "ok",
+      "switches": "ok"
+    },
+    "notes": "Openhood's test passed with the MCP server 0.1.14 (issue 49). Ignition check unclear: the engine was warm. The website lost the ECU mid-read (issue 46)."
   }
 ]
