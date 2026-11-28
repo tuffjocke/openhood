@@ -22,9 +22,9 @@ answer" are checked byte for byte in `tests/td5.test.ts` against published value
 | Temperatures `21 1A` (coolant, intake, ambient, fuel; 0.1 K + sensor mV) | verified, known answer | Nanocom log format, SimonRafferty |
 | MAP and MAF `21 1C` (MAP 0.01 kPa, MAF 0.1 kg/h at offset 4) | verified, known answer | Nanocom log format, discovery2-diag (MAF proven on a car) |
 | Ambient pressure `21 23` (0.01 kPa), boost = MAP − ambient, also shown as air pressure | verified | SimonRafferty, discotd5 |
-| Idle speed error `21 21` (signed rpm, target minus actual) | community | discovery2-diag (`rpm_error`), Ekaitza_Itzali (`get_rpm_error`), SimonRafferty |
-| Injected fuel per stroke `21 1D`, data offset 6 (0.01 mg), shown as "Injected" | community | discovery2-diag (`injection_qty`, marked proven there); the rest of the block isn't read |
-| Cylinder balance `21 40`: five signed numbers, cylinders 1 to 5, no unit published | community | discovery2-diag (`balance_1..5`, marked proven on a Discovery 2 NNN; its notes say BinOwl_Td5Gauge reads it the same way), td5-carplay-gauge (`injector_balance`, marked verified on a Defender). Not read by us yet |
+| Idle speed error `21 21` (signed rpm, target minus actual) | community, seen on the car | discovery2-diag (`rpm_error`), Ekaitza_Itzali (`get_rpm_error`), SimonRafferty. -13 to 17 rpm on the 1999 Defender at idle (issue #49), no gauge to compare |
+| Injected fuel per stroke `21 1D`, data offset 6 (0.01 mg), shown as "Injected" | community, seen on the car | discovery2-diag (`injection_qty`, marked proven there); the rest of the block isn't read. 5.4 to 6.8 mg on the 1999 Defender at idle (issue #49), no gauge to compare |
+| Cylinder balance `21 40`: five signed numbers, cylinders 1 to 5, no unit published | community, seen on the car | discovery2-diag (`balance_1..5`, marked proven on a Discovery 2 NNN; its notes say BinOwl_Td5Gauge reads it the same way), td5-carplay-gauge (`injector_balance`, marked verified on a Defender). Seen on the 1999 Defender at idle: each within -11 to 17 (issue #49) |
 | Battery `21 10` (mV) | verified | SimonRafferty |
 | Pedal switches `21 1E`, 2 data bytes, each bit low while pressed: clutch = offset 0 bit 1, brake = offset 1 bit 7 | verified, known answer | Read on the 1999 Defender pressing brake, clutch, brake, clutch (GitHub issue #23): `03 A2` at rest. Offset 1 bit 5 flips by itself every 0.5 to 2 s; cruise not tested |
 | Accelerator tracks `21 1B` (mV, track 1 shown) | verified | SimonRafferty |
@@ -84,8 +84,9 @@ all, not even to the `ATI` probes after it, so the browser wasn't receiving from
   (early Defender), so it isn't shown.
 - **Pedal as a percentage.** The ECU reports track voltages; the conversion to percent isn't sourced
   yet, so we show track 1 in volts.
-- **Not tried on a car yet:** idle speed error (`21 21`) and fuel per stroke (`21 1D`). A car that
-  refuses either one leaves that chart empty; the other readings carry on.
+- **No gauge to check against:** idle speed error (`21 21`), fuel per stroke (`21 1D`) and cylinder balance
+  (`21 40`) answered on the 1999 Defender with sensible idle values (issue #49), but nothing on the car shows
+  them, so they stay community. A car that refuses one leaves that chart empty; the other readings carry on.
 - **Not read yet:** EGR (`21 37`) and wastegate (`21 38`) positions, and the cruise control bits of `21 1E`.
 - Ekaitza_Itzali's sign handling for `21 40` and `21 21` subtracts 65537, one off: use 65536.
 - **Avoid** `21 07`, `0A`, `0B`, `0F`, `17`, `20`, `2B`, `2C`: reported as rejected or unreliable.
