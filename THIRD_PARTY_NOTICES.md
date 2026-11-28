@@ -73,5 +73,5 @@ code meanings in `profiles/land-rover-srs/`, are facts from openostler/ostler-pa
 AGPL-3.0, vehicle data CC BY-SA 4.0). No code or text is copied.
 
 Request bytes, scalings and sniffed traces from Ekaitza_Itzali, SimonRafferty's Td5 diagnostics,
-TD5-Dash, td5-carplay-gauge (GPL-3.0) and discotd5.com are used as facts about the ECU's protocol, with credit in
+TD5-Dash, td5-carplay-gauge (GPL-3.0), discotd5.com and the AULRO Nanocom fault list are used as facts about the ECU's protocol, with credit in
 `profiles/land-rover-td5/README.md`. No code from those projects is included.
